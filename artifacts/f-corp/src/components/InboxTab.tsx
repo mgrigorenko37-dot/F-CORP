@@ -62,10 +62,11 @@ const initialMessages: Message[] = [
   },
 ];
 
+// Each type's text colour (the primary is #00FF87, matches bullet + badges)
 const TYPE_COLOR: Record<Message['type'], string> = {
-  'ОТЧЁТ':      'text-primary',
-  'ПРЕДЛОЖЕНИЕ':'text-primary',
-  'ЗАПРОС':     'text-amber-400',
+  'ОТЧЁТ':       'text-primary',
+  'ПРЕДЛОЖЕНИЕ': 'text-primary',
+  'ЗАПРОС':      'text-amber-400',
 };
 
 export default function InboxTab() {
@@ -80,10 +81,12 @@ export default function InboxTab() {
   }, []);
 
   const handleAction = (id: string, action: 'approved' | 'rejected' | 'read') => {
-    setMessages(msgs => msgs.map(m => m.id === id ? { ...m, status: action } : m));
+    setMessages(msgs =>
+      msgs.map(m => (m.id === id ? { ...m, status: action } : m))
+    );
   };
 
-  const pending   = messages.filter(m => m.status === 'pending').length;
+  const pending    = messages.filter(m => m.status === 'pending').length;
   const actionable = messages.filter(m => m.requiresAction && m.status === 'pending').length;
 
   return (
@@ -93,46 +96,92 @@ export default function InboxTab() {
       exit={{ opacity: 0, y: -10 }}
       className="flex flex-col h-full"
     >
-      {/* ── Club header bar ─────────────────────────────────── */}
-      <div className="flex items-center justify-between px-4 pt-4 pb-3">
+      {/* ── Header: badge + club name + bell ─────────────────── */}
+      <div className="flex items-center justify-between px-4 pt-5 pb-3">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-black text-xs font-black tracking-tight">FC</span>
+          {/*
+            FC badge — rounded-2xl to match the reference's soft square.
+            bg-primary = #00FF87, text-black for contrast.
+          */}
+          <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center shrink-0">
+            {/* Override font-display from base styles explicitly */}
+            <span
+              className="text-black text-xs font-black leading-none"
+              style={{ fontFamily: 'Inter, sans-serif', letterSpacing: '-0.02em' }}
+            >
+              FC
+            </span>
           </div>
-          <span className="text-white font-bold text-base uppercase tracking-wider">{clubName}</span>
+
+          {/*
+            Club name: reference uses a bold sans-serif in normal (not uppercase)
+            BUT the global h1-h6 rule forces uppercase + Rajdhani.
+            We use a <span> and inline style to break free of that.
+          */}
+          <span
+            className="text-white font-bold text-[17px] leading-none"
+            style={{ fontFamily: 'Inter, sans-serif', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+          >
+            {clubName}
+          </span>
         </div>
-        <button className="relative text-muted-foreground hover:text-white transition-colors">
-          <Bell className="w-5 h-5" />
+
+        {/* Bell — muted unless there are unread messages */}
+        <button className="relative p-1 text-muted-foreground hover:text-white transition-colors">
+          <Bell className="w-[22px] h-[22px]" strokeWidth={1.5} />
           {pending > 0 && (
-            <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full" />
+            <span className="absolute top-0 right-0 w-2 h-2 bg-primary rounded-full ring-2 ring-background" />
           )}
         </button>
       </div>
 
-      {/* ── Title + badges ───────────────────────────────────── */}
+      {/* ── Title: NOT uppercase, NOT Rajdhani ───────────────── */}
       <div className="px-4 pb-4">
-        <h2 className="text-2xl font-bold text-white mb-3">Рабочий кабинет</h2>
-        <div className="flex gap-2">
+        {/*
+          Global CSS: h2 { font-display tracking-wide uppercase }
+          We override every property that conflicts.
+        */}
+        <h2
+          className="font-bold text-white mb-3"
+          style={{
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '26px',
+            textTransform: 'none',
+            letterSpacing: 'normal',
+            lineHeight: '1.2',
+          }}
+        >
+          Рабочий кабинет
+        </h2>
+
+        {/* Pill badges */}
+        <div className="flex gap-2 flex-wrap">
           {pending > 0 && (
-            <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-bold">
+            <span
+              className="px-3 py-[5px] rounded-full text-[13px] font-semibold text-primary"
+              style={{ background: 'rgba(0,255,135,0.15)' }}
+            >
               {pending} новых
             </span>
           )}
           {actionable > 0 && (
-            <span className="px-3 py-1 rounded-full bg-amber-400/20 text-amber-400 text-xs font-bold">
+            <span
+              className="px-3 py-[5px] rounded-full text-[13px] font-semibold text-amber-400"
+              style={{ background: 'rgba(251,191,36,0.15)' }}
+            >
               {actionable} к решению
             </span>
           )}
           {pending === 0 && (
-            <span className="px-3 py-1 rounded-full bg-white/10 text-muted-foreground text-xs font-bold">
+            <span className="px-3 py-[5px] rounded-full text-[13px] font-semibold text-white/40 bg-white/8">
               Всё прочитано
             </span>
           )}
         </div>
       </div>
 
-      {/* ── Messages list ────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto px-4 space-y-1 pb-4">
+      {/* ── Messages ─────────────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto px-4 pb-4">
         <AnimatePresence initial={false}>
           {messages.map((msg) => (
             <motion.div
@@ -141,77 +190,110 @@ export default function InboxTab() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2 }}
-              className="flex gap-3 py-3 border-b border-white/5 last:border-0"
+              className="flex gap-3 py-4 border-b border-white/[0.07] last:border-0"
             >
-              {/* Left dot */}
-              <div className="pt-1 shrink-0">
-                <div className={`w-2 h-2 rounded-full mt-0.5 ${
-                  msg.status === 'pending' ? 'bg-primary' : 'bg-white/20'
-                }`} />
+              {/* Teal dot — aligns with the first text line */}
+              <div className="shrink-0 pt-[3px]">
+                <div
+                  className="w-[7px] h-[7px] rounded-full"
+                  style={{
+                    background: msg.status === 'pending' ? '#00FF87' : 'rgba(255,255,255,0.2)',
+                  }}
+                />
               </div>
 
-              {/* Content */}
+              {/* Content block */}
               <div className="flex-1 min-w-0">
-                {/* Meta row */}
-                <div className="flex items-center justify-between gap-2 mb-1.5">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className={`text-[11px] font-bold uppercase tracking-wider ${TYPE_COLOR[msg.type]}`}>
+
+                {/* Meta: TYPE · sender ··············· time */}
+                <div className="flex items-baseline justify-between gap-2 mb-[6px]">
+                  <div className="flex items-baseline gap-[6px] min-w-0 overflow-hidden">
+                    <span
+                      className={`text-[11px] font-bold uppercase leading-none shrink-0 ${TYPE_COLOR[msg.type]}`}
+                      style={{ letterSpacing: '0.06em' }}
+                    >
                       {msg.type}
                     </span>
-                    <span className="text-muted-foreground text-[11px]">·</span>
-                    <span className="text-muted-foreground text-[11px] truncate">{msg.sender}</span>
+                    <span className="text-muted-foreground text-[11px] leading-none shrink-0">·</span>
+                    <span className="text-muted-foreground text-[12px] leading-none truncate">
+                      {msg.sender}
+                    </span>
                   </div>
-                  <span className="text-muted-foreground text-[11px] font-mono shrink-0">{msg.time}</span>
+                  <span
+                    className="text-muted-foreground text-[12px] shrink-0"
+                    style={{ fontVariantNumeric: 'tabular-nums' }}
+                  >
+                    {msg.time}
+                  </span>
                 </div>
 
-                {/* Body */}
-                <p className="text-sm text-white/90 leading-relaxed mb-3">
+                {/* Body text */}
+                <p
+                  className="text-white/90 mb-[14px] leading-[1.55]"
+                  style={{ fontSize: '14px' }}
+                >
                   {msg.text}
                 </p>
 
-                {/* Actions */}
+                {/* ── Action buttons (pending) ─── */}
                 {msg.status === 'pending' && (
                   <div className="flex gap-2 flex-wrap">
                     {msg.requiresAction ? (
                       <>
+                        {/* Одобрить — muted green, white text (reference design) */}
                         <button
                           onClick={() => handleAction(msg.id, 'approved')}
-                          className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-primary text-black text-xs font-bold hover:bg-primary/90 active:scale-95 transition-all"
+                          className="flex items-center gap-[6px] px-4 py-[7px] rounded-full text-white text-[13px] font-semibold active:scale-95 transition-transform"
+                          style={{ background: '#27AE60' }}
                         >
-                          <Check className="w-3 h-3" strokeWidth={3} />
+                          <Check className="w-[13px] h-[13px]" strokeWidth={2.5} />
                           Одобрить
                         </button>
+
+                        {/* Отклонить — red, white text */}
                         <button
                           onClick={() => handleAction(msg.id, 'rejected')}
-                          className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-red-500/90 text-white text-xs font-bold hover:bg-red-500 active:scale-95 transition-all"
+                          className="flex items-center gap-[6px] px-4 py-[7px] rounded-full text-white text-[13px] font-semibold active:scale-95 transition-transform"
+                          style={{ background: '#E74C3C' }}
                         >
-                          <X className="w-3 h-3" strokeWidth={3} />
+                          <X className="w-[13px] h-[13px]" strokeWidth={2.5} />
                           Отклонить
                         </button>
                       </>
                     ) : (
+                      /* Принято — dark translucent pill with subtle border */
                       <button
                         onClick={() => handleAction(msg.id, 'read')}
-                        className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white/10 text-white/80 text-xs font-bold hover:bg-white/15 active:scale-95 transition-all"
+                        className="flex items-center gap-[6px] px-4 py-[7px] rounded-full text-white/85 text-[13px] font-semibold active:scale-95 transition-transform"
+                        style={{
+                          background: 'rgba(255,255,255,0.09)',
+                          border: '1px solid rgba(255,255,255,0.18)',
+                        }}
                       >
-                        <Check className="w-3 h-3" strokeWidth={3} />
+                        <Check className="w-[13px] h-[13px]" strokeWidth={2.5} />
                         Принято
                       </button>
                     )}
                   </div>
                 )}
 
-                {/* Done state */}
+                {/* ── Status after action ─── */}
                 {msg.status !== 'pending' && (
-                  <span className={`inline-flex items-center gap-1 text-[11px] font-bold ${
-                    msg.status === 'approved' ? 'text-primary' :
-                    msg.status === 'rejected' ? 'text-red-400' :
-                    'text-muted-foreground'
-                  }`}>
-                    <Check className="w-3 h-3" strokeWidth={3} />
-                    {msg.status === 'approved' ? 'Одобрено' :
-                     msg.status === 'rejected' ? 'Отклонено' :
-                     'Принято'}
+                  <span
+                    className={`inline-flex items-center gap-[5px] text-[12px] font-semibold ${
+                      msg.status === 'approved'
+                        ? 'text-primary'
+                        : msg.status === 'rejected'
+                        ? 'text-red-400'
+                        : 'text-white/40'
+                    }`}
+                  >
+                    <Check className="w-[12px] h-[12px]" strokeWidth={2.5} />
+                    {msg.status === 'approved'
+                      ? 'Одобрено'
+                      : msg.status === 'rejected'
+                      ? 'Отклонено'
+                      : 'Принято'}
                   </span>
                 )}
               </div>
@@ -220,9 +302,11 @@ export default function InboxTab() {
         </AnimatePresence>
       </div>
 
-      {/* ── Footer watermark ─────────────────────────────────── */}
-      <div className="text-center py-3 border-t border-white/5 shrink-0">
-        <span className="text-[11px] text-muted-foreground/50">@fcorp_official_bot</span>
+      {/* ── Footer ───────────────────────────────────────────── */}
+      <div className="text-center py-3 border-t border-white/[0.06] shrink-0">
+        <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.25)' }}>
+          @fcorp_official_bot
+        </span>
       </div>
     </motion.div>
   );
