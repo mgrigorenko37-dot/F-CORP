@@ -1,141 +1,116 @@
-import { motion } from 'framer-motion';
-import { UserSquare2, Shield, Activity, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 
-const mockPlayers = [
-  { id: 1, name: 'С. Алиссон', pos: 'ГК', rating: 88, form: 90, morale: 'happy', nat: '🇧🇷' },
-  { id: 2, name: 'М. Де Лигт', pos: 'ЗЩ', rating: 85, form: 75, morale: 'neutral', nat: '🇳🇱' },
-  { id: 3, name: 'Ж. Канселу', pos: 'ЗЩ', rating: 86, form: 82, morale: 'happy', nat: '🇵🇹' },
-  { id: 4, name: 'Э. Милитао', pos: 'ЗЩ', rating: 84, form: 60, morale: 'sad', nat: '🇧🇷' },
-  { id: 5, name: 'А. Робертсон', pos: 'ЗЩ', rating: 86, form: 88, morale: 'happy', nat: '🏴󠁧󠁢󠁳󠁣󠁴󠁿' },
-  { id: 6, name: 'К. Де Брюйне', pos: 'ПЗ', rating: 91, form: 95, morale: 'happy', nat: '🇧🇪' },
-  { id: 7, name: 'Н. Барелла', pos: 'ПЗ', rating: 86, form: 70, morale: 'neutral', nat: '🇮🇹' },
-  { id: 8, name: 'Ф. Де Йонг', pos: 'ПЗ', rating: 87, form: 85, morale: 'happy', nat: '🇳🇱' },
-  { id: 9, name: 'К. Мбаппе', pos: 'НП', rating: 92, form: 98, morale: 'happy', nat: '🇫🇷' },
-  { id: 10, name: 'Э. Холанд', pos: 'НП', rating: 90, form: 92, morale: 'happy', nat: '🇳🇴' },
-  { id: 11, name: 'В. Жуниор', pos: 'НП', rating: 89, form: 88, morale: 'neutral', nat: '🇧🇷' },
+const C = {
+  card: '#1a1c25', border: '#1c1f28', border2: '#2a2d38',
+  teal: '#0fd4a8', tealText: '#04342c',
+  white: '#e4e5ea', muted: '#c8cad4', dim: '#6b6f7d', vdim: '#5a5d6a',
+  salmon: '#f0997b', yellow: '#f0b429', blue: '#3ba1e0', purple: '#a78bfa',
+};
+
+const POS_COLOR: Record<string, string> = {
+  ВР: C.blue, ЗЩ: C.teal, ОП: C.purple, ПЗ: C.yellow, АП: C.salmon, НП: C.salmon,
+};
+
+const players = [
+  { id:1,  pos:'ВР', name:'Марко Руссо',        sub:'Вратарь',         rating:74 },
+  { id:2,  pos:'ЗЩ', name:'Антонио Рейес',      sub:'Защитник',        rating:76 },
+  { id:3,  pos:'ЗЩ', name:'Де Лигт',            sub:'Защитник',        rating:85 },
+  { id:4,  pos:'ЗЩ', name:'Канселу',            sub:'Защитник',        rating:86 },
+  { id:5,  pos:'ЗЩ', name:'Робертсон',          sub:'Защитник',        rating:86 },
+  { id:6,  pos:'ОП', name:'Барелла',             sub:'Опорный',         rating:86 },
+  { id:7,  pos:'ПЗ', name:'Диего Фернандес',    sub:'Полузащитник',    rating:79 },
+  { id:8,  pos:'ПЗ', name:'Де Брюйне',          sub:'Полузащитник',    rating:91 },
+  { id:9,  pos:'ПЗ', name:'Де Йонг',            sub:'Полузащитник',    rating:87 },
+  { id:10, pos:'НП', name:'Карлос Мендес',       sub:'Нападающий',      rating:82 },
+  { id:11, pos:'НП', name:'Мбаппе',              sub:'Нападающий',      rating:92 },
 ];
 
+type Vector = 'youth' | 'balanced' | 'veteran';
+type PosFilter = 'ВСЕ' | 'ВР' | 'ЗЩ' | 'ОП' | 'ПЗ' | 'АП' | 'НП';
+
+const VECTORS: { id: Vector; label: string }[] = [
+  { id:'youth',    label:'МОЛОДЁЖЬ' },
+  { id:'balanced', label:'БАЛАНС'   },
+  { id:'veteran',  label:'ОПЫТ'     },
+];
+const POS_FILTERS: PosFilter[] = ['ВСЕ','ВР','ЗЩ','ОП','ПЗ','АП','НП'];
+
+const avg = (arr: number[]) => arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1) : '—';
+
 export default function SquadTab() {
-  const [vector, setVector] = useState('balanced');
+  const [vector, setVector] = useState<Vector>('balanced');
+  const [posFilter, setPosFilter] = useState<PosFilter>('ВСЕ');
 
-  const getPosColor = (pos: string) => {
-    switch(pos) {
-      case 'ГК': return 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20';
-      case 'ЗЩ': return 'text-blue-500 bg-blue-500/10 border-blue-500/20';
-      case 'ПЗ': return 'text-green-500 bg-green-500/10 border-green-500/20';
-      case 'НП': return 'text-red-500 bg-red-500/10 border-red-500/20';
-      default: return 'text-white bg-white/10 border-white/20';
-    }
-  };
-
-  const getFormColor = (form: number) => {
-    if (form >= 80) return 'bg-primary';
-    if (form >= 60) return 'bg-yellow-500';
-    return 'bg-destructive';
-  };
+  const filtered = posFilter === 'ВСЕ' ? players : players.filter(p => p.pos === posFilter);
+  const avgRating = avg(players.map(p => p.rating));
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      className="p-4 space-y-6"
-    >
-      <div>
-        <h2 className="font-display font-bold text-2xl text-white uppercase tracking-wider mb-1">Активы клуба</h2>
-        <p className="text-xs text-muted-foreground uppercase tracking-widest">Текущий состав и менеджмент</p>
-      </div>
+    <motion.div initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-10}}
+      className="flex flex-col h-full overflow-y-auto">
 
-      {/* Manager Card */}
-      <div className="bg-card border border-border p-4">
-        <div className="flex justify-between items-start mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-muted border border-border flex items-center justify-center">
-              <UserSquare2 className="w-6 h-6 text-muted-foreground" />
-            </div>
-            <div>
-              <div className="text-[10px] font-bold text-primary tracking-widest uppercase mb-1">МЕНЕДЖЕР ИИ</div>
-              <div className="font-display font-bold text-lg text-white uppercase">Алехандро Гомес</div>
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-2xl font-display font-bold text-white">73<span className="text-sm text-muted-foreground">%</span></div>
-            <div className="text-[9px] text-muted-foreground uppercase tracking-widest">Доверие</div>
-          </div>
+      {/* Title section */}
+      <div style={{padding:'16px 18px 0'}}>
+        <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:4}}>
+          <span style={{fontSize:22,fontWeight:700,color:'#ffffff',fontFamily:'Inter,sans-serif'}}>Состав</span>
+          <span style={{fontSize:22,fontWeight:700,color:C.teal,fontFamily:'Inter,sans-serif'}}>{players.length}</span>
         </div>
-        
-        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
-          <div>
-            <div className="text-[9px] text-muted-foreground uppercase tracking-widest mb-1">Зарплата</div>
-            <div className="font-mono text-sm text-white">€25,000/мес</div>
-          </div>
-          <div>
-            <div className="text-[9px] text-muted-foreground uppercase tracking-widest mb-1">Рекорд сезона</div>
-            <div className="font-mono text-sm text-white">12-4-3</div>
-          </div>
+        <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:16}}>
+          <span style={{fontSize:11,letterSpacing:'0.5px',color:C.dim}}>ТЕКУЩИЙ ДИВИЗИОН · {players.length} ИГРОКА</span>
+          <span style={{fontSize:11,letterSpacing:'0.5px',color:C.dim}}>СР. {avgRating}</span>
         </div>
-      </div>
 
-      {/* Vector */}
-      <div>
-        <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">Вектор развития</div>
-        <div className="flex border border-border bg-card p-1">
-          <button 
-            onClick={() => setVector('youth')}
-            className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wider transition-colors ${vector === 'youth' ? 'bg-primary text-black' : 'text-muted-foreground hover:text-white'}`}
-          >
-            Молодежь
-          </button>
-          <button 
-            onClick={() => setVector('balanced')}
-            className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wider transition-colors ${vector === 'balanced' ? 'bg-primary text-black' : 'text-muted-foreground hover:text-white'}`}
-          >
-            Баланс
-          </button>
-          <button 
-            onClick={() => setVector('veteran')}
-            className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wider transition-colors ${vector === 'veteran' ? 'bg-primary text-black' : 'text-muted-foreground hover:text-white'}`}
-          >
-            Опыт
-          </button>
-        </div>
-      </div>
-
-      {/* Squad List */}
-      <div>
-        <div className="flex justify-between items-end mb-3">
-          <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Основной состав</div>
-          <div className="text-xs font-mono text-white">11/18</div>
-        </div>
-        
-        <div className="space-y-2">
-          {mockPlayers.map(p => (
-            <div key={p.id} className="bg-card border border-border p-3 flex items-center justify-between group">
-              <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 flex items-center justify-center border font-display font-bold text-xs ${getPosColor(p.pos)}`}>
-                  {p.pos}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-white uppercase tracking-wide">{p.name}</span>
-                    <span className="text-xs">{p.nat}</span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider w-8">Форма</div>
-                    <div className="w-16 h-1 bg-black overflow-hidden">
-                      <div className={`h-full ${getFormColor(p.form)}`} style={{ width: `${p.form}%` }} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex flex-col items-end justify-center">
-                <div className="font-display font-bold text-lg text-white leading-none">{p.rating}</div>
-              </div>
-            </div>
+        {/* Vector toggle */}
+        <div style={{display:'flex',background:C.card,borderRadius:20,padding:3,marginBottom:12}}>
+          {VECTORS.map(v => (
+            <button key={v.id} onClick={() => setVector(v.id)}
+              style={{flex:1,textAlign:'center',fontSize:11,fontWeight:v.id===vector?700:600,
+                color:v.id===vector?C.tealText:C.vdim,background:v.id===vector?C.teal:'transparent',
+                padding:'7px 0',borderRadius:20,border:'none',cursor:'pointer'}}>
+              {v.label}
+            </button>
           ))}
         </div>
+
+        {/* Position filters */}
+        <div style={{display:'flex',gap:6,overflowX:'auto',paddingBottom:14}}>
+          {POS_FILTERS.map(f => (
+            <button key={f} onClick={() => setPosFilter(f)}
+              style={{flexShrink:0,fontSize:11,fontWeight:f===posFilter?700:400,
+                color:f===posFilter?C.tealText:C.vdim,
+                background:f===posFilter?C.teal:'transparent',
+                border:f===posFilter?'none':`0.5px solid ${C.border2}`,
+                padding:'5px 12px',borderRadius:14,cursor:'pointer',whiteSpace:'nowrap'}}>
+              {f}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Player list */}
+      <div style={{padding:'0 18px 80px'}}>
+        {filtered.map((p, i) => {
+          const col = POS_COLOR[p.pos] ?? C.muted;
+          return (
+            <div key={p.id} style={{display:'flex',alignItems:'center',gap:12,
+              padding:'10px 0',borderBottom: i < filtered.length-1 ? `0.5px solid ${C.border}` : 'none'}}>
+              {/* Avatar */}
+              <div style={{width:32,height:32,borderRadius:'50%',
+                background:`${col}26`,color:col,
+                display:'flex',alignItems:'center',justifyContent:'center',
+                fontSize:11,fontWeight:700,flexShrink:0}}>
+                {p.pos}
+              </div>
+              {/* Info */}
+              <div style={{flex:1}}>
+                <div style={{fontSize:13,color:C.white}}>{p.name}</div>
+                <div style={{fontSize:10,color:C.vdim}}>{p.sub}</div>
+              </div>
+              {/* Rating */}
+              <span style={{fontSize:14,fontWeight:700,color:'#ffffff'}}>{p.rating}</span>
+            </div>
+          );
+        })}
       </div>
     </motion.div>
   );

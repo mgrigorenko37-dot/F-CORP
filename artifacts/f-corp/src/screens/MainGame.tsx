@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Inbox, Users, TrendingUp, Building2, Trophy, Menu } from 'lucide-react';
+import { MoreVertical, X, ChevronDown } from 'lucide-react';
 
 import BottomNav from '../components/BottomNav';
 import InboxTab from '../components/InboxTab';
@@ -9,63 +9,99 @@ import MarketTab from '../components/MarketTab';
 import CommerceTab from '../components/CommerceTab';
 import TournamentTab from '../components/TournamentTab';
 import PersonnelTab from '../components/PersonnelTab';
+import TrainingTab from '../components/TrainingTab';
 
-export type TabType = 'inbox' | 'squad' | 'market' | 'commerce' | 'tournament' | 'personnel';
+export type TabType = 'inbox' | 'squad' | 'personnel' | 'training' | 'market' | 'commerce' | 'tournament';
+
+const C = {
+  bg: '#0f1117',
+  bar: '#14161f',
+  teal: '#0fd4a8',
+  tealText: '#04342c',
+  white: '#e4e5ea',
+  vdim: '#5a5d6a',
+};
 
 export default function MainGame() {
   const [activeTab, setActiveTab] = useState<TabType>('inbox');
-  const [clubName, setClubName] = useState('F-CORP CLUB');
-  const [userName, setUserName] = useState('OWNER');
+  const [clubName, setClubName] = useState('ВЫАВЫБА');
 
   useEffect(() => {
     const club = localStorage.getItem('fcorp_club');
-    const user = localStorage.getItem('fcorp_user');
-    
     if (club) {
-      try { setClubName(JSON.parse(club).name); } catch(e) {}
-    }
-    if (user) {
-      try { setUserName(JSON.parse(user).name); } catch(e) {}
+      try {
+        const parsed = JSON.parse(club);
+        if (parsed?.name) setClubName(parsed.name.toUpperCase());
+      } catch {}
     }
   }, []);
 
+  // Close Telegram Mini App
+  const handleClose = () => {
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg?.close) tg.close();
+  };
+
   return (
-    <motion.div 
-      className="flex-1 flex flex-col bg-background relative overflow-hidden"
+    <motion.div
+      className="flex flex-col relative overflow-hidden"
+      style={{ background: C.bg, minHeight: '100dvh' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.6 }}
+      transition={{ duration: 0.4 }}
     >
-      {/* Top Header */}
-      <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 z-20 shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary text-primary-foreground flex items-center justify-center font-display font-bold text-sm tracking-tighter">
-            FC
-          </div>
+      {/* ── Top app bar ── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '16px 18px 12px', flexShrink: 0,
+      }}>
+        <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: 1, color: '#ffffff', fontFamily: 'Inter,sans-serif' }}>
+          F-CORP
+        </span>
+        <div style={{ display: 'flex', gap: 14 }}>
+          <MoreVertical size={17} color={C.vdim} strokeWidth={1.5} />
+          <X size={17} color={C.vdim} strokeWidth={1.5} onClick={handleClose} style={{ cursor: 'pointer' }} />
         </div>
-        <div className="flex flex-col items-end">
-          <span className="text-sm font-display font-bold text-white tracking-wider uppercase">
-            {clubName}
-          </span>
-          <span className="text-[10px] font-sans text-muted-foreground uppercase tracking-widest">
-            ВЛАДЕЛЕЦ: {userName}
-          </span>
-        </div>
-      </header>
+      </div>
 
-      {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto relative pb-20">
+      {/* ── Club strip ── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '10px 18px', background: C.bar, flexShrink: 0,
+      }}>
+        {/* FC hexagon badge */}
+        <div style={{
+          width: 26, height: 30, background: C.teal,
+          clipPath: 'polygon(50% 0%,100% 15%,100% 62%,50% 100%,0% 62%,0% 15%)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 10, fontWeight: 700, color: C.tealText, fontFamily: 'Inter,sans-serif',
+          flexShrink: 0,
+        }}>
+          FC
+        </div>
+        <span style={{
+          fontSize: 13, fontWeight: 500, color: C.white,
+          letterSpacing: 1, fontFamily: 'Inter,sans-serif',
+        }}>
+          {clubName}
+        </span>
+        <ChevronDown size={15} color={C.vdim} style={{ marginLeft: 'auto' }} />
+      </div>
+
+      {/* ── Tab content ── */}
+      <main style={{ flex: 1, overflowY: 'auto', position: 'relative', paddingBottom: 72 }}>
         <AnimatePresence mode="wait">
-          {activeTab === 'inbox' && <InboxTab key="inbox" />}
-          {activeTab === 'squad' && <SquadTab key="squad" />}
-          {activeTab === 'market' && <MarketTab key="market" />}
-          {activeTab === 'commerce' && <CommerceTab key="commerce" />}
+          {activeTab === 'inbox'      && <InboxTab      key="inbox" />}
+          {activeTab === 'squad'      && <SquadTab      key="squad" />}
+          {activeTab === 'personnel'  && <PersonnelTab  key="personnel" />}
+          {activeTab === 'training'   && <TrainingTab   key="training" />}
+          {activeTab === 'market'     && <MarketTab     key="market" />}
+          {activeTab === 'commerce'   && <CommerceTab   key="commerce" />}
           {activeTab === 'tournament' && <TournamentTab key="tournament" />}
-          {activeTab === 'personnel' && <PersonnelTab key="personnel" />}
         </AnimatePresence>
       </main>
 
-      {/* Sticky Bottom Nav */}
+      {/* ── Bottom nav ── */}
       <BottomNav activeTab={activeTab} onChange={setActiveTab} />
     </motion.div>
   );

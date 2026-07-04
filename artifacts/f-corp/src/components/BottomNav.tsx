@@ -1,43 +1,80 @@
-import { Inbox, Users, TrendingUp, Building2, Trophy, UserCog } from 'lucide-react';
+import { Mail, Users, Briefcase, Dumbbell, TrendingUp, Landmark, Trophy } from 'lucide-react';
 import { TabType } from '../screens/MainGame';
+
+const C = {
+  bg: '#0f1117',
+  bar: '#14161f',
+  border: '#1c1f28',
+  teal: '#0fd4a8',
+  vdim: '#5a5d6a',
+};
 
 interface Props {
   activeTab: TabType;
   onChange: (tab: TabType) => void;
 }
 
-export default function BottomNav({ activeTab, onChange }: Props) {
-  const tabs: { id: TabType; label: string; icon: any }[] = [
-    { id: 'inbox',      label: 'Входящие', icon: Inbox },
-    { id: 'squad',      label: 'Актив',    icon: Users },
-    { id: 'market',     label: 'Маркет',   icon: TrendingUp },
-    { id: 'commerce',   label: 'Коммерция',icon: Building2 },
-    { id: 'tournament', label: 'Лига',     icon: Trophy },
-    { id: 'personnel',  label: 'Персонал', icon: UserCog },
-  ];
+const TABS: { id: TabType; label: string; Icon: React.ElementType }[] = [
+  { id: 'inbox',      label: 'ПОЧТА',   Icon: Mail       },
+  { id: 'squad',      label: 'СОСТАВ',  Icon: Users      },
+  { id: 'personnel',  label: 'ШТАБ',    Icon: Briefcase  },
+  { id: 'training',   label: 'ТРЕНИР.', Icon: Dumbbell   },
+  { id: 'market',     label: 'МАРКЕТ',  Icon: TrendingUp },
+  { id: 'commerce',   label: 'ФИНАНСЫ', Icon: Landmark   },
+  { id: 'tournament', label: 'ЛИГА',    Icon: Trophy     },
+];
 
+export default function BottomNav({ activeTab, onChange }: Props) {
   return (
-    <div className="absolute bottom-0 left-0 w-full h-16 bg-card border-t border-border flex items-center justify-around px-1 z-30">
-      {tabs.map((tab) => {
-        const Icon = tab.icon;
-        const isActive = activeTab === tab.id;
-        
+    <div style={{
+      position: 'fixed', bottom: 0, left: 0, right: 0,
+      display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
+      padding: '14px 10px 8px',
+      borderTop: `0.5px solid ${C.border}`,
+      background: C.bg,
+      zIndex: 40,
+    }}>
+      {TABS.map(({ id, label, Icon }) => {
+        const active = activeTab === id;
         return (
           <button
-            key={tab.id}
-            onClick={() => onChange(tab.id)}
-            className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
-              isActive ? 'text-primary' : 'text-muted-foreground hover:text-white'
-            }`}
+            key={id}
+            onClick={() => onChange(id)}
+            style={{
+              flex: 1,
+              textAlign: 'center',
+              color: active ? C.teal : C.vdim,
+              position: 'relative',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+            }}
           >
-            <div className="relative">
-              <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 1.5} />
-              {isActive && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full shadow-[0_0_8px_rgba(0,255,135,0.8)]" />
-              )}
-            </div>
-            <span className="text-[9px] font-display uppercase tracking-wider font-bold">
-              {tab.label}
+            {/* Active indicator bar */}
+            {active && (
+              <div style={{
+                position: 'absolute',
+                top: -8,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: 16,
+                height: 2,
+                background: C.teal,
+                borderRadius: 1,
+              }} />
+            )}
+            <Icon size={17} strokeWidth={active ? 2 : 1.5} style={{ display: 'block', marginBottom: 2 }} />
+            <span style={{
+              fontSize: 8,
+              letterSpacing: '0.5px',
+              fontFamily: 'Inter,sans-serif',
+              fontWeight: active ? 700 : 400,
+            }}>
+              {label}
             </span>
           </button>
         );

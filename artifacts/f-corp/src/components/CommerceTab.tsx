@@ -1,107 +1,175 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { TrendingUp, TrendingDown, Check } from 'lucide-react';
+
+const C = {
+  card:'#1a1c25', border:'#1c1f28', border2:'#2a2d38',
+  teal:'#0fd4a8', tealText:'#04342c',
+  white:'#e4e5ea', muted:'#c8cad4', dim:'#6b6f7d', vdim:'#5a5d6a',
+  salmon:'#f0997b', yellow:'#f0b429',
+};
+
+interface StadiumItem {
+  id: string;
+  name: string;
+  incomeLabel: string;
+  costLabel: string;
+  level: number;
+  maxLevel: number;
+}
+
+const INITIAL_STADIUM: StadiumItem[] = [
+  { id:'vip',     name:'VIP ложи',          incomeLabel:'+€25K/мес', costLabel:'€500K',  level:2, maxLevel:5 },
+  { id:'north',   name:'Северная трибуна',  incomeLabel:'+€80K/мес', costLabel:'€1.2M',  level:1, maxLevel:3 },
+  { id:'screen',  name:'Электронное табло', incomeLabel:'+€15K/мес', costLabel:'—',       level:3, maxLevel:3 },
+];
+
+const INITIAL_SPONSORS = [
+  { id:'aero', name:'Aero Fly', badge:'ГЕНЕРАЛЬНЫЙ', badgeColor:C.tealText, badgeBg:C.teal,
+    meta:'€180,000/мес · осталось 8 мес', signed:true },
+  { id:'nexus', name:'Nexus Tech', badge:'РИСК: СРЕДНИЙ', badgeColor:'#412402', badgeBg:C.yellow,
+    meta:'€45,000/мес · на 12 мес', signed:false },
+];
+
+const INCOME = 275_000;
+const EXPENSES = 265_000;
 
 export default function CommerceTab() {
+  const [stadium, setStadium] = useState(INITIAL_STADIUM);
+  const [sponsors, setSponsors] = useState(INITIAL_SPONSORS);
+
+  const profit = INCOME - EXPENSES;
+
+  const upgrade = (id: string) => {
+    setStadium(prev => prev.map(s =>
+      s.id === id && s.level < s.maxLevel ? {...s, level: s.level + 1} : s
+    ));
+  };
+
+  const sign = (id: string) => {
+    setSponsors(prev => prev.map(s => s.id === id ? {...s, signed:true} : s));
+  };
+
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      className="p-4 space-y-8"
-    >
-      <div>
-        <h2 className="font-display font-bold text-2xl text-white uppercase tracking-wider mb-1">Инфраструктура</h2>
-        <p className="text-xs text-muted-foreground uppercase tracking-widest">Финансы и объекты</p>
+    <motion.div initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-10}}
+      className="flex flex-col h-full overflow-y-auto">
+
+      {/* Title */}
+      <div style={{padding:'16px 18px 0'}}>
+        <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:4}}>
+          <span style={{fontSize:22,fontWeight:700,color:'#ffffff',fontFamily:'Inter,sans-serif'}}>Финансы</span>
+          <span style={{fontSize:22,fontWeight:700,color:profit>=0?C.teal:C.salmon,fontFamily:'Inter,sans-serif'}}>
+            {profit >= 0 ? '+' : ''}€{Math.round(profit/1000)}K
+          </span>
+        </div>
+        <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:18}}>
+          <span style={{fontSize:11,letterSpacing:'0.5px',color:C.dim}}>ФИНАНСЫ И ОБЪЕКТЫ</span>
+          <span style={{fontSize:11,letterSpacing:'0.5px',color:C.dim}}>ПРИБЫЛЬ/МЕС</span>
+        </div>
       </div>
 
-      {/* Budget Dashboard */}
-      <div className="bg-card border border-border p-4">
-        <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-4">Бюджетный отчет</div>
-        
-        <div className="flex justify-between items-center mb-2 pb-2 border-b border-white/5">
-          <span className="text-[10px] uppercase text-muted-foreground">Доходы (Билеты, Спонсоры)</span>
-          <span className="font-mono text-sm text-primary">+ €275,000</span>
-        </div>
-        
-        <div className="flex justify-between items-center mb-4 pb-2 border-b border-white/5">
-          <span className="text-[10px] uppercase text-muted-foreground">Расходы (ЗП, Объекты)</span>
-          <span className="font-mono text-sm text-destructive">- €265,000</span>
-        </div>
-        
-        <div className="flex justify-between items-center pt-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-white">Чистая прибыль</span>
-          <span className="font-mono text-lg font-bold text-primary">+ €10,000 / мес</span>
+      {/* Budget card */}
+      <div style={{padding:'0 18px 20px'}}>
+        <div style={{background:C.card,borderRadius:12,padding:16}}>
+          <div style={{fontSize:11,fontWeight:600,letterSpacing:'0.5px',color:C.dim,marginBottom:12}}>БЮДЖЕТНЫЙ ОТЧЁТ</div>
+
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+            <div style={{display:'flex',alignItems:'center',gap:6}}>
+              <TrendingUp size={14} color={C.teal} />
+              <span style={{fontSize:12,color:C.muted}}>Доходы</span>
+            </div>
+            <span style={{fontSize:13,fontWeight:700,color:C.teal}}>+€{(INCOME/1000).toFixed(0)}K</span>
+          </div>
+
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
+            <div style={{display:'flex',alignItems:'center',gap:6}}>
+              <TrendingDown size={14} color={C.salmon} />
+              <span style={{fontSize:12,color:C.muted}}>Расходы</span>
+            </div>
+            <span style={{fontSize:13,fontWeight:700,color:C.salmon}}>-€{(EXPENSES/1000).toFixed(0)}K</span>
+          </div>
+
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',
+            borderTop:`0.5px solid #262a35`,paddingTop:12}}>
+            <span style={{fontSize:12,fontWeight:600,color:C.white}}>Чистая прибыль</span>
+            <span style={{fontSize:15,fontWeight:700,color:C.teal}}>
+              +€{Math.round(profit/1000).toLocaleString()},000/мес
+            </span>
+          </div>
         </div>
       </div>
 
       {/* Sponsors */}
-      <div className="space-y-3">
-        <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Спонсоры</div>
-        
-        <div className="bg-card border border-border p-3 flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-sm font-bold text-white uppercase">AERO FLY</span>
-              <span className="text-[8px] bg-primary/20 text-primary px-1.5 py-0.5 border border-primary/30 uppercase">Генеральный</span>
+      <div style={{padding:'0 18px 20px'}}>
+        <div style={{fontSize:11,fontWeight:600,letterSpacing:'0.5px',color:C.dim,marginBottom:10}}>СПОНСОРЫ</div>
+        {sponsors.map(sp => (
+          <div key={sp.id} style={{background:C.card,borderRadius:12,padding:14,marginBottom:10}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+              <span style={{fontSize:14,fontWeight:700,color:'#ffffff'}}>{sp.name}</span>
+              <span style={{fontSize:9,fontWeight:700,color:sp.badgeColor,
+                background:sp.badgeBg,padding:'2px 8px',borderRadius:10}}>
+                {sp.badge}
+              </span>
             </div>
-            <div className="text-[10px] text-muted-foreground font-mono">€180,000/мес • Осталось 8 мес</div>
+            <div style={{fontSize:11,color:C.vdim,marginBottom:10}}>{sp.meta}</div>
+            <button onClick={() => !sp.signed && sign(sp.id)}
+              style={{width:'100%',
+                background: sp.signed ? 'transparent' : C.teal,
+                border: sp.signed ? `0.5px solid ${C.teal}` : 'none',
+                color: sp.signed ? C.teal : C.tealText,
+                fontSize:11,fontWeight:sp.signed?600:700,
+                padding:'8px',borderRadius:20,cursor:'pointer'}}>
+              {sp.signed ? 'Активен' : 'Подписать'}
+            </button>
           </div>
-          <button disabled className="bg-primary/20 text-primary border border-primary text-[9px] font-bold uppercase tracking-wider px-3 py-1">
-            Активен
-          </button>
-        </div>
-
-        <div className="bg-card border border-border p-3 flex items-center justify-between opacity-70">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-sm font-bold text-white uppercase">NEXUS TECH</span>
-              <span className="text-[8px] bg-yellow-500/20 text-yellow-500 px-1.5 py-0.5 border border-yellow-500/30 uppercase">Риск: Средний</span>
-            </div>
-            <div className="text-[10px] text-muted-foreground font-mono">€45,000/мес • На 12 мес</div>
-          </div>
-          <button className="bg-white/5 text-white border border-border text-[9px] font-bold uppercase tracking-wider px-3 py-1 hover:bg-white/10 hover:border-white/30 transition-colors">
-            Подписать
-          </button>
-        </div>
+        ))}
       </div>
 
       {/* Stadium */}
-      <div className="space-y-3">
-        <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Стадион</div>
-        
-        <div className="grid gap-3">
-          {[
-            { name: 'VIP Ложи', level: 2, max: 5, cost: '€500K', inc: '+€25K/мес' },
-            { name: 'Северная Трибуна', level: 1, max: 3, cost: '€1.2M', inc: '+€80K/мес' },
-            { name: 'Электронное табло', level: 3, max: 3, cost: 'МАКС', inc: '-' },
-          ].map((u, i) => (
-            <div key={i} className="bg-card border border-border p-3 flex flex-col gap-3">
-              <div className="flex justify-between items-start">
-                <div>
-                  <div className="text-sm font-bold text-white uppercase mb-1">{u.name}</div>
-                  <div className="flex gap-1">
-                    {Array.from({ length: u.max }).map((_, idx) => (
-                      <div key={idx} className={`w-3 h-1 ${idx < u.level ? 'bg-primary' : 'bg-white/10'}`} />
-                    ))}
-                  </div>
+      <div style={{padding:'0 18px 80px'}}>
+        <div style={{fontSize:11,fontWeight:600,letterSpacing:'0.5px',color:C.dim,marginBottom:10}}>СТАДИОН</div>
+        {stadium.map(s => {
+          const maxed = s.level >= s.maxLevel;
+          return (
+            <div key={s.id} style={{background:C.card,borderRadius:12,padding:14,marginBottom:10}}>
+              <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:8}}>
+                <span style={{fontSize:14,fontWeight:700,color:'#ffffff'}}>{s.name}</span>
+                <div style={{textAlign:'right'}}>
+                  {maxed
+                    ? <Check size={15} color={C.teal} />
+                    : <>
+                        <div style={{fontSize:12,fontWeight:700,color:C.teal}}>{s.incomeLabel}</div>
+                        <div style={{fontSize:10,color:C.vdim}}>{s.costLabel}</div>
+                      </>
+                  }
                 </div>
-                {u.cost !== 'МАКС' && (
-                  <div className="text-right">
-                    <div className="text-[10px] text-primary uppercase">{u.inc}</div>
-                    <div className="text-xs font-mono text-muted-foreground">{u.cost}</div>
-                  </div>
-                )}
               </div>
-              <button 
-                disabled={u.cost === 'МАКС'}
-                className="w-full bg-white/5 border border-border text-muted-foreground text-[10px] font-bold font-display uppercase tracking-widest py-2 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-30"
-              >
-                {u.cost === 'МАКС' ? 'МАКСИМАЛЬНЫЙ УРОВЕНЬ' : 'УЛУЧШИТЬ'}
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
 
+              {/* Level bars */}
+              <div style={{display:'flex',gap:3,marginBottom:12}}>
+                {Array.from({length:s.maxLevel}).map((_,i) => (
+                  <div key={i} style={{width:16,height:4,borderRadius:2,
+                    background: i < s.level ? C.teal : C.border2}} />
+                ))}
+              </div>
+
+              {maxed
+                ? <div style={{width:'100%',textAlign:'center',color:'#4a4d5a',
+                    fontSize:11,fontWeight:600,padding:'8px',borderRadius:20,
+                    background:'#15161d'}}>
+                    Максимальный уровень
+                  </div>
+                : <button onClick={() => upgrade(s.id)}
+                    style={{width:'100%',background:'transparent',
+                      border:`0.5px solid ${C.border2}`,color:C.muted,
+                      fontSize:11,fontWeight:600,padding:'8px',borderRadius:20,cursor:'pointer'}}>
+                    Улучшить
+                  </button>
+              }
+            </div>
+          );
+        })}
+      </div>
     </motion.div>
   );
 }
