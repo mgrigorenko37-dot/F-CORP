@@ -8,8 +8,9 @@ import SquadTab from '../components/SquadTab';
 import MarketTab from '../components/MarketTab';
 import CommerceTab from '../components/CommerceTab';
 import TournamentTab from '../components/TournamentTab';
+import PersonnelTab from '../components/PersonnelTab';
 
-export type TabType = 'inbox' | 'squad' | 'market' | 'commerce' | 'tournament';
+export type TabType = 'inbox' | 'squad' | 'market' | 'commerce' | 'tournament' | 'personnel';
 
 export default function MainGame() {
   const [activeTab, setActiveTab] = useState<TabType>('inbox');
@@ -60,6 +61,7 @@ export default function MainGame() {
           {activeTab === 'market' && <MarketTab key="market" />}
           {activeTab === 'commerce' && <CommerceTab key="commerce" />}
           {activeTab === 'tournament' && <TournamentTab key="tournament" />}
+          {activeTab === 'personnel' && <PersonnelTab key="personnel" />}
         </AnimatePresence>
       </main>
 

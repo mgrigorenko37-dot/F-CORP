@@ -1,4 +1,4 @@
-import { Inbox, Users, TrendingUp, Building2, Trophy } from 'lucide-react';
+import { Inbox, Users, TrendingUp, Building2, Trophy, UserCog } from 'lucide-react';
 import { TabType } from '../screens/MainGame';
 
 interface Props {
@@ -8,15 +8,16 @@ interface Props {
 
 export default function BottomNav({ activeTab, onChange }: Props) {
   const tabs: { id: TabType; label: string; icon: any }[] = [
-    { id: 'inbox', label: 'Входящие', icon: Inbox },
-    { id: 'squad', label: 'Актив', icon: Users },
-    { id: 'market', label: 'Маркет', icon: TrendingUp },
-    { id: 'commerce', label: 'Коммерция', icon: Building2 },
-    { id: 'tournament', label: 'Лига', icon: Trophy },
+    { id: 'inbox',      label: 'Входящие', icon: Inbox },
+    { id: 'squad',      label: 'Актив',    icon: Users },
+    { id: 'market',     label: 'Маркет',   icon: TrendingUp },
+    { id: 'commerce',   label: 'Коммерция',icon: Building2 },
+    { id: 'tournament', label: 'Лига',     icon: Trophy },
+    { id: 'personnel',  label: 'Персонал', icon: UserCog },
   ];
 
   return (
-    <div className="absolute bottom-0 left-0 w-full h-16 bg-card border-t border-border flex items-center justify-around px-2 z-30">
+    <div className="absolute bottom-0 left-0 w-full h-16 bg-card border-t border-border flex items-center justify-around px-1 z-30">
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;
