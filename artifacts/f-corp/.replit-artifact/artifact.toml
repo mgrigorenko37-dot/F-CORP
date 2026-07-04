@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "F-CORP Football Manager"
+version = "1.0.0"
+id = "artifacts/f-corp"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23610
+
+[services.development]
+run = "pnpm --filter @workspace/f-corp run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/f-corp", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/f-corp/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23610"
+BASE_PATH = "/"
