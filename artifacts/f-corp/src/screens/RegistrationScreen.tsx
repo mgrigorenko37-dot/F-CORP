@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { countries } from '../data/countries';
 import { Check } from 'lucide-react';
+import { getUser, saveUser } from '../lib/storage';
 
 interface Props {
   onNext: () => void;
@@ -9,9 +10,12 @@ interface Props {
 }
 
 export default function RegistrationScreen({ onNext, defaultName }: Props) {
-  const [name, setName] = useState(defaultName ?? '');
-  const [age, setAge] = useState<string>('');
-  const [country, setCountry] = useState<string>('');
+  // Restore previously saved valid data (user closed app mid-onboarding)
+  const saved = getUser();
+
+  const [name, setName] = useState<string>(saved?.name ?? defaultName ?? '');
+  const [age, setAge] = useState<string>(saved?.age != null ? String(saved.age) : '');
+  const [country, setCountry] = useState<string>(saved?.country ?? '');
   const [search, setSearch] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -19,7 +23,7 @@ export default function RegistrationScreen({ onNext, defaultName }: Props) {
 
   const handleContinue = () => {
     if (isValid) {
-      localStorage.setItem('fcorp_user', JSON.stringify({ name, age: Number(age), country }));
+      saveUser({ name: name.trim(), age: Number(age), country });
       onNext();
     }
   };

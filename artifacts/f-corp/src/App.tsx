@@ -7,6 +7,7 @@ import LeagueSelectionScreen from './screens/LeagueSelectionScreen';
 import ClubCreationScreen from './screens/ClubCreationScreen';
 import MainGame from './screens/MainGame';
 import { initTelegram, getTelegramWebApp, getTelegramUserName } from './lib/telegram';
+import { isOnboardingComplete, getUser, getLeagueCountry } from './lib/storage';
 
 export type AppState = 'splash' | 'registration' | 'league' | 'club' | 'game';
 
@@ -27,11 +28,20 @@ function App() {
     initTelegram();
   }, []);
 
-  // Auto-advance from splash
+  // Auto-advance from splash — resume from last valid completed step
   useEffect(() => {
-    const isComplete = localStorage.getItem('fcorp_onboarding_complete') === 'true';
     const timer = setTimeout(() => {
-      setCurrentScreen(isComplete ? 'game' : 'registration');
+      if (isOnboardingComplete()) {
+        setCurrentScreen('game');
+      } else if (getLeagueCountry() !== null) {
+        // Valid league chosen but club not yet created
+        setCurrentScreen('club');
+      } else if (getUser() !== null) {
+        // Valid user registered but league not yet chosen
+        setCurrentScreen('league');
+      } else {
+        setCurrentScreen('registration');
+      }
     }, 2500);
     return () => clearTimeout(timer);
   }, []);

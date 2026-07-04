@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { countries } from '../data/countries';
 import { Search, Map } from 'lucide-react';
+import { getLeagueCountry, saveLeagueCountry } from '../lib/storage';
 
 interface Props {
   onNext: () => void;
@@ -9,13 +10,14 @@ interface Props {
 
 export default function LeagueSelectionScreen({ onNext }: Props) {
   const [search, setSearch] = useState('');
-  const [selectedLeague, setSelectedLeague] = useState<string>('');
+  // Restore previously saved valid selection
+  const [selectedLeague, setSelectedLeague] = useState<string>(getLeagueCountry() ?? '');
 
   const filteredCountries = countries.filter(c => c.toLowerCase().includes(search.toLowerCase()));
 
   const handleContinue = () => {
     if (selectedLeague) {
-      localStorage.setItem('fcorp_league_country', selectedLeague);
+      saveLeagueCountry(selectedLeague);
       onNext();
     }
   };

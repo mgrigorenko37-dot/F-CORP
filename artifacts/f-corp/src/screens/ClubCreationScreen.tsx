@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
+import { getClub, saveClub, completeOnboarding } from '../lib/storage';
 
 interface Props {
   onNext: () => void;
@@ -13,22 +14,20 @@ const COLORS = [
 ];
 
 export default function ClubCreationScreen({ onNext }: Props) {
-  const [clubName, setClubName] = useState('');
-  const [stadiumName, setStadiumName] = useState('');
-  const [primaryColor, setPrimaryColor] = useState('#ffffff');
-  const [secondaryColor, setSecondaryColor] = useState('#000000');
+  // Restore previously saved valid club data (user closed app mid-onboarding)
+  const saved = getClub();
+
+  const [clubName, setClubName] = useState<string>(saved?.name ?? '');
+  const [stadiumName, setStadiumName] = useState<string>(saved?.stadium ?? '');
+  const [primaryColor, setPrimaryColor] = useState<string>(saved?.primaryColor ?? '#ffffff');
+  const [secondaryColor, setSecondaryColor] = useState<string>(saved?.secondaryColor ?? '#000000');
 
   const isValid = clubName.trim().length > 0 && stadiumName.trim().length > 0;
 
   const handleFound = () => {
     if (isValid) {
-      localStorage.setItem('fcorp_club', JSON.stringify({ 
-        name: clubName, 
-        stadium: stadiumName,
-        primaryColor,
-        secondaryColor
-      }));
-      localStorage.setItem('fcorp_onboarding_complete', 'true');
+      saveClub({ name: clubName.trim(), stadium: stadiumName.trim(), primaryColor, secondaryColor });
+      completeOnboarding();
       onNext();
     }
   };
