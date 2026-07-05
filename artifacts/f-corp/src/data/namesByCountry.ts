@@ -293,6 +293,155 @@ const pools: Record<string, NamePool> = {
   },
 };
 
+// ── Extra pools ───────────────────────────────────────────────────────────
+
+pools['sc'] = {
+  first: [
+    'Callum','Cameron','Craig','David','Ewan','Fraser','Gregor','Hamish',
+    'Iain','Jamie','Kieran','Liam','Malcolm','Neil','Owen','Ross','Scott',
+    'Stuart','Connor','Duncan','Euan','Fergus','Graeme','Kerr','Logan','Murray',
+    'Ryan','Sean','Angus','Bruce',
+  ],
+  last: [
+    'Campbell','MacDonald','MacKenzie','Robertson','Stewart','Thomson','Morrison',
+    'Anderson','Hamilton','Henderson','Graham','Wallace','Bruce','Douglas','Reid',
+    'Murray','Mitchell','Ferguson','MacLeod','Mackay','Grant','Patterson',
+    'Black','Kerr','Cunningham','Sinclair','Ross','Boyd','Fleming','Christie',
+  ],
+};
+
+pools['el'] = {
+  first: [
+    'Giorgos','Nikos','Kostas','Dimitris','Yannis','Alexandros','Petros',
+    'Stavros','Thanos','Vassilis','Christos','Spyros','Lefteris','Makis',
+    'Panagiotis','Antonis','Takis','Manolis','Stelios','Giannis',
+    'Apostolis','Babanikos','Christoforos','Dimos','Eleftherios',
+    'Fotis','Grigoris','Haris','Ilias','Kosmas',
+  ],
+  last: [
+    'Papadopoulos','Georgiou','Nikolaou','Alexiou','Dimitriou','Stavros',
+    'Kostopoulos','Papadakis','Theodorou','Vassilopoulos','Christodoulou',
+    'Spyropoulos','Antoniadis','Mitropoulos','Konstantinou','Andreou',
+    'Karamanlis','Stefanopoulos','Papageorgiou','Delaportas',
+    'Evangelou','Fragkos','Giannopoulos','Hatzigeorgiou','Ioannou',
+    'Kakouros','Lamprou','Makris','Nikopoulos','Oikonomou',
+  ],
+};
+
+pools['sr'] = {
+  first: [
+    'Aleksandar','Bojan','Dejan','Filip','Goran','Igor','Ivan','Jovan',
+    'Lazar','Marko','Nemanja','Nikola','Petar','Rade','Stefan','Uroš',
+    'Vladimir','Vuk','Zoran','Branko','Dragan','Đorđe','Mladen',
+    'Predrag','Saša','Srđan','Slobodan','Miloš','Andrej','Aleksa',
+  ],
+  last: [
+    'Đorđević','Jovanović','Nikolić','Petrović','Popović','Savić',
+    'Stanković','Stefanović','Marković','Todorović','Vasić','Milić',
+    'Ivanović','Kovačević','Lukić','Milošević','Nešić','Obradović',
+    'Perović','Ristić','Simić','Tomić','Vujović','Živković',
+    'Arsenović','Bogdanović','Ćosić','Dimitrijević','Erić','Filipović',
+  ],
+};
+
+pools['hr'] = {
+  first: [
+    'Antonio','Bruno','Dario','Domagoj','Filip','Ivan','Josip','Karlo',
+    'Luka','Marko','Mateo','Nikola','Petar','Roko','Sandro','Tomislav',
+    'Vedran','Zvonimir','Alen','Boris','Danijel','Eduard','Frane',
+    'Goran','Hrvoje','Igor','Jakov','Krešimir','Leon','Marin',
+  ],
+  last: [
+    'Babić','Čabrić','Domjanić','Fabijanić','Gašparić','Horvat',
+    'Ivić','Jurić','Kovač','Lovrić','Marić','Nikolić','Orlić',
+    'Perić','Rakić','Stipić','Tomić','Ujević','Vrdoljak','Žanić',
+    'Barbarić','Crnković','Duvnjak','Ergović','Franjić','Grbić',
+    'Hanžek','Ivanušić','Jelić','Knežević',
+  ],
+};
+
+pools['da'] = {
+  first: [
+    'Anders','Bjørn','Casper','Daniel','Emil','Frederik','Gustav','Henrik',
+    'Jesper','Kasper','Lars','Mads','Nicolai','Oliver','Peter','Rasmus',
+    'Simon','Thomas','Victor','William','Andreas','Christian','David',
+    'Erik','Filip','Jens','Jonas','Mathias','Mikkel','Søren',
+  ],
+  last: [
+    'Andersen','Christensen','Hansen','Jensen','Johansen','Larsen',
+    'Madsen','Nielsen','Pedersen','Rasmussen','Sørensen','Thomsen',
+    'Christoffersen','Eriksen','Frandsen','Gregersen','Holm','Iversen',
+    'Jakobsen','Kjærgaard','Lund','Mortensen','Nørgaard','Olsen',
+    'Paulsen','Qvistgaard','Rohde','Simonsen','Thorsen','Vestergaard',
+  ],
+};
+
+pools['sv'] = {
+  first: [
+    'Anders','Björn','Carl','David','Erik','Filip','Gustav','Henrik',
+    'Jakob','Karl','Lars','Martin','Niklas','Oscar','Per','Robin',
+    'Simon','Thomas','Victor','Wilhelm','Andreas','Axel','Christoffer',
+    'Daniel','Emil','Fredrik','Jonas','Kristoffer','Ludvig','Marcus',
+  ],
+  last: [
+    'Andersson','Eriksson','Gustafsson','Hansson','Johansson','Karlsson',
+    'Larsson','Lindqvist','Magnusson','Nilsson','Olsson','Persson',
+    'Pettersson','Svensson','Jansson','Lindberg','Lindström','Sjöberg',
+    'Ström','Bergman','Björk','Claesson','Dahlström','Edström','Forsberg',
+    'Granlund','Hedström','Isaksson','Jakobsson','Krogh',
+  ],
+};
+
+pools['no'] = {
+  first: [
+    'Anders','Bjørn','Christian','Daniel','Erik','Fredrik','Gunnar','Hans',
+    'Jan','Kristian','Lars','Magnus','Nicolai','Ola','Per','Rune',
+    'Sigurd','Thomas','Vegard','Øyvind','Andreas','Bjørnar','Dag',
+    'Espen','Frode','Geir','Hallvard','Ingvar','Jonas','Kjetil',
+  ],
+  last: [
+    'Andersen','Berg','Christensen','Dahl','Eriksen','Fredriksen',
+    'Hansen','Jensen','Johansen','Karlsen','Larsen','Mikkelsen',
+    'Nilsen','Olsen','Pedersen','Rasmussen','Sørensen','Thomsen',
+    'Andreassen','Bakke','Christiansen','Evensen','Gulbrandsen',
+    'Halvorsen','Isaksen','Johansen','Knutsen','Lindgaard','Mathiesen',
+  ],
+};
+
+pools['cs'] = {
+  first: [
+    'Adam','Daniel','Filip','Jakub','Jan','Jiří','Karel','Lukáš',
+    'Martin','Marek','Michal','Milan','Miroslav','Ondřej','Pavel',
+    'Petr','Radek','Radovan','Stanislav','Tomáš','Vojtěch','Zdeněk',
+    'Antonín','Bronislav','Cyril','David','Eduard','František','Gustav',
+    'Hynek',
+  ],
+  last: [
+    'Beneš','Čech','Dočkal','Fiala','Hájek','Horák','Horáček',
+    'Janda','Jelínek','Koplík','Kratochvíl','Krejčí','Machač',
+    'Marek','Navrátil','Novák','Novotný','Pekař','Procházka',
+    'Sedláček','Semerád','Šimánek','Špaček','Svoboda','Tomáš',
+    'Urban','Vaněk','Veselý','Vlček','Zeman',
+  ],
+};
+
+pools['pt_eu'] = {
+  first: [
+    'André','Bruno','Carlos','Diogo','Eduardo','Francisco','Gonçalo',
+    'Hugo','João','Luís','Marco','Nuno','Pedro','Ricardo','Rui',
+    'Sérgio','Tiago','Vasco','Alexandre','Bernardo','Cristiano','Daniel',
+    'Emanuel','Fábio','Guilherme','Henrique','Ivo','Jorge','Leandro',
+    'Miguel',
+  ],
+  last: [
+    'Alves','Carvalho','Costa','Ferreira','Gomes','Lopes','Martins',
+    'Melo','Moreira','Neves','Oliveira','Pereira','Rodrigues','Santos',
+    'Seabra','Silva','Soares','Sousa','Teixeira','Vieira',
+    'Araújo','Barbosa','Correia','Dias','Esteves','Figueiredo',
+    'Gonçalves','Henriques','Inácio','Jesus',
+  ],
+};
+
 // ── Country → pool mapping ────────────────────────────────────────────────
 
 const countryToPool: Record<string, string> = {
@@ -312,10 +461,11 @@ const countryToPool: Record<string, string> = {
   'Сальвадор':'es','Никарагуа':'es','Коста-Рика':'es','Панама':'es',
 
   // Portuguese/Brazilian
-  'Бразилия':'pt','Португалия':'pt','Ангола':'pt','Мозамбик':'pt',
+  'Бразилия':'pt','Ангола':'pt','Мозамбик':'pt',
+  'Португалия':'pt_eu',
 
   // German
-  'Германия':'de','Австрия':'de','Лихтенштейн':'de',
+  'Германия':'de','Австрия':'de','Лихтенштейн':'de','Швейцария':'de',
 
   // French
   'Франция':'fr','Люксембург':'fr','Монако':'fr',
@@ -327,7 +477,7 @@ const countryToPool: Record<string, string> = {
   'Италия':'it','Сан-Марино':'it',
 
   // Dutch
-  'Нидерланды':'nl',
+  'Нидерланды':'nl','Бельгия':'nl',
 
   // Turkish
   'Турция':'tr','Азербайджан':'tr',
@@ -357,9 +507,33 @@ const countryToPool: Record<string, string> = {
   'Замбия':'af','Зимбабве':'af','Руанда':'af','Сенегал':'af',
   'Сьерра-Леоне':'af','Либерия':'af','Намибия':'af',
 
-  // English
-  'Великобритания':'en','США':'en','Австралия':'en',
+  // English-speaking
+  'Англия':'en','Великобритания':'en','США':'en','Австралия':'en',
   'Ирландия':'en','Канада':'en','Новая Зеландия':'en',
+
+  // Scottish
+  'Шотландия':'sc',
+
+  // Greek
+  'Греция':'el',
+
+  // Serbian
+  'Сербия':'sr',
+
+  // Croatian
+  'Хорватия':'hr',
+
+  // Danish
+  'Дания':'da',
+
+  // Swedish
+  'Швеция':'sv',
+
+  // Norwegian
+  'Норвегия':'no',
+
+  // Czech
+  'Чехия':'cs',
 };
 
 export function getPoolForCountry(country: string): NamePool {

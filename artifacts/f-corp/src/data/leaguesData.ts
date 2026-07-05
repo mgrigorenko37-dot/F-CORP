@@ -10,7 +10,7 @@ export interface LeagueInfo {
   totalClubs: number; // real-world club count
   promoted: number;   // top N spots = promotion
   relegated: number;  // bottom N spots = relegation (0 if lowest)
-  rivals: string[];   // 7 rival clubs shown in table
+  rivals: string[];   // rival clubs shown in table (should be totalClubs-1)
 }
 
 export interface CountryData {
@@ -40,13 +40,13 @@ export const COUNTRY_LEAGUES: Record<string, CountryData> = {
     flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
     leagues: [
       { level: 1, name: 'Premier League', totalClubs: 20, promoted: 0, relegated: 3,
-        rivals: ['Westbridge City', 'Northgate United', 'Riverside Athletic', 'Eastfield Town', 'Thornwick FC', 'Bramley Rovers', 'Halford City'] },
+        rivals: ['Westbridge City','Northgate United','Riverside Athletic','Eastfield Town','Thornwick FC','Bramley Rovers','Halford City','Castleworth FC','Wellington United','Hartley City','Midfield Athletic','Sandown City','Fairway United','Cromwell FC','Lakefield City','Edgebury Athletic','Southwell United','Grange City','Pemberton Rovers'] },
       { level: 2, name: 'Championship', totalClubs: 24, promoted: 3, relegated: 3,
-        rivals: ['Greywood United', 'Farrow Town', 'Coldbury FC', 'Milworth City', 'Stonebridge Wed', 'Portview City', 'Ashton Vale'] },
+        rivals: ['Greywood United','Farrow Town','Coldbury FC','Milworth City','Stonebridge Wed','Portview City','Ashton Vale','Kendal Athletic','Shrewfield Town','Darbourne City','Westport United','Blackwater FC','Holmbury City','Covely Athletic','Northwick Town','Stafford Vale','Chelver United','Southgate City','Warnfield Rovers','Penngate Town','Felton Athletic','Maidwich United','Brentwick City'] },
       { level: 3, name: 'League One', totalClubs: 24, promoted: 4, relegated: 4,
-        rivals: ['Barwick AFC', 'Fenmore Town', 'Redstone FC', 'Huxton Park', 'Linbrook City', 'Berrow Albion', 'Camford Utd'] },
+        rivals: ['Barwick AFC','Fenmore Town','Redstone FC','Huxton Park','Linbrook City','Berrow Albion','Camford Utd','Thornton City','Blackfield Rovers','Sefton Park FC','Lydbury United','Cresthaven Athletic','Mosswood City','Oakbrook United','Grantham Vale','Helmsley Town','Pelbury Rovers','Stratton Athletic','Dalbridge FC','Weaverport City','Alnwick United','Silkby Town','Greenford AFC'] },
       { level: 4, name: 'League Two', totalClubs: 24, promoted: 4, relegated: 2,
-        rivals: ['AFC Dunmoor', 'Harwick Town', 'Moorcastle', 'Trentfield Rovers', 'Grimwood Town', 'Colbury Utd', 'Crowley Alexandra'] },
+        rivals: ['AFC Dunmoor','Harwick Town','Moorcastle','Trentfield Rovers','Grimwood Town','Colbury Utd','Crowley Alexandra','Pembrook City','Stockwell United','Oakvale FC','Hadleigh Town','Crestford Athletic','Bridgemoor Rovers','Westham Park','Dunfield City','Ashwick United','Porton Athletic','Heathfield Town','Stonewick FC','Fairwood United','Malford City','Woodsworth Albion','Granville Rovers'] },
     ],
   },
 

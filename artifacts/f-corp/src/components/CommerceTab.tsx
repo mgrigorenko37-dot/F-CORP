@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, Check } from 'lucide-react';
+import { TrendingUp, TrendingDown, Check, Wallet, Plus, Minus } from 'lucide-react';
+import { loadGameState, topUpWallet, withdrawFromWallet } from '../lib/gameState';
 
 const C = {
   card:'#1a1c25', border:'#1c1f28', border2:'#2a2d38',
@@ -34,11 +35,37 @@ const INITIAL_SPONSORS = [
 const INCOME = 275_000;
 const EXPENSES = 265_000;
 
+const TOPUP_AMOUNTS = [500_000, 1_000_000, 2_000_000, 5_000_000];
+
 export default function CommerceTab() {
-  const [stadium, setStadium] = useState(INITIAL_STADIUM);
-  const [sponsors, setSponsors] = useState(INITIAL_SPONSORS);
+  const [stadium, setStadium]       = useState(INITIAL_STADIUM);
+  const [sponsors, setSponsors]     = useState(INITIAL_SPONSORS);
+  const [walletBalance, setWallet]  = useState(5_000_000);
+  const [showTopup, setShowTopup]   = useState(false);
+  const [showWithdraw, setShowWithdraw] = useState(false);
+  const [customAmount, setCustomAmount] = useState('');
+
+  useEffect(() => {
+    const gs = loadGameState();
+    setWallet(gs.walletBalance);
+  }, []);
 
   const profit = INCOME - EXPENSES;
+
+  const doTopup = (amount: number) => {
+    topUpWallet(amount);
+    setWallet(b => b + amount);
+    setShowTopup(false);
+    setCustomAmount('');
+  };
+
+  const doWithdraw = (amount: number) => {
+    const safe = Math.min(amount, walletBalance);
+    withdrawFromWallet(safe);
+    setWallet(b => Math.max(0, b - safe));
+    setShowWithdraw(false);
+    setCustomAmount('');
+  };
 
   const upgrade = (id: string) => {
     setStadium(prev => prev.map(s =>
@@ -65,6 +92,83 @@ export default function CommerceTab() {
         <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:18}}>
           <span style={{fontSize:11,letterSpacing:'0.5px',color:C.dim}}>ФИНАНСЫ И ОБЪЕКТЫ</span>
           <span style={{fontSize:11,letterSpacing:'0.5px',color:C.dim}}>ПРИБЫЛЬ/МЕС</span>
+        </div>
+      </div>
+
+      {/* Wallet card */}
+      <div style={{padding:'0 18px 16px'}}>
+        <div style={{background:'linear-gradient(135deg,#1a1c25 0%,#1f222d 100%)',borderRadius:16,padding:16,border:`0.5px solid ${C.border2}`}}>
+          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
+            <Wallet size={16} color={C.yellow} />
+            <span style={{fontSize:11,fontWeight:700,letterSpacing:'0.5px',color:C.dim}}>КОШЕЛЁК КЛУБА</span>
+          </div>
+          <div style={{fontSize:28,fontWeight:800,color:C.yellow,marginBottom:14,fontFamily:'Inter,sans-serif'}}>
+            {walletBalance >= 1_000_000
+              ? `€${(walletBalance/1_000_000).toFixed(2)}M`
+              : `€${Math.round(walletBalance/1_000)}K`}
+          </div>
+          <div style={{display:'flex',gap:8}}>
+            <button onClick={() => { setShowTopup(!showTopup); setShowWithdraw(false); setCustomAmount(''); }}
+              style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:5,
+                background:C.teal,border:'none',color:C.tealText,fontWeight:700,fontSize:12,
+                padding:'9px',borderRadius:20,cursor:'pointer'}}>
+              <Plus size={13} /> Пополнить
+            </button>
+            <button onClick={() => { setShowWithdraw(!showWithdraw); setShowTopup(false); setCustomAmount(''); }}
+              style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:5,
+                background:'transparent',border:`0.5px solid ${C.border2}`,
+                color:C.muted,fontWeight:600,fontSize:12,
+                padding:'9px',borderRadius:20,cursor:'pointer'}}>
+              <Minus size={13} /> Вывести
+            </button>
+          </div>
+
+          {/* Top-up panel */}
+          {showTopup && (
+            <div style={{marginTop:12,padding:12,background:'rgba(15,212,168,0.06)',borderRadius:12,border:`0.5px solid ${C.teal}40`}}>
+              <div style={{fontSize:10,letterSpacing:'0.5px',color:C.teal,fontWeight:700,marginBottom:10}}>ВЫБЕРИТЕ СУММУ ПОПОЛНЕНИЯ</div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:8}}>
+                {TOPUP_AMOUNTS.map(a => (
+                  <button key={a} onClick={() => doTopup(a)}
+                    style={{background:`${C.teal}18`,border:`0.5px solid ${C.teal}40`,
+                      color:C.teal,fontWeight:700,fontSize:11,padding:'8px',borderRadius:12,cursor:'pointer'}}>
+                    +€{a >= 1_000_000 ? `${a/1_000_000}M` : `${a/1_000}K`}
+                  </button>
+                ))}
+              </div>
+              <div style={{display:'flex',gap:8}}>
+                <input value={customAmount} onChange={e => setCustomAmount(e.target.value.replace(/[^0-9]/g,''))}
+                  placeholder="Своя сумма €"
+                  style={{flex:1,background:'transparent',border:`0.5px solid ${C.border2}`,
+                    color:C.white,fontSize:12,padding:'8px 12px',borderRadius:12,outline:'none'}} />
+                <button onClick={() => { const n = Number(customAmount); if (n > 0) doTopup(n); }}
+                  disabled={!customAmount || Number(customAmount) <= 0}
+                  style={{background:C.teal,border:'none',color:C.tealText,fontWeight:700,
+                    fontSize:12,padding:'8px 14px',borderRadius:12,cursor:'pointer'}}>
+                  ОК
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Withdraw panel */}
+          {showWithdraw && (
+            <div style={{marginTop:12,padding:12,background:'rgba(240,153,123,0.06)',borderRadius:12,border:`0.5px solid ${C.salmon}40`}}>
+              <div style={{fontSize:10,letterSpacing:'0.5px',color:C.salmon,fontWeight:700,marginBottom:10}}>ВВЕДИТЕ СУММУ ВЫВОДА</div>
+              <div style={{display:'flex',gap:8}}>
+                <input value={customAmount} onChange={e => setCustomAmount(e.target.value.replace(/[^0-9]/g,''))}
+                  placeholder={`Макс: €${Math.round(walletBalance/1000)}K`}
+                  style={{flex:1,background:'transparent',border:`0.5px solid ${C.border2}`,
+                    color:C.white,fontSize:12,padding:'8px 12px',borderRadius:12,outline:'none'}} />
+                <button onClick={() => { const n = Number(customAmount); if (n > 0) doWithdraw(n); }}
+                  disabled={!customAmount || Number(customAmount) <= 0}
+                  style={{background:C.salmon,border:'none',color:'#fff',fontWeight:700,
+                    fontSize:12,padding:'8px 14px',borderRadius:12,cursor:'pointer'}}>
+                  ОК
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

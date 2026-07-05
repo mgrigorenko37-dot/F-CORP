@@ -1,4 +1,4 @@
-import { Mail, Users, Briefcase, Dumbbell, TrendingUp, Landmark, Trophy, Globe } from 'lucide-react';
+import { Mail, Users, Briefcase, Dumbbell, TrendingUp, Landmark, Trophy, Globe, Building2 } from 'lucide-react';
 import { TabType } from '../screens/MainGame';
 
 const C = {
@@ -22,6 +22,7 @@ const TABS: { id: TabType; label: string; Icon: React.ElementType }[] = [
   { id: 'market',     label: 'МАРКЕТ',  Icon: TrendingUp },
   { id: 'commerce',   label: 'ФИНАНСЫ', Icon: Landmark   },
   { id: 'tournament', label: 'ЛИГА',    Icon: Trophy     },
+  { id: 'club',       label: 'КЛУБ',    Icon: Building2  },
   { id: 'world',      label: 'МИР',     Icon: Globe      },
 ];
 

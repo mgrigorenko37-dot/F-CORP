@@ -15,71 +15,82 @@ interface Message {
   requiresAction: boolean;
 }
 
-const initialMessages: Message[] = [
-  {
-    id: '1',
-    type: 'REPORT',
-    time: '08:00',
-    sender: 'AI Менеджер',
-    text: 'Тренировка прошла продуктивно. Нападающий Jorav Narzon показал отличные результаты. Рекомендую увеличить нагрузку на следующей неделе.',
-    status: 'pending',
-    requiresAction: false,
-  },
-  {
-    id: '2',
-    type: 'OFFER',
-    time: '09:15',
-    sender: 'FC Veldric',
-    text: 'Босс, мы получили трансферное предложение за Imrek Meldric от FC Veldric. Сумма: €4.2M. Рекомендую отклонить.',
-    status: 'pending',
-    requiresAction: true,
-  },
-  {
-    id: '3',
-    type: 'REPORT',
-    time: '11:30',
-    sender: 'Медицинский штаб',
-    text: 'Полузащитник Dranik Jornek выбывает на 3 недели с травмой колена. План восстановления составлен.',
-    status: 'pending',
-    requiresAction: false,
-  },
-  {
-    id: '4',
-    type: 'REQUEST',
-    time: '14:00',
-    sender: 'Тренерский штаб',
-    text: 'Состав показывает признаки усталости. Предлагаю снизить интенсивность тренировок на этой неделе. Требуется решение.',
-    status: 'pending',
-    requiresAction: true,
-  },
-  {
-    id: '5',
-    type: 'REPORT',
-    time: '18:45',
-    sender: 'Аналитика',
-    text: 'Завтра матч против Borwick United. Соперник силён на флангах. Оборонительный план готов.',
-    status: 'pending',
-    requiresAction: false,
-  },
-  {
-    id: '6',
-    type: 'OFFER',
-    time: '21:00',
-    sender: 'Спонсор: VortexPro',
-    text: 'VortexPro выдвинул новое спонсорское предложение — €800K в сезон. Требуется ваше одобрение как владельца клуба.',
-    status: 'pending',
-    requiresAction: true,
-  },
-  {
-    id: '7',
-    type: 'REQUEST',
-    time: '22:10',
-    sender: 'Скаут Aldron Tharvon',
-    text: 'Обнаружен перспективный нападающий в лиге U23, рейтинг 74. Запрашиваю бюджет €350K на скаутинг.',
-    status: 'pending',
-    requiresAction: true,
-  },
-];
+function buildMessages(clubName: string, leagueName: string): Message[] {
+  return [
+    {
+      id: 'welcome',
+      type: 'REPORT',
+      time: '00:00',
+      sender: 'Футбольная лига',
+      text: `Добро пожаловать в профессиональный футбол! Клуб «${clubName}» официально зарегистрирован в ${leagueName}. Желаем успехов в предстоящем сезоне. Удачи, менеджер!`,
+      status: 'pending',
+      requiresAction: false,
+    },
+    {
+      id: '1',
+      type: 'REPORT',
+      time: '08:00',
+      sender: 'AI Менеджер',
+      text: 'Предсезонная подготовка завершена. Состав готов к старту сезона. Рекомендую сосредоточиться на физической форме игроков на этой неделе.',
+      status: 'pending',
+      requiresAction: false,
+    },
+    {
+      id: '2',
+      type: 'OFFER',
+      time: '09:15',
+      sender: 'Greywood United',
+      text: `Мы заинтересованы в приобретении одного из ваших полузащитников. Готовы обсудить сумму от €2.8M. Требуется ваше решение.`,
+      status: 'pending',
+      requiresAction: true,
+    },
+    {
+      id: '3',
+      type: 'REPORT',
+      time: '11:30',
+      sender: 'Медицинский штаб',
+      text: 'Плановые предсезонные медицинские осмотры завершены. Весь состав признан здоровым и готовым к соревновательной нагрузке.',
+      status: 'pending',
+      requiresAction: false,
+    },
+    {
+      id: '4',
+      type: 'REQUEST',
+      time: '14:00',
+      sender: 'Тренерский штаб',
+      text: 'Необходимо определить тактическую схему на первый тур. Предлагаю 4-3-3 или 4-4-2 в зависимости от соперника. Ваше решение, босс.',
+      status: 'pending',
+      requiresAction: true,
+    },
+    {
+      id: '5',
+      type: 'REPORT',
+      time: '18:45',
+      sender: 'Аналитика',
+      text: 'Анализ соперников в предстоящем сезоне готов. Наибольшую угрозу в группе представляет AFC Dunmoor — мощная игра на стандартах.',
+      status: 'pending',
+      requiresAction: false,
+    },
+    {
+      id: '6',
+      type: 'OFFER',
+      time: '21:00',
+      sender: 'Спонсор: VortexPro',
+      text: 'VortexPro предлагает спонсорский контракт на сезон — €800K. Логотип на форме + права на название тренировочного поля. Требуется одобрение.',
+      status: 'pending',
+      requiresAction: true,
+    },
+    {
+      id: '7',
+      type: 'REQUEST',
+      time: '22:10',
+      sender: 'Директор скаутинга',
+      text: 'Обнаружен талантливый 19-летний нападающий в резервной лиге, рейтинг 74, потенциал 86. Запрашиваю бюджет €350K на скаутинг.',
+      status: 'pending',
+      requiresAction: true,
+    },
+  ];
+}
 
 const TYPE_LABEL: Record<Message['type'], string> = {
   REPORT: 'ОТЧЁТ',
@@ -99,17 +110,21 @@ const FILTERS: { id: InboxFilter; label: string }[] = [
   { id: 'all',    label: 'ВСЕ'     },
 ];
 
-export default function InboxTab() {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
-  const [clubName, setClubName] = useState('F-CORP');
-  const [filter, setFilter] = useState<InboxFilter>('new');
+function readStoredClub(): { name: string; league: string } {
+  try {
+    const raw     = localStorage.getItem('fcorp_club');
+    const country = localStorage.getItem('fcorp_league_country') ?? 'лиге';
+    const name    = raw ? (JSON.parse(raw).name ?? 'F-CORP') : 'F-CORP';
+    return { name, league: country };
+  } catch {
+    return { name: 'F-CORP', league: 'лиге' };
+  }
+}
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem('fcorp_club');
-      if (raw) setClubName(JSON.parse(raw).name ?? 'F-CORP');
-    } catch { /* ignore */ }
-  }, []);
+export default function InboxTab() {
+  const stored  = readStoredClub();
+  const [messages, setMessages] = useState<Message[]>(() => buildMessages(stored.name, stored.league));
+  const [filter, setFilter]     = useState<InboxFilter>('new');
 
   const handleAction = (id: string, action: 'approved' | 'rejected' | 'read') => {
     setMessages(msgs => msgs.map(m => (m.id === id ? { ...m, status: action } : m)));

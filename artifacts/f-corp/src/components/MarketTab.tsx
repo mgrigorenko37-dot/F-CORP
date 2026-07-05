@@ -70,6 +70,10 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
   const [roleFilter, setRoleFilter] = useState('ALL');
   const [ratingMin, setRatingMin]   = useState(30);
   const [ratingMax, setRatingMax]   = useState(99);
+  const [ageMin, setAgeMin]         = useState(16);
+  const [ageMax, setAgeMax]         = useState(40);
+  const [natFilter, setNatFilter]   = useState('ALL');
+  const [sortBy, setSortBy]         = useState<'rating'|'age'|'price'|'potential'>('rating');
   const [purchased, setPurchased]   = useState<Set<number>>(new Set());
   const [hiredStaff, setHiredStaff] = useState<Set<number>>(new Set());
   const [budget, setBudget]         = useState(2_400_000);
@@ -84,16 +88,31 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
     setHiredStaff(new Set(gs.hiredStaffIds));
   }, []);
 
+  const allNats = useMemo(() => {
+    const set = new Set<string>();
+    ALL_MARKET_PLAYERS.forEach(p => { if (p.nat) set.add(p.nat); });
+    return ['ALL', ...Array.from(set).sort()];
+  }, []);
+
   const visiblePlayers = useMemo(() => {
     const q = search.toLowerCase();
-    return ALL_MARKET_PLAYERS.filter(p => {
+    const filtered = ALL_MARKET_PLAYERS.filter(p => {
       if (purchased.has(p.id)) return false;
       if (posFilter !== 'ALL' && p.pos !== posFilter) return false;
       if (p.rating < ratingMin || p.rating > ratingMax) return false;
+      if (p.age < ageMin || p.age > ageMax) return false;
+      if (natFilter !== 'ALL' && p.nat !== natFilter) return false;
       if (q && !p.name.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [search, posFilter, ratingMin, ratingMax, purchased]);
+    return [...filtered].sort((a, b) => {
+      if (sortBy === 'rating')    return b.rating - a.rating;
+      if (sortBy === 'age')       return a.age - b.age;
+      if (sortBy === 'price')     return a.price - b.price;
+      if (sortBy === 'potential') return b.potential - a.potential;
+      return 0;
+    });
+  }, [search, posFilter, ratingMin, ratingMax, ageMin, ageMax, natFilter, sortBy, purchased]);
 
   const visibleStaff = useMemo(() => {
     const q = search.toLowerCase();
@@ -128,6 +147,10 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
     setSearch('');
     setRatingMin(30);
     setRatingMax(99);
+    setAgeMin(16);
+    setAgeMax(40);
+    setNatFilter('ALL');
+    setSortBy('rating');
     setPosFilter('ALL');
     setRoleFilter('ALL');
     setPlayerPage(1);
@@ -208,31 +231,64 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
         )}
 
         {/* ── Rating range ── */}
-        <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:14}}>
-          <span style={{fontSize:10,letterSpacing:'0.5px',color:C.vdim,flexShrink:0}}>РЕЙТИНГ</span>
-          {/* Min control */}
+        <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:10}}>
+          <span style={{fontSize:10,letterSpacing:'0.5px',color:C.vdim,flexShrink:0}}>РЕЙ</span>
           <div style={{display:'flex',alignItems:'center',gap:0,background:C.card,borderRadius:10,overflow:'hidden'}}>
-            <button onClick={() => { const v = Math.max(30, ratingMin - 5); setRatingMin(v); setPlayerPage(1); setStaffPage(1); }}
-              style={{fontSize:12,color:C.muted,background:'transparent',padding:'4px 8px',cursor:'pointer',border:'none'}}>▼</button>
-            <span style={{fontSize:11,color:C.white,padding:'4px 4px',minWidth:24,textAlign:'center'}}>{ratingMin}</span>
-            <button onClick={() => { const v = Math.min(ratingMax - 5, ratingMin + 5); setRatingMin(v); setPlayerPage(1); setStaffPage(1); }}
-              style={{fontSize:12,color:C.muted,background:'transparent',padding:'4px 8px',cursor:'pointer',border:'none'}}>▲</button>
+            <button onClick={() => { setRatingMin(Math.max(30, ratingMin - 5)); setPlayerPage(1); }}
+              style={{fontSize:12,color:C.muted,background:'transparent',padding:'4px 7px',cursor:'pointer',border:'none'}}>▼</button>
+            <span style={{fontSize:11,color:C.white,padding:'4px 3px',minWidth:22,textAlign:'center'}}>{ratingMin}</span>
+            <button onClick={() => { setRatingMin(Math.min(ratingMax - 5, ratingMin + 5)); setPlayerPage(1); }}
+              style={{fontSize:12,color:C.muted,background:'transparent',padding:'4px 7px',cursor:'pointer',border:'none'}}>▲</button>
           </div>
           <span style={{fontSize:11,color:C.vdim}}>—</span>
-          {/* Max control */}
           <div style={{display:'flex',alignItems:'center',gap:0,background:C.card,borderRadius:10,overflow:'hidden'}}>
-            <button onClick={() => { const v = Math.max(ratingMin + 5, ratingMax - 5); setRatingMax(v); setPlayerPage(1); setStaffPage(1); }}
-              style={{fontSize:12,color:C.muted,background:'transparent',padding:'4px 8px',cursor:'pointer',border:'none'}}>▼</button>
-            <span style={{fontSize:11,color:C.white,padding:'4px 4px',minWidth:24,textAlign:'center'}}>{ratingMax}</span>
-            <button onClick={() => { const v = Math.min(99, ratingMax + 5); setRatingMax(v); setPlayerPage(1); setStaffPage(1); }}
-              style={{fontSize:12,color:C.muted,background:'transparent',padding:'4px 8px',cursor:'pointer',border:'none'}}>▲</button>
+            <button onClick={() => { setRatingMax(Math.max(ratingMin + 5, ratingMax - 5)); setPlayerPage(1); }}
+              style={{fontSize:12,color:C.muted,background:'transparent',padding:'4px 7px',cursor:'pointer',border:'none'}}>▼</button>
+            <span style={{fontSize:11,color:C.white,padding:'4px 3px',minWidth:22,textAlign:'center'}}>{ratingMax}</span>
+            <button onClick={() => { setRatingMax(Math.min(99, ratingMax + 5)); setPlayerPage(1); }}
+              style={{fontSize:12,color:C.muted,background:'transparent',padding:'4px 7px',cursor:'pointer',border:'none'}}>▲</button>
           </div>
-          <button onClick={() => { setRatingMin(30); setRatingMax(99); setPlayerPage(1); setStaffPage(1); }}
-            style={{marginLeft:'auto',background:'none',border:'none',
-              fontSize:11,color:C.vdim,cursor:'pointer'}}>
-            Сброс
-          </button>
+          {/* Age */}
+          <span style={{fontSize:10,letterSpacing:'0.5px',color:C.vdim,flexShrink:0,marginLeft:4}}>ВОЗ</span>
+          <div style={{display:'flex',alignItems:'center',gap:0,background:C.card,borderRadius:10,overflow:'hidden'}}>
+            <button onClick={() => { setAgeMin(Math.max(16, ageMin - 1)); setPlayerPage(1); }}
+              style={{fontSize:12,color:C.muted,background:'transparent',padding:'4px 7px',cursor:'pointer',border:'none'}}>▼</button>
+            <span style={{fontSize:11,color:C.white,padding:'4px 2px',minWidth:22,textAlign:'center'}}>{ageMin}</span>
+            <button onClick={() => { setAgeMin(Math.min(ageMax - 1, ageMin + 1)); setPlayerPage(1); }}
+              style={{fontSize:12,color:C.muted,background:'transparent',padding:'4px 7px',cursor:'pointer',border:'none'}}>▲</button>
+          </div>
+          <span style={{fontSize:11,color:C.vdim}}>—</span>
+          <div style={{display:'flex',alignItems:'center',gap:0,background:C.card,borderRadius:10,overflow:'hidden'}}>
+            <button onClick={() => { setAgeMax(Math.max(ageMin + 1, ageMax - 1)); setPlayerPage(1); }}
+              style={{fontSize:12,color:C.muted,background:'transparent',padding:'4px 7px',cursor:'pointer',border:'none'}}>▼</button>
+            <span style={{fontSize:11,color:C.white,padding:'4px 2px',minWidth:22,textAlign:'center'}}>{ageMax}</span>
+            <button onClick={() => { setAgeMax(Math.min(45, ageMax + 1)); setPlayerPage(1); }}
+              style={{fontSize:12,color:C.muted,background:'transparent',padding:'4px 7px',cursor:'pointer',border:'none'}}>▲</button>
+          </div>
         </div>
+
+        {/* ── Nationality + Sort ── */}
+        {tab === 'players' && (
+          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:14}}>
+            <select value={natFilter} onChange={e => { setNatFilter(e.target.value); setPlayerPage(1); }}
+              style={{flex:1,background:C.card,border:`0.5px solid ${C.border2}`,color:C.muted,
+                fontSize:11,padding:'6px 10px',borderRadius:10,outline:'none',cursor:'pointer'}}>
+              {allNats.map(n => <option key={n} value={n}>{n === 'ALL' ? 'Все нац.' : n}</option>)}
+            </select>
+            <select value={sortBy} onChange={e => { setSortBy(e.target.value as typeof sortBy); setPlayerPage(1); }}
+              style={{flex:1,background:C.card,border:`0.5px solid ${C.border2}`,color:C.muted,
+                fontSize:11,padding:'6px 10px',borderRadius:10,outline:'none',cursor:'pointer'}}>
+              <option value="rating">По рейтингу</option>
+              <option value="age">По возрасту</option>
+              <option value="price">По цене</option>
+              <option value="potential">По потенциалу</option>
+            </select>
+            <button onClick={() => { setRatingMin(30); setRatingMax(99); setAgeMin(16); setAgeMax(40); setNatFilter('ALL'); setSortBy('rating'); setPlayerPage(1); }}
+              style={{background:'none',border:'none',fontSize:11,color:C.vdim,cursor:'pointer',flexShrink:0}}>
+              Сброс
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── PLAYERS list ── */}

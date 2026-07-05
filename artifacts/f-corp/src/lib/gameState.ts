@@ -154,16 +154,19 @@ export interface GameState {
   weeklyPlan:         WeeklyTrainingPlan | null;
   lastWeekTick:       string | null;  // ISO date of last weekly simulation
   marketBudget:       number;          // Remaining transfer budget in €
+  walletBalance:      number;          // Club wallet / cash reserves in €
   purchasedPlayerIds: number[];        // IDs of bought players
   hiredStaffIds:      number[];        // IDs of hired staff
+  reservePlayerIds:   number[];        // First-team player IDs moved to reserve
 }
 
 // ─── STORAGE HELPERS ──────────────────────────────────────────────────────────
 
 const KEY = 'fcorp_game_state';
-const VERSION = 1;
+const VERSION = 2;
 
 const DEFAULT_MARKET_BUDGET = 2_400_000;
+const DEFAULT_WALLET         = 5_000_000;
 
 function buildDefaultGameState(): GameState {
   return {
@@ -175,15 +178,17 @@ function buildDefaultGameState(): GameState {
       startDate:          '',
       currentDate:        '',
       leagueRound:        0,
-      totalRounds:        38,
+      totalRounds:        46,
       schedule:           [],
       activeCompetitions: ['league', 'national_cup', 'league_cup'],
     },
     weeklyPlan:         null,
     lastWeekTick:       null,
     marketBudget:       DEFAULT_MARKET_BUDGET,
+    walletBalance:      DEFAULT_WALLET,
     purchasedPlayerIds: [],
     hiredStaffIds:      [],
+    reservePlayerIds:   [],
   };
 }
 
@@ -191,9 +196,25 @@ export function loadGameState(): GameState {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return buildDefaultGameState();
-    const parsed = JSON.parse(raw) as GameState;
-    if (parsed.version !== VERSION) return buildDefaultGameState();
-    return parsed;
+    const parsed = JSON.parse(raw) as Partial<GameState> & { version?: number };
+    if (parsed.version !== VERSION) {
+      // Soft migration: keep what we can
+      const def = buildDefaultGameState();
+      return {
+        ...def,
+        coach:              parsed.coach              ?? def.coach,
+        playerStates:       parsed.playerStates       ?? def.playerStates,
+        weeklyPlan:         parsed.weeklyPlan         ?? def.weeklyPlan,
+        lastWeekTick:       parsed.lastWeekTick       ?? def.lastWeekTick,
+        marketBudget:       parsed.marketBudget       ?? def.marketBudget,
+        walletBalance:      (parsed as GameState).walletBalance ?? def.walletBalance,
+        purchasedPlayerIds: parsed.purchasedPlayerIds ?? def.purchasedPlayerIds,
+        hiredStaffIds:      parsed.hiredStaffIds      ?? def.hiredStaffIds,
+        reservePlayerIds:   (parsed as GameState).reservePlayerIds   ?? def.reservePlayerIds,
+        version: VERSION,
+      };
+    }
+    return parsed as GameState;
   } catch {
     return buildDefaultGameState();
   }
@@ -235,6 +256,32 @@ export function hireStaff(id: number): void {
     ...s,
     hiredStaffIds: [...s.hiredStaffIds, id],
   }));
+}
+
+/** Move a first-team player to the reserve squad */
+export function moveToReserve(id: number): void {
+  updateGameState(s => ({
+    ...s,
+    reservePlayerIds: s.reservePlayerIds.includes(id) ? s.reservePlayerIds : [...s.reservePlayerIds, id],
+  }));
+}
+
+/** Promote a reserve player back to the first team */
+export function moveFromReserve(id: number): void {
+  updateGameState(s => ({
+    ...s,
+    reservePlayerIds: s.reservePlayerIds.filter(pid => pid !== id),
+  }));
+}
+
+/** Add funds to the club wallet */
+export function topUpWallet(amount: number): void {
+  updateGameState(s => ({ ...s, walletBalance: s.walletBalance + amount }));
+}
+
+/** Withdraw funds from the club wallet (min 0) */
+export function withdrawFromWallet(amount: number): void {
+  updateGameState(s => ({ ...s, walletBalance: Math.max(0, s.walletBalance - amount) }));
 }
 
 // ─── PLAYER STATE HELPERS ─────────────────────────────────────────────────────

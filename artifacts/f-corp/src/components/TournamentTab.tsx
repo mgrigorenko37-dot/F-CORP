@@ -56,30 +56,38 @@ interface Team {
   isMe: boolean; trend: 'up' | 'same' | 'down';
 }
 
-function buildTable(myClub: string, rivals: string[], myPos: number, leagueRound: number): Team[] {
-  const names = rivals.slice(0, 7);
-  const allNames = [...names.slice(0, myPos - 1), myClub, ...names.slice(myPos - 1)];
+function buildTable(myClub: string, rivals: string[], myPos: number, leagueRound: number, totalClubs: number): Team[] {
+  const rivalSlice = rivals.slice(0, totalClubs - 1);
+  const allNames   = [...rivalSlice.slice(0, myPos - 1), myClub, ...rivalSlice.slice(myPos - 1)];
+  const totalRounds = (totalClubs - 1) * 2;
 
-  const ptsBase = [52, 47, 43, 39, 34, 28, 23, 17];
-  const pctScale = leagueRound / 38;
+  if (leagueRound === 0) {
+    return allNames.map((name, i) => ({
+      pos: i + 1, name, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, points: 0,
+      isMe: name === myClub, trend: 'same' as const,
+    }));
+  }
+
+  const pctScale = leagueRound / totalRounds;
+  const TREND_CYCLE: Array<'up' | 'same' | 'down'> = ['up', 'same', 'down', 'up', 'same', 'up', 'down', 'same'];
 
   return allNames.map((name, i) => {
-    const maxPts = ptsBase[i];
-    const pts    = Math.round(maxPts * pctScale + (i === myPos - 1 ? 0 : (Math.random() > 0.5 ? 1 : -1)));
-    const played = Math.round(leagueRound + (Math.random() > 0.7 ? 1 : 0));
-    const won    = Math.floor(pts / 3);
-    const drawn  = pts % 3;
-    const lost   = Math.max(0, played - won - drawn);
-    const gf     = won * 2 + drawn + 5 + Math.floor(i * 0.5);
-    const ga     = lost * 2 + drawn + 3 + Math.floor((7 - i) * 0.4);
-
-    const trends: Array<'up' | 'same' | 'down'> = ['up', 'same', 'down', 'up', 'same', 'up', 'down', 'same'];
+    const rankFactor = 1 - i / allNames.length;
+    const baseMax  = Math.round(totalRounds * (0.45 + rankFactor * 0.45));
+    const jitter   = i === myPos - 1 ? 0 : (Math.sin(i * 7.31 + 1.1) > 0 ? 1 : -1);
+    const pts      = Math.max(0, Math.round(baseMax * pctScale + jitter));
+    const played   = leagueRound;
+    const won      = Math.floor(pts / 3);
+    const drawn    = pts % 3;
+    const lost     = Math.max(0, played - won - drawn);
+    const gf       = Math.max(0, won * 2 + drawn + 3);
+    const ga       = Math.max(0, lost * 2 + drawn + 2);
     return {
       pos: i + 1, name,
       played: Math.max(played, won + drawn + lost),
-      won: Math.max(0, won), drawn: Math.max(0, drawn), lost: Math.max(0, lost),
-      gf: Math.max(gf, 0), ga: Math.max(ga, 0), points: Math.max(pts, 0),
-      isMe: name === myClub, trend: trends[i] ?? 'same',
+      won, drawn, lost, gf, ga, points: pts,
+      isMe: name === myClub,
+      trend: TREND_CYCLE[i % TREND_CYCLE.length],
     };
   });
 }
@@ -267,13 +275,12 @@ export default function TournamentTab() {
   const league = getLeagueAtLevel(country, level);
   const levelColor = LEVEL_COLOR[level] ?? C.dim;
 
-  // Demo state: round 14, position 3
-  const leagueRound = 14;
-  const myPos       = 3;
-  // useMemo keeps the table stable across re-renders (no random flicker)
+  const leagueRound = 0;
+  const myPos       = 1;
+  const totalRounds = (league.totalClubs - 1) * 2;
   const table = useMemo(
-    () => buildTable(myClub, league.rivals, myPos, leagueRound),
-    [myClub, league.rivals, myPos, leagueRound],
+    () => buildTable(myClub, league.rivals, myPos, leagueRound, league.totalClubs),
+    [myClub, league.rivals, myPos, leagueRound, league.totalClubs],
   );
   const myRow = table.find(t => t.isMe) ?? table[myPos - 1] ?? table[0];
 
@@ -305,7 +312,7 @@ export default function TournamentTab() {
             {league.name.toUpperCase()} · {country.toUpperCase()}
           </span>
           <span style={{ fontSize: 11, letterSpacing: '0.5px', color: C.dim }}>
-            ТУР {leagueRound}/{league.totalClubs === 20 ? 38 : 34}
+            {leagueRound === 0 ? 'СЕЗОН СТАРТУЕТ' : `ТУР ${leagueRound}/${totalRounds}`}
           </span>
         </div>
 
