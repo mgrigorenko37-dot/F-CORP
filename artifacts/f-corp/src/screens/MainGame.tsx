@@ -10,8 +10,9 @@ import CommerceTab from '../components/CommerceTab';
 import TournamentTab from '../components/TournamentTab';
 import PersonnelTab from '../components/PersonnelTab';
 import TrainingTab from '../components/TrainingTab';
+import WorldTab from '../components/WorldTab';
 
-export type TabType = 'inbox' | 'squad' | 'personnel' | 'training' | 'market' | 'commerce' | 'tournament';
+export type TabType = 'inbox' | 'squad' | 'personnel' | 'training' | 'market' | 'commerce' | 'tournament' | 'world';
 
 const C = {
   bg: '#0f1117',
@@ -112,6 +113,7 @@ export default function MainGame() {
           {activeTab === 'market'     && <MarketTab     key={`market-${marketInitialTab}`} initialTab={marketInitialTab} />}
           {activeTab === 'commerce'   && <CommerceTab   key="commerce" />}
           {activeTab === 'tournament' && <TournamentTab key="tournament" />}
+          {activeTab === 'world'      && <WorldTab      key="world" />}
         </AnimatePresence>
       </main>
 
