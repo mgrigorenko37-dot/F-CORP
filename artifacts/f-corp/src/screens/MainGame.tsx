@@ -25,6 +25,8 @@ const C = {
 export default function MainGame() {
   const [activeTab, setActiveTab] = useState<TabType>('inbox');
   const [clubName, setClubName] = useState('ВЫАВЫБА');
+  // Which sub-tab Market should open on
+  const [marketInitialTab, setMarketInitialTab] = useState<'players' | 'staff'>('players');
 
   useEffect(() => {
     const club = localStorage.getItem('fcorp_club');
@@ -36,7 +38,20 @@ export default function MainGame() {
     }
   }, []);
 
-  // Close Telegram Mini App
+  // Called by PersonnelTab → Hire Staff button
+  const goToMarketStaff = () => {
+    setMarketInitialTab('staff');
+    setActiveTab('market');
+  };
+
+  const handleTabChange = (tab: TabType) => {
+    // When navigating away from market and back, reset to players
+    if (tab !== 'market') {
+      setMarketInitialTab('players');
+    }
+    setActiveTab(tab);
+  };
+
   const handleClose = () => {
     const tg = (window as any).Telegram?.WebApp;
     if (tg?.close) tg.close();
@@ -69,7 +84,6 @@ export default function MainGame() {
         display: 'flex', alignItems: 'center', gap: 10,
         padding: '10px 18px', background: C.bar, flexShrink: 0,
       }}>
-        {/* FC hexagon badge */}
         <div style={{
           width: 26, height: 30, background: C.teal,
           clipPath: 'polygon(50% 0%,100% 15%,100% 62%,50% 100%,0% 62%,0% 15%)',
@@ -93,16 +107,16 @@ export default function MainGame() {
         <AnimatePresence mode="wait">
           {activeTab === 'inbox'      && <InboxTab      key="inbox" />}
           {activeTab === 'squad'      && <SquadTab      key="squad" />}
-          {activeTab === 'personnel'  && <PersonnelTab  key="personnel" />}
+          {activeTab === 'personnel'  && <PersonnelTab  key="personnel" onHireStaff={goToMarketStaff} />}
           {activeTab === 'training'   && <TrainingTab   key="training" />}
-          {activeTab === 'market'     && <MarketTab     key="market" />}
+          {activeTab === 'market'     && <MarketTab     key={`market-${marketInitialTab}`} initialTab={marketInitialTab} />}
           {activeTab === 'commerce'   && <CommerceTab   key="commerce" />}
           {activeTab === 'tournament' && <TournamentTab key="tournament" />}
         </AnimatePresence>
       </main>
 
       {/* ── Bottom nav ── */}
-      <BottomNav activeTab={activeTab} onChange={setActiveTab} />
+      <BottomNav activeTab={activeTab} onChange={handleTabChange} />
     </motion.div>
   );
 }
