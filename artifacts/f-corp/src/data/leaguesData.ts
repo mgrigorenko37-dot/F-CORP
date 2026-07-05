@@ -330,6 +330,182 @@ export const COUNTRY_LEAGUES: Record<string, CountryData> = {
     ],
   },
 
+  // ─── ОСТАЛЬНАЯ ЕВРОПА / ДРУГИЕ ────────────────────────────────────────────
+
+  'Уругвай': {
+    flag: '🇺🇾',
+    leagues: [
+      { level: 1, name: 'Primera División', totalClubs: 16, promoted: 0, relegated: 2,
+        rivals: ['Peñarolito', 'Nacional Norte', 'Defensor Norte', 'Danubio Norte', 'Wanderersito', 'Fénixito', 'Rentistasito'] },
+      { level: 2, name: 'Segunda División', totalClubs: 14, promoted: 2, relegated: 2,
+        rivals: ['Cerro Norte', 'Huracánito', 'Atenas Norte', 'Tacuarembó FC', 'Melo Deportivo', 'Salto FC', 'Progresito'] },
+      { level: 3, name: 'Tercera División', totalClubs: 14, promoted: 3, relegated: 3,
+        rivals: ['Colonia Norte', 'Maldonado FC', 'Rocha Norte', 'Treinta y Tres', 'Artigas FC', 'Florida Norte', 'Lavalleja FC'] },
+      { level: 4, name: 'Cuarta División', totalClubs: 16, promoted: 2, relegated: 0,
+        rivals: ['San José Norte', 'Soriano FC', 'Durazno Norte', 'Rivera FC', 'Flores Norte', 'Canelones FC', 'Paysandú Norte'] },
+    ],
+  },
+
+  // ─── АЗИЯ ─────────────────────────────────────────────────────────────────
+
+  'Япония': {
+    flag: '🇯🇵',
+    leagues: [
+      { level: 1, name: 'J1 League', totalClubs: 18, promoted: 0, relegated: 3,
+        rivals: ['Kawasaki Glorion', 'Urawa Regulus', 'Gamba Osako', 'Yokohama FC Marinos', 'Nagoya Gramplon', 'Cerezo Osako', 'Vissel Kobion'] },
+      { level: 2, name: 'J2 League', totalClubs: 22, promoted: 3, relegated: 3,
+        rivals: ['Jubilo Iwaton', 'Montedio Yamoto', 'Vegalta Sendaion', 'Kyoto Sanga FC', 'FC Gifu', 'Consadole Sapporo', 'Ehime FC'] },
+      { level: 3, name: 'J3 League', totalClubs: 20, promoted: 3, relegated: 3,
+        rivals: ['SC Sagamihara', 'Fujieda MYFC', 'Azul Claro Numazu', 'FC Osaka', 'Gainare Tottori', 'Vanraure Hachinohe', 'FC Imabari'] },
+      { level: 4, name: 'JFL', totalClubs: 16, promoted: 2, relegated: 0,
+        rivals: ['Honda FC', 'Suzuka Point Getters', 'Banditonce Kochi', 'Reinmeer Asahikawa', 'FC Kariya', 'Tonan Maebashi', 'Osaka Tatsuma'] },
+    ],
+  },
+
+  'Южная Корея': {
+    flag: '🇰🇷',
+    leagues: [
+      { level: 1, name: 'K League 1', totalClubs: 12, promoted: 0, relegated: 2,
+        rivals: ['Ulsan Hyundaion', 'Jeonbuk Motoron', 'Jeju Unitedion', 'Seoul FC', 'Suwon Bluewingion', 'Pohang Steeleron', 'Daegu FC'] },
+      { level: 2, name: 'K League 2', totalClubs: 12, promoted: 2, relegated: 2,
+        rivals: ['Asan Mugunghwaon', 'Bucheon FCon', 'Seoul E-Lander', 'Gyeongnam FC', 'Seongnam FC', 'Chungnam Asan', 'Busan IPark'] },
+      { level: 3, name: 'K3 League', totalClubs: 16, promoted: 3, relegated: 3,
+        rivals: ['Cheonan City FC', 'Hwaseong FC', 'FC Ansanon', 'Pyeongtaek Citiz', 'Gimpo FC', 'Daejeon Hana', 'Incheon Unitedion'] },
+      { level: 4, name: 'K4 League', totalClubs: 16, promoted: 2, relegated: 0,
+        rivals: ['Suncheon Bluewingers', 'Jeonnam Dragonson', 'Gangwon FC B', 'Ulsan B FC', 'Jeju B FC', 'Daegu B FC', 'Suwon B FC'] },
+    ],
+  },
+
+  'Китай': {
+    flag: '🇨🇳',
+    leagues: [
+      { level: 1, name: 'Super League', totalClubs: 16, promoted: 0, relegated: 3,
+        rivals: ['Shanghai Porting', 'Jiangsu Suninton', 'Guangzhou FC', 'Beijing Guoan', 'Shandong Taishan', 'Wuhan FC', 'Tianjin FC'] },
+      { level: 2, name: 'China League One', totalClubs: 16, promoted: 3, relegated: 3,
+        rivals: ['Zhejiang FC', 'Qingdao FC', 'Chongqing Lifan', 'Dalian FC', 'Yanbian Fude', 'Meizhou Kejia', 'Nanjing City'] },
+      { level: 3, name: 'China League Two', totalClubs: 16, promoted: 3, relegated: 3,
+        rivals: ['Henan FC', 'Chengdu FC', 'Guangxi FC', 'Guizhou FC', 'Xinjiang FC', 'Ningbo FC', 'Shaanxi FC'] },
+      { level: 4, name: 'China Amateur League', totalClubs: 20, promoted: 2, relegated: 0,
+        rivals: ['Hunan FC', 'Jilin FC', 'Heilongjiang FC', 'Gansu FC', 'Yunnan FC', 'Hainan FC', 'Shanxi FC'] },
+    ],
+  },
+
+  'Саудовская Аравия': {
+    flag: '🇸🇦',
+    leagues: [
+      { level: 1, name: 'Pro League', totalClubs: 18, promoted: 0, relegated: 3,
+        rivals: ['Al Hilalon', 'Al Nassr FC', 'Al Ahly Saudion', 'Al Ittihad Jeddah', 'Al Shabab FC', 'Al Qadsiah', 'Al Taawon'] },
+      { level: 2, name: 'First Division', totalClubs: 16, promoted: 2, relegated: 3,
+        rivals: ['Al Faisaly', 'Al Hazem', 'Damac FC', 'Al Ettifaq', 'Al Fayha', 'Al Adalah', 'Al Batin'] },
+      { level: 3, name: 'Second Division', totalClubs: 16, promoted: 3, relegated: 3,
+        rivals: ['Ohod Club', 'Al Hilal B', 'Abha Club', 'Al Orubah', 'Al Riyadh', 'Al Jandal', 'Al Rawdah'] },
+      { level: 4, name: 'Third Division', totalClubs: 20, promoted: 2, relegated: 0,
+        rivals: ['Al Watani', 'Al Ansar', 'Al Kholood', 'Al Nahda', 'Al Hejaz', 'Al Salam', 'Al Khaleej B'] },
+    ],
+  },
+
+  // ─── АФРИКА ───────────────────────────────────────────────────────────────
+
+  'Египет': {
+    flag: '🇪🇬',
+    leagues: [
+      { level: 1, name: 'Premier League', totalClubs: 18, promoted: 0, relegated: 3,
+        rivals: ['Al Ahly Cairo', 'Zamalek SC', 'Pyramids FC', 'Smouha SC', 'El Gouna FC', 'Enppi Club', 'Ceramica Cleopatra'] },
+      { level: 2, name: 'Second Division', totalClubs: 16, promoted: 3, relegated: 3,
+        rivals: ['Aswan SC', 'El Dakhleya', 'Misr Lel Makkasa', 'Tala\'ea El Gaish', 'Wadi Degla', 'Ismaily SC B', 'FC Ghazl El Mehalla'] },
+      { level: 3, name: 'Third Division', totalClubs: 16, promoted: 3, relegated: 3,
+        rivals: ['Suez FC', 'Beni Suef SC', 'Qena SC', 'Matrouh SC', 'Dakahlia SC', 'Kafr El Sheikh', 'Port Said SC'] },
+      { level: 4, name: 'Fourth Division', totalClubs: 20, promoted: 2, relegated: 0,
+        rivals: ['Sohag SC', 'Assiut SC', 'Minya SC', 'Fayoum SC', 'Beheira SC', 'Sharqia SC', 'Luxor SC'] },
+    ],
+  },
+
+  'Нигерия': {
+    flag: '🇳🇬',
+    leagues: [
+      { level: 1, name: 'NPFL', totalClubs: 20, promoted: 0, relegated: 3,
+        rivals: ['Enugu Rangers', 'Enyimba FC', 'Kano Pillars', 'Rivers United', 'Heartland FC', 'Shooting Stars', 'Sunshine Stars'] },
+      { level: 2, name: 'NNL', totalClubs: 18, promoted: 3, relegated: 3,
+        rivals: ['El-Kanemi Warriors', 'Kwara United', 'FC IfeanyiUbah', 'Dakkada FC', 'Abia Warriors', 'Adamawa United', 'Gombe United'] },
+      { level: 3, name: 'Amateur League', totalClubs: 16, promoted: 3, relegated: 3,
+        rivals: ['Plateau United B', 'MFM FC B', 'Nasarawa United B', 'Wikki Tourists B', 'Niger Tornadoes B', 'Bayelsa United', 'Delta Force'] },
+      { level: 4, name: 'State League', totalClubs: 20, promoted: 2, relegated: 0,
+        rivals: ['Lagos FC', 'Abuja City FC', 'Kogi Stars', 'Oyo Stars', 'Ekiti Stars', 'Ondo Stars', 'Edo Stars'] },
+    ],
+  },
+
+  'Марокко': {
+    flag: '🇲🇦',
+    leagues: [
+      { level: 1, name: 'Botola Pro', totalClubs: 16, promoted: 0, relegated: 2,
+        rivals: ['Wydad Casablancaon', 'Raja Casablancaon', 'RS Berkane', 'Mouloudia Oujda', 'FAR Rabat', 'Hassania Agadir', 'Ittihad Tanger'] },
+      { level: 2, name: 'Botola 2', totalClubs: 16, promoted: 3, relegated: 3,
+        rivals: ['Rapide Oued Zem', 'Olympic Safi', 'Difaâ Hassani', 'Renaissance Zemamra', 'Youssoufia Berrechid', 'Chabab Mohammédia', 'FUS Rabat'] },
+      { level: 3, name: 'Division Amateur', totalClubs: 16, promoted: 3, relegated: 3,
+        rivals: ['Fath Union Sport B', 'SC Chabab Mohon', 'CS Sfaxien', 'KAC Marrakech', 'Maghreb Fès', 'Olympic Dakhla', 'AS FAR B'] },
+      { level: 4, name: 'Régionale', totalClubs: 20, promoted: 2, relegated: 0,
+        rivals: ['Stade Marocain', 'Union Touarga', 'AS Salé', 'AS Khémisset', 'AS Tiflet', 'MC Oujda', 'AS Témara'] },
+    ],
+  },
+
+  'ЮАР': {
+    flag: '🇿🇦',
+    leagues: [
+      { level: 1, name: 'PSL', totalClubs: 16, promoted: 0, relegated: 2,
+        rivals: ['Kaizer Chiefs', 'Orlando Pirates', 'Mamelodi Sundowns', 'Supersport United', 'Cape Town City', 'AmaZulu FC', 'Golden Arrows'] },
+      { level: 2, name: 'GladAfrica Championship', totalClubs: 16, promoted: 2, relegated: 2,
+        rivals: ['Sekhukhune United B', 'Richards Bay FC', 'Swallows FC', 'Royal AM B', 'Chippa United B', 'Stellenbosch B', 'TS Galaxy B'] },
+      { level: 3, name: 'ABC Motsepe League', totalClubs: 16, promoted: 3, relegated: 3,
+        rivals: ['Cape Umoya United', 'Polokwane City B', 'National Stars', 'Vaal University', 'Black Leopards B', 'Jomo Cosmos', 'Tshakhuma FC'] },
+      { level: 4, name: 'SAB League', totalClubs: 20, promoted: 2, relegated: 0,
+        rivals: ['Pretoria Callies', 'Durban Stars', 'Johannesburg Stars', 'Cape Stars', 'Bloemfontein Stars', 'Nelspruit FC', 'East London FC'] },
+    ],
+  },
+
+  // ─── АМЕРИКА / ОКЕАНИЯ ────────────────────────────────────────────────────
+
+  'США': {
+    flag: '🇺🇸',
+    leagues: [
+      { level: 1, name: 'MLS', totalClubs: 29, promoted: 0, relegated: 0,
+        rivals: ['LA Galaxion', 'Inter Miamilon', 'New York City FC', 'Atlanta United', 'Seattle Sounderlon', 'Portland Timberslon', 'Chicago Fire'] },
+      { level: 2, name: 'USL Championship', totalClubs: 24, promoted: 0, relegated: 2,
+        rivals: ['Sacramento Republic', 'San Diego FC B', 'Phoenix Rising', 'Louisville City', 'Tampa Bay Rowdies', 'New England II', 'Colorado Springs'] },
+      { level: 3, name: 'USL League One', totalClubs: 12, promoted: 2, relegated: 2,
+        rivals: ['Chattanooga FC', 'North Texas SC', 'Richmond Kickers', 'Forward Madison', 'South Georgia Tormenta', 'FC Tucson', 'Greenville Triumph'] },
+      { level: 4, name: 'USL League Two', totalClubs: 20, promoted: 2, relegated: 0,
+        rivals: ['Des Moines Menace', 'Flint City', 'FC Milwaukee', 'Charlotte Independence B', 'GPS Portland', 'FC Peoria', 'Western Mass Pioneers'] },
+    ],
+  },
+
+  'Мексика': {
+    flag: '🇲🇽',
+    leagues: [
+      { level: 1, name: 'Liga MX', totalClubs: 18, promoted: 0, relegated: 0,
+        rivals: ['Club Américalon', 'Guadalajara Chivalon', 'Cruz Azulon', 'Pumas UNAM', 'Monterrey FC', 'Tigres UANL', 'Tolucalon'] },
+      { level: 2, name: 'Liga de Expansión', totalClubs: 16, promoted: 2, relegated: 2,
+        rivals: ['Tampico Madero', 'Mineros Zacatecas', 'FC Juárez B', 'Correcaminos UAT', 'Cancún FC', 'Atlético Morelia', 'Cimarrones Sonora'] },
+      { level: 3, name: 'Liga Premier', totalClubs: 16, promoted: 3, relegated: 3,
+        rivals: ['Deportivo Neza', 'Tlaxcala FC', 'FC Hidalgo', 'Deportivo Xalapa', 'Tuxpan FC', 'Reboceros La Piedad', 'FC Durango'] },
+      { level: 4, name: 'Liga TDP', totalClubs: 20, promoted: 2, relegated: 0,
+        rivals: ['Diablos Rojos', 'Guerreros FC', 'Aztecas FC', 'Piratas FC', 'Gallos Norte', 'Aguilas Sur', 'Indios Norte'] },
+    ],
+  },
+
+  'Австралия': {
+    flag: '🇦🇺',
+    leagues: [
+      { level: 1, name: 'A-League', totalClubs: 12, promoted: 0, relegated: 2,
+        rivals: ['Melbourne City FC', 'Sydney FC', 'Western United', 'Perth Glory', 'Melbourne Victory', 'Brisbane Roar', 'Central Coast'] },
+      { level: 2, name: 'NPL Australia', totalClubs: 12, promoted: 2, relegated: 2,
+        rivals: ['Heidelberg United', 'APIA Leichhardt', 'Olympic Kingsgrove', 'Broadmeadow Magic', 'Lions FC Brisbane', 'Floreat Athena', 'Adelaide City'] },
+      { level: 3, name: 'NPL State', totalClubs: 14, promoted: 3, relegated: 3,
+        rivals: ['South Melbourne', 'Brisbane Strikers', 'Gold Coast City', 'Western Spirit', 'Edgeworth Eagles', 'Marconi Stallions', 'Bentleigh Greens'] },
+      { level: 4, name: 'State League', totalClubs: 16, promoted: 2, relegated: 0,
+        rivals: ['Knox City', 'Dandenong Thunder', 'Altona Magic', 'Rockdale Illawarra', 'St Albans Saints', 'Whittlesea Ranges', 'Pascoe Vale FC'] },
+    ],
+  },
+
   // ─── ЮЖНАЯ АМЕРИКА ────────────────────────────────────────────────────────
 
   'Бразилия': {
