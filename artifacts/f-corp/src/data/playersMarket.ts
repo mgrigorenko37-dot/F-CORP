@@ -46,7 +46,12 @@ const NATS: string[] = [
   'DK','SE','NO','CH','AT','CZ','RU','UA','GE','MK',
 ];
 
-const POSITIONS: string[] = ['GK','CB','CB','CDM','CM','CAM','ST','ST'];
+const POSITIONS: string[] = [
+  'GK','GK',
+  'CB','CB','CB','LB','LB','RB','RB',
+  'CDM','CDM','CM','CM','CM','CAM','LM','RM',
+  'LW','RW','ST','ST','ST','CF','CF',
+];
 
 function seeded(i: number, offset: number): number {
   const x = Math.sin(i * 127.1 + offset * 311.7) * 43758.5453;

@@ -12,19 +12,43 @@ const C = {
 };
 
 const POS_COLOR: Record<string,string> = {
-  ВР:'#3ba1e0', ЗЩ:'#0fd4a8', ОП:'#a78bfa', ПЗ:'#f0b429', АП:'#f0997b', НП:'#f0997b',
-  GK:'#3ba1e0', CB:'#0fd4a8', CDM:'#a78bfa', CM:'#f0b429', CAM:'#f0997b', ST:'#f0997b',
+  GK:'#3ba1e0',
+  CB:'#0fd4a8', LB:'#0fd4a8', RB:'#0fd4a8',
+  CDM:'#a78bfa', CM:'#f0b429', CAM:'#f0997b', LM:'#f0997b', RM:'#f0997b',
+  LW:'#f0997b', RW:'#f0997b', ST:'#f0997b', CF:'#f0997b',
 };
 
 const ROLE_COLOR: Record<string,string> = {
-  'Coach':'#3ba1e0','Scout':'#0fd4a8','Doctor':'#f0997b','Analyst':'#f0b429',
-  'Fitness Coach':'#a78bfa','GK Coach':'#f0997b',
+  'Главный тренер':'#3ba1e0',
+  'Ассистент тренера':'#3ba1e0',
+  'Тренер по атаке':'#f0997b',
+  'Тренер по обороне':'#0fd4a8',
+  'Тренер по тактике':'#a78bfa',
+  'Тренер вратарей':'#c8cad4',
+  'Тренер по физподготовке':'#f0b429',
+  'Специалист по восстановлению':'#f0b429',
+  'Диетолог':'#f0b429',
+  'Главный врач':'#f0997b',
+  'Физиотерапевт':'#f0997b',
+  'Главный аналитик':'#a78bfa',
+  'Видеоаналитик':'#a78bfa',
+  'Аналитик данных':'#a78bfa',
+  'Директор скаутинга':'#0fd4a8',
+  'Скаут':'#0fd4a8',
 };
 
-type PosFilter = 'ALL'|'GK'|'CB'|'CDM'|'CM'|'CAM'|'ST';
-const POS_FILTERS: PosFilter[] = ['ALL','GK','CB','CDM','CM','CAM','ST'];
+type PosFilter = 'ALL'|'GK'|'CB'|'LB'|'RB'|'CDM'|'CM'|'CAM'|'LM'|'RM'|'LW'|'RW'|'ST'|'CF';
+const POS_FILTERS: PosFilter[] = ['ALL','GK','CB','LB','RB','CDM','CM','CAM','LM','RM','LW','RW','ST','CF'];
 
-const ROLE_FILTERS = ['ALL','Coach','Scout','Doctor','Analyst','Fitness Coach','GK Coach'];
+const ROLE_FILTERS = [
+  'ALL',
+  'Главный тренер','Ассистент тренера',
+  'Тренер по атаке','Тренер по обороне','Тренер по тактике','Тренер вратарей',
+  'Тренер по физподготовке','Специалист по восстановлению','Диетолог',
+  'Главный врач','Физиотерапевт',
+  'Главный аналитик','Видеоаналитик','Аналитик данных',
+  'Директор скаутинга','Скаут',
+];
 
 const BUDGET = 2_400_000;
 const PAGE_SIZE = 20;
