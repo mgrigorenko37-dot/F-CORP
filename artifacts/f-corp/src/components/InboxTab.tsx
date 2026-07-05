@@ -122,7 +122,8 @@ function readStoredClub(): { name: string; league: string } {
 }
 
 export default function InboxTab() {
-  const stored  = readStoredClub();
+  const stored   = readStoredClub();
+  const clubName = stored.name;
   const [messages, setMessages] = useState<Message[]>(() => buildMessages(stored.name, stored.league));
   const [filter, setFilter]     = useState<InboxFilter>('new');
 
