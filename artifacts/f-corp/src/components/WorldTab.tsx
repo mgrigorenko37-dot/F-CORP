@@ -33,14 +33,16 @@ const REGIONS: { label: string; countries: string[] }[] = [
 
 const LANG_CITIES: Record<string, string[]> = {
   ru: ['Самара','Казань','Уфа','Пермь','Воронеж','Тула','Рязань','Тверь','Курск','Орёл','Ярославль','Иваново','Брянск','Тамбов','Липецк','Саратов','Ульяновск'],
+  // Ukrainian cities — only clearly Ukrainian territory, no occupied cities
+  uk: ['Хмельницький','Вінниця','Черкаси','Полтава','Суми','Чернігів','Житомир','Луцьк','Рівне','Тернопіль','Івано-Франківськ','Ужгород','Чернівці','Кропивницький','Миколаїв','Мукачево','Кам\'янець','Берегово','Коломия','Нікополь'],
   en: ['Burton','Oldham','Mansfield','Stockport','Chester','Rochdale','Macclesfield','Shrewsbury','Grimsby','Carlisle','Exeter','Wycombe','Stevenage','Leyton','Bury'],
-  es: ['Badajoz','Huelva','Salamanca','Burgos','Logroño','Cádiz','Jaén','Castellón','Tarragona','Lugo','Ponferrada','Ferrol','Ourense','Jaén','Linares'],
+  es: ['Badajoz','Huelva','Salamanca','Burgos','Logroño','Cádiz','Jaén','Castellón','Tarragona','Lugo','Ponferrada','Ferrol','Ourense','Linares','Alcoy'],
   de: ['Münster','Kiel','Lübeck','Erfurt','Halle','Magdeburg','Rostock','Paderborn','Osnabrück','Darmstadt','Aalen','Saarbrücken','Ulm','Würzburg'],
   it: ['Catania','Messina','Foggia','Taranto','Cosenza','Benevento','Avellino','Caserta','Pescara','Cittadella','Crotone','Reggio','Ternana','Brescia'],
   fr: ['Nîmes','Caen','Clermont','Tours','Angers','Rouen','Troyes','Lens','Valenciennes','Laval','Chateauroux','Niort','Belfort','Béziers'],
-  pt: ['Braga','Coimbra','Aveiro','Viseu','Guarda','Évora','Beja','Portimão','Setúbal','Cascais','Estoril','Almada','Barreiro','Caldas'],
-  nl: ['Utrecht','Groningen','Eindhoven','Tilburg','Breda','Nijmegen','Arnhem','Enschede','Maastricht','Haarlem','Delft','Leiden','Deventer'],
-  tr: ['Adana','Izmir','Bursa','Antalya','Konya','Gaziantep','Kayseri','Mersin','Eskişehir','Erzurum','Trabzon','Samsun','Elazığ'],
+  pt: ['Coimbra','Aveiro','Viseu','Guarda','Évora','Beja','Portimão','Setúbal','Cascais','Almada','Barreiro','Caldas','Faro','Tavira'],
+  nl: ['Utrecht','Groningen','Tilburg','Breda','Nijmegen','Arnhem','Enschede','Maastricht','Haarlem','Delft','Leiden','Deventer','Zwolle'],
+  tr: ['Adana','Bursa','Antalya','Konya','Gaziantep','Kayseri','Mersin','Eskişehir','Erzurum','Samsun','Elazığ','Malatya','Denizli'],
   pl: ['Gdańsk','Wrocław','Łódź','Lublin','Bydgoszcz','Białystok','Rzeszów','Toruń','Kielce','Radom','Częstochowa','Sosnowiec'],
   br: ['Fortaleza','Recife','Manaus','Natal','Maceió','Belém','Teresina','Campo Grande','Cuiabá','Macapá','Porto Velho','Rio Branco'],
   ar: ['Tucumán','Rosario','Córdoba','Mendoza','La Plata','Mar del Plata','Salta','Formosa','Corrientes','Posadas','Santa Fe','Bahía Blanca'],
@@ -50,23 +52,26 @@ const LANG_CITIES: Record<string, string[]> = {
 
 const LANG_SUFFIX: Record<string, string[]> = {
   ru: ['ФК','Спартак','Динамо','Прогресс','Энергетик','Металлист','Олимп','Академия'],
+  uk: ['ФК','Єдність','Вперед','Гарт','Злет','Борець','Олімп','Центр'],
   en: ['City','Town','United','Athletic','Rovers','Wanderers','FC','AFC'],
   es: ['CF','FC','CD','UD','SD','Athletic','Sporting','Atlético'],
   de: ['FC','SV','VfB','SC','1. FC','TSV','SSV','FV'],
   it: ['FC','AC','SS','US','AS','ASD','Unione','Associazione'],
   fr: ['FC','AS','SC','US','OGC','Stade','Racing','Amical'],
-  pt: ['FC','SC','CD','CF','GD','UD','SL','Benfica'],
+  pt: ['FC','SC','CD','CF','GD','UD','SL','AD'],
   nl: ['FC','AZ','SC','VV','SV','RKC','NAC','NEC'],
-  tr: ['SK','FK','Spor','Gücü','BLD','A.Ş','Kulübü','İdmanyurdu'],
+  tr: ['SK','FK','Spor','Gücü','BLD','Kulübü','İdmanyurdu','Birliği'],
   pl: ['FC','SK','KS','LKS','WKS','GKS','AKS','TS'],
-  br: ['FC','EC','SC','AA','Esporte','Atletico','Botafogo','Grêmio'],
-  ar: ['FC','CA','AC','SA','Atlético','Deportivo','Boca','Racing'],
+  br: ['FC','EC','SC','AA','Esporte','Atletico','Estrela','União'],
+  ar: ['FC','CA','AC','SA','Atlético','Deportivo','Estudiantes','Racing'],
   jp: ['FC','SC','United','City','F.C.','Athletic','Stars','Dream'],
   generic: ['FC','SC','United','City','Athletic','Olympic','Sporting'],
 };
 
 const COUNTRY_LANG: Record<string, string> = {
-  'Россия':'ru','Украина':'ru','Беларусь':'ru',
+  'Россия':'ru',
+  'Украина':'uk',
+  'Беларусь':'ru',
   'Англия':'en','Шотландия':'en','США':'en','Австралия':'en','ЮАР':'en',
   'Испания':'es','Мексика':'es','Колумбия':'es','Чили':'es','Аргентина':'es','Уругвай':'es',
   'Германия':'de','Австрия':'de','Швейцария':'de',

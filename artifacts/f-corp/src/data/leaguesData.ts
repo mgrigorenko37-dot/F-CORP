@@ -236,7 +236,7 @@ export const COUNTRY_LEAGUES: Record<string, CountryData> = {
     flag: '🇵🇱',
     leagues: [
       { level: 1, name: 'Ekstraklasa', totalClubs: 18, promoted: 0, relegated: 3,
-        rivals: ['Legia Varshov', 'Lech Poznal', 'Pogol Szczeron', 'Wisłal Krakow', 'Zagłębiol Lubin', 'Rakol Czestoch', 'Śląskon Vrocław'] },
+        rivals: ['KS Mazoviol', 'KKS Poznański', 'Pogol Szczeron', 'WKS Krakovol', 'Zagłębiol Lubin', 'Rakol Czestoch', 'Śląskon Vrocław'] },
       { level: 2, name: 'I liga', totalClubs: 18, promoted: 3, relegated: 3,
         rivals: ['Arkon Gdynia', 'GKS Katovol', 'Chrobrol Głogov', 'Sandecjol Sącz', 'Resovola', 'Puszczon Niepol', 'Odron Opolsk'] },
       { level: 3, name: 'II liga', totalClubs: 18, promoted: 3, relegated: 3,
@@ -264,7 +264,7 @@ export const COUNTRY_LEAGUES: Record<string, CountryData> = {
     flag: '🇦🇹',
     leagues: [
       { level: 1, name: 'Bundesliga', totalClubs: 12, promoted: 0, relegated: 2,
-        rivals: ['RB Salzmark', 'Rapid Wiental', 'LASK Nord', 'Sturm Grazol', 'Austria Wienol', 'Wolfsbergerol', 'Hartbergol'] },
+        rivals: ['RB Salzmark', 'SC Hütteldorfol', 'LASK Nord', 'SK Sturmol', 'AC Favoriteol', 'Wolfsbergerol', 'Hartbergol'] },
       { level: 2, name: '2. Liga', totalClubs: 16, promoted: 2, relegated: 2,
         rivals: ['Kapfenbergol SV', 'SKU Amstebol', 'SC Austria Lusol', 'FC Lieferol', 'Lafnitzol', 'FC Hornol', 'FAC Wienol'] },
       { level: 3, name: 'Regionalliga Ost', totalClubs: 16, promoted: 2, relegated: 3,
@@ -278,7 +278,7 @@ export const COUNTRY_LEAGUES: Record<string, CountryData> = {
     flag: '🇨🇭',
     leagues: [
       { level: 1, name: 'Super League', totalClubs: 10, promoted: 0, relegated: 2,
-        rivals: ['FC Baselton', 'Young Boystein', 'FC Zürichton', 'Servettol', 'FC Luganol', 'FC Luzernol', 'FC Sionol'] },
+        rivals: ['FC Rheinnon', 'FC Bernikon', 'FC Limmatton', 'FC Genèvalon', 'FC Luganol', 'FC Luzernol', 'FC Sionol'] },
       { level: 2, name: 'Challenge League', totalClubs: 10, promoted: 2, relegated: 2,
         rivals: ['Winterthol', 'Stade Lausannol', 'FC Wilton', 'Bellinzonol', 'SC Kriensol', 'FC Schaffhol', 'Yverdonnol'] },
       { level: 3, name: 'Promotion League', totalClubs: 16, promoted: 3, relegated: 4,
@@ -306,11 +306,11 @@ export const COUNTRY_LEAGUES: Record<string, CountryData> = {
     flag: '🇷🇸',
     leagues: [
       { level: 1, name: 'Superliga', totalClubs: 16, promoted: 0, relegated: 2,
-        rivals: ['Crvena Zvezol', 'Partizola', 'Vojvodola', 'Spartak Subotol', 'FK Čukola', 'Radnički Nišol', 'FK TSCola'] },
+        rivals: ['Crvena Zvezol', 'Crno-Belol', 'Vojvodola', 'Spartak Subotol', 'FK Čukola', 'Radnički Nišol', 'FK TSCola'] },
       { level: 2, name: 'Prva liga', totalClubs: 16, promoted: 2, relegated: 3,
         rivals: ['FK Zemunol', 'FK Bačkola', 'FK Slobodol', 'FK Sremol', 'FK Kolubarola', 'FK Grafičol', 'FK Radnol 1923'] },
       { level: 3, name: 'Srpska liga', totalClubs: 16, promoted: 2, relegated: 3,
-        rivals: ['FK Metalol GM', 'FK Dinamol Vran', 'FK Radnikol Bij', 'FK Jedinstvol', 'FK Proleterol', 'FK Napredol B', 'FK Lozniol'] },
+        rivals: ['FK Metalol GM', 'FK Vranjancol', 'FK Radnikol Bij', 'FK Jedinstvol', 'FK Proleterol', 'FK Napredol B', 'FK Lozniol'] },
       { level: 4, name: 'Zonska liga', totalClubs: 18, promoted: 2, relegated: 0,
         rivals: ['FK Omladol', 'FK Poletol', 'FK Vojvođol', 'FK Spartak B', 'FK Slogaol', 'FK Radnol Somb', 'FK Jadraniol'] },
     ],
@@ -320,7 +320,7 @@ export const COUNTRY_LEAGUES: Record<string, CountryData> = {
     flag: '🇭🇷',
     leagues: [
       { level: 1, name: 'HNL', totalClubs: 10, promoted: 0, relegated: 2,
-        rivals: ['Dinamo Zagrebol', 'Hajduk Splitol', 'Rijekaol', 'Osijekol', 'Varaždinol', 'Goricarol', 'Šibenikol'] },
+        rivals: ['NK Medvedgradon', 'NK Dioklecijanon', 'NK Kvarnerikon', 'NK Slavonikon', 'Varaždinol', 'Goricarol', 'NK Jadranol'] },
       { level: 2, name: '1. NL', totalClubs: 12, promoted: 2, relegated: 2,
         rivals: ['NK Sesvetol', 'NK Istra Nord', 'NK Slaven B', 'Lokomotivaol', 'NK Inter Zapol', 'NK Rudešol', 'NK Dugopolol'] },
       { level: 3, name: '2. NL', totalClubs: 16, promoted: 3, relegated: 4,
@@ -336,7 +336,7 @@ export const COUNTRY_LEAGUES: Record<string, CountryData> = {
     flag: '🇺🇾',
     leagues: [
       { level: 1, name: 'Primera División', totalClubs: 16, promoted: 0, relegated: 2,
-        rivals: ['Peñarolito', 'Tricolorito', 'Defensor Norte', 'Danubio Norte', 'Wanderersito', 'Fénixito', 'Rentistasito'] },
+        rivals: ['Cerrillon FC', 'Tricolorito', 'Defensor Norte', 'Aguadón FC', 'Wanderersito', 'Fénixito', 'Rentistasito'] },
       { level: 2, name: 'Segunda División', totalClubs: 14, promoted: 2, relegated: 2,
         rivals: ['Cerro Norte', 'Huracánito', 'Atenas Norte', 'Tacuarembó FC', 'Melo Deportivo', 'Salto FC', 'Progresito'] },
       { level: 3, name: 'Tercera División', totalClubs: 14, promoted: 3, relegated: 3,
@@ -366,7 +366,7 @@ export const COUNTRY_LEAGUES: Record<string, CountryData> = {
     flag: '🇰🇷',
     leagues: [
       { level: 1, name: 'K League 1', totalClubs: 12, promoted: 0, relegated: 2,
-        rivals: ['Ulsan Hyundaion', 'Jeonbuk Motoron', 'Jeju Unitedion', 'Hangangon FC', 'Suwon Bluewingion', 'Pohang Steeleron', 'Daeguon FC'] },
+        rivals: ['Ulsanon FC', 'Jeonjuon FC', 'Jejuon FC', 'Hangangon FC', 'Suwonon FC', 'Pohangon FC', 'Daeguon FC'] },
       { level: 2, name: 'K League 2', totalClubs: 12, promoted: 2, relegated: 2,
         rivals: ['Asan Mugunghwaon', 'Bucheon FCon', 'Seoul E-Lander', 'Gyeongnam FC', 'Seongnam FC', 'Chungnam Asan', 'Busanon FC'] },
       { level: 3, name: 'K3 League', totalClubs: 16, promoted: 3, relegated: 3,
