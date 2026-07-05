@@ -88,6 +88,17 @@ export function saveLeagueCountry(country: string): void {
   localStorage.setItem('fcorp_league_country', country);
 }
 
+/** Returns the current league level (1–4). Default = 4 (bottom). */
+export function getLeagueLevel(): number {
+  const raw = localStorage.getItem('fcorp_league_level');
+  const n = Number(raw);
+  return n >= 1 && n <= 4 ? n : 4;
+}
+
+export function saveLeagueLevel(level: number): void {
+  localStorage.setItem('fcorp_league_level', String(level));
+}
+
 export function saveClub(club: StoredClub): void {
   localStorage.setItem('fcorp_club', JSON.stringify(club));
 }
