@@ -157,7 +157,7 @@ export default function InboxTab() {
       <div className="px-4 pb-3">
         <h2 className="font-bold text-white mb-3"
           style={{ fontFamily: 'Inter, sans-serif', fontSize: '26px', textTransform: 'none', letterSpacing: 'normal', lineHeight: '1.2' }}>
-          Канцелярия
+          Сообщения
         </h2>
         <div className="flex gap-2 flex-wrap">
           {pending > 0 && (
