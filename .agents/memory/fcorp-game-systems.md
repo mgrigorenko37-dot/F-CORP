@@ -48,6 +48,14 @@ description: Key decisions for the football manager game engine — training, co
 - Falls back to mock `buildUpcomingMatches()` when `schedule.length === 0`
 - `Map as MapIcon` import alias required — `Map` from lucide-react shadows the global Map constructor
 
-**Why:** Decisions on Day 1 of implementation should be consistent. Future work (tick system, inbox events, transfer AI) should extend GameState and use simulateMatch as the authoritative result source.
+## Tick Engine (src/lib/tickEngine.ts) — built, in production
+- `initializeSeason(gameState, SeasonScheduleInput)` → builds full schedule via `generateSeasonSchedule`, anchors `currentDate` 7 days before first fixture
+- `applyWeeklyTick(gameState, squadNames, leagueLevel, clubName)` → one-week tick: simulate matches → heal injuries → recover fatigue
+- **Injury healing rule**: snapshot `preTickInjuredIds` BEFORE simulating matches. Only pre-existing injuries heal at end of week. Injuries sustained during the week keep full `weeksLeft` — prevents same-tick heal bug.
+- **Fatigue recovery**: `restDays = max(0, 7 - ceil(matchDays * 1.5))` × `(8–14 per day)`. Burnout computed from post-recovery fatigue.
+- **Integration in TournamentTab**: `handleAdvanceWeek` uses try/finally to always clear `simulatingRef` even on errors. "Старт сезона" on first press (no schedule) → calls `initializeSeason` then `applyWeeklyTick`.
+- `getThisWeekMatches(schedule, currentDate)` — used by UI to preview matches in the upcoming week window.
 
-**How to apply:** When adding new game systems, read gameState.ts first and extend the `GameState` interface rather than creating new localStorage keys. Tick system should call simulateMatch for each match day fixture, then handle injury healing separately.
+**Why:** Decisions on Day 1 of implementation should be consistent. Future work (inbox events, transfer AI) should extend GameState and use applyWeeklyTick as the time-progression entry point.
+
+**How to apply:** When adding new game systems, read gameState.ts first and extend the `GameState` interface rather than creating new localStorage keys. All time-based progression (injuries, fatigue, aging) belongs in tickEngine, not matchEngine.

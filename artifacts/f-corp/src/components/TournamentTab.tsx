@@ -13,7 +13,7 @@ import { getLeagueAtLevel } from '../data/leaguesData';
 import { getDomesticCups, getContinentalComps, getConfederation, getQualificationMap } from '../data/competitions';
 import { getLeagueLevel } from '../lib/storage';
 import { loadGameState, updateGameState, type GameState, type ScheduledMatch } from '../lib/gameState';
-import { simulateMatch } from '../lib/matchEngine';
+import { applyWeeklyTick, initializeSeason, getThisWeekMatches } from '../lib/tickEngine';
 import { ALL_MARKET_PLAYERS } from '../data/playersMarket';
 
 const C = {
@@ -330,6 +330,16 @@ const LEVEL_NAME  = ['', 'Высшая лига', '2-я лига', '3-я лиг�
 
 // ── Competition style helper ───────────────────────────────────────────────────
 
+/** Russian plural for "матч" based on count */
+function matchWord(n: number): string {
+  const mod10  = n % 10;
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 19) return 'матчей';
+  if (mod10 === 1) return 'матч';
+  if (mod10 >= 2 && mod10 <= 4) return 'матча';
+  return 'матчей';
+}
+
 function getCompetitionStyle(competition: string): { color: string; icon: string } {
   switch (competition) {
     case 'ucl':          return { color: '#1a56db', icon: '🏆' };
@@ -400,49 +410,53 @@ export default function TournamentTab() {
   const upcoming   = buildUpcomingMatches(myClub, league.rivals, country, level, activeComps);
   const compBadges = buildCompBadges(country, level, activeComps);
 
-  // ── Simulate next match ──
-  const handleSimulateMatch = useCallback(() => {
-    if (!nextMatch || !gameState || simulatingRef.current) return;
+  // ── Week-level matches preview ──
+  const currentDateStr  = gameState?.season.currentDate ?? '';
+  const thisWeekMatches = getThisWeekMatches(schedule, currentDateStr);
+
+  // ── Advance one week (init season if needed, then tick) ──
+  const handleAdvanceWeek = useCallback(() => {
+    if (simulatingRef.current || !gameState) return;
     simulatingRef.current = true;
     setSimulating(true);
 
-    // Build squad name map: purchased players from market, fallback generic
+    // Initialise season on first press if schedule is empty
+    let state = gameState;
+    if (!hasSchedule) {
+      const totalRoundsForSeason = (league.totalClubs - 1) * 2;
+      const comps = level === 1
+        ? ['league', 'national_cup', 'league_cup', 'uel']
+        : level === 2 ? ['league', 'national_cup', 'league_cup'] : ['league', 'national_cup'];
+      state = initializeSeason(state, {
+        country,
+        leagueLevel:        level,
+        rivals:             league.rivals,
+        leagueName:         league.name,
+        totalRounds:        totalRoundsForSeason,
+        activeCompetitions: comps,
+        seasonStartDate:    '2025-08-09',
+      });
+    }
+
+    // Build squad name map
     const squadNames = new Map<number, string>();
-    for (const id of gameState.purchasedPlayerIds) {
+    for (const id of state.purchasedPlayerIds) {
       const p = ALL_MARKET_PLAYERS.find(mp => mp.id === id);
       if (p) squadNames.set(id, p.name);
     }
-    for (const ps of gameState.playerStates) {
+    for (const ps of state.playerStates) {
       if (!squadNames.has(ps.id)) squadNames.set(ps.id, `Игрок #${ps.id}`);
     }
 
-    const output = simulateMatch({
-      match:        nextMatch,
-      playerStates: gameState.playerStates,
-      squadNames,
-      coach:        gameState.coach,
-      leagueLevel:  level,
-      clubName:     myClub,
-    });
-
-    const newState = updateGameState(s => ({
-      ...s,
-      playerStates: output.updatedPlayerStates,
-      season: {
-        ...s.season,
-        schedule: s.season.schedule.map(m =>
-          m.id === nextMatch.id ? { ...m, played: true, result: output.result } : m
-        ),
-        leagueRound: nextMatch.competition === 'league'
-          ? s.season.leagueRound + 1
-          : s.season.leagueRound,
-      },
-    }));
-
-    setGameState(newState);
-    simulatingRef.current = false;
-    setSimulating(false);
-  }, [nextMatch, gameState, level, myClub]);
+    try {
+      const tickResult = applyWeeklyTick(state, squadNames, level, myClub);
+      updateGameState(() => tickResult.newState);
+      setGameState(tickResult.newState);
+    } finally {
+      simulatingRef.current = false;
+      setSimulating(false);
+    }
+  }, [gameState, hasSchedule, league, level, country, myClub]);
   const cups      = getDomesticCups(country);
   const conf      = getConfederation(country);
   const allLeagues = [4, 3, 2, 1].map(l => getLeagueAtLevel(country, l));
@@ -618,10 +632,10 @@ export default function TournamentTab() {
       {view === 'calendar' && (
         <div style={{ padding: '0 18px', display: 'flex', flexDirection: 'column', gap: 7 }}>
 
-          {/* Simulate next match button */}
-          {nextMatch && (
+          {/* Week advance / start season button */}
+          {(hasSchedule ? !!nextMatch : true) ? (
             <button
-              onClick={handleSimulateMatch}
+              onClick={handleAdvanceWeek}
               disabled={simulating}
               style={{
                 width: '100%', padding: '13px 16px', borderRadius: 12, border: 'none',
@@ -632,8 +646,22 @@ export default function TournamentTab() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 marginBottom: 6,
               }}>
-              {simulating ? '⏳ Симулируется...' : `▶  Сыграть: ${nextMatch.competitionName}`}
+              {simulating
+                ? '⏳ Симулируется...'
+                : !hasSchedule
+                  ? '▶  Старт сезона'
+                  : thisWeekMatches.length > 0
+                    ? `→  Следующая неделя · ${thisWeekMatches.length} ${matchWord(thisWeekMatches.length)}`
+                    : '→  Следующая неделя'}
             </button>
+          ) : (
+            <div style={{
+              textAlign: 'center', padding: '14px', borderRadius: 12,
+              background: `${C.yellow}12`, color: C.yellow, fontWeight: 700, fontSize: 13,
+              marginBottom: 6,
+            }}>
+              🏆 Сезон завершён
+            </div>
           )}
 
           {/* Recent results */}

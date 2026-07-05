@@ -1,0 +1,274 @@
+/**
+ * F-CORP Tick (Week) Engine
+ *
+ * The "conductor" of game time. Each tick represents one calendar week:
+ *   1. Simulates every scheduled match whose date falls inside the week window.
+ *   2. Applies post-week recovery to all players (fatigue↓, injury healing, morale drift).
+ *   3. Advances season.currentDate by 7 days.
+ *   4. Updates season.leagueRound for every league match played.
+ *
+ * Injury healing lives here, NOT in matchEngine — so a double-fixture week
+ * still counts as just one healing tick.
+ *
+ * Season initialisation:
+ *   `initializeSeason()` builds the full schedule from `generateSeasonSchedule`
+ *   and anchors currentDate 7 days before the first fixture.
+ */
+
+import type { GameState, ScheduledMatch, InjuryType } from './gameState';
+import { simulateMatch } from './matchEngine';
+import type { SimulateMatchOutput } from './matchEngine';
+import { generateSeasonSchedule } from './scheduleEngine';
+import type { SeasonScheduleInput } from './scheduleEngine';
+
+// ─── TYPES ────────────────────────────────────────────────────────────────────
+
+export interface MatchSummary {
+  match:     ScheduledMatch;
+  myGoals:   number;
+  oppGoals:  number;
+  output:    SimulateMatchOutput;
+}
+
+export interface InjuryEvent {
+  playerId:   number;
+  playerName: string;
+  injuryType: InjuryType;
+}
+
+export interface WeeklyTickResult {
+  newState:          GameState;
+  weekStart:         string;   // ISO — start of processed window
+  weekEnd:           string;   // ISO — new currentDate
+  matchesPlayed:     MatchSummary[];
+  injuriesHealed:    number[]; // player IDs whose injury cleared this week
+  injuriesOccurred:  InjuryEvent[];
+}
+
+// ─── DATE UTILS ───────────────────────────────────────────────────────────────
+
+function isoDate(d: Date): string {
+  return d.toISOString().split('T')[0];
+}
+
+function addDays(d: Date, n: number): Date {
+  const r = new Date(d);
+  r.setDate(r.getDate() + n);
+  return r;
+}
+
+// ─── SEASON INITIALISATION ────────────────────────────────────────────────────
+
+/**
+ * Generate the full season schedule and set the initial currentDate.
+ * Call this once when the player starts a new game (schedule is empty).
+ */
+export function initializeSeason(
+  gameState: GameState,
+  input: SeasonScheduleInput,
+): GameState {
+  const schedule  = generateSeasonSchedule(input);
+  const first     = schedule[0];
+
+  // currentDate starts 7 days before the first fixture so the first tick
+  // falls on match week 1.
+  const startDate = first
+    ? isoDate(addDays(new Date(first.date), -7))
+    : input.seasonStartDate;
+
+  return {
+    ...gameState,
+    season: {
+      ...gameState.season,
+      schedule,
+      startDate,
+      currentDate:        startDate,
+      seasonNumber:       1,
+      leagueRound:        0,
+      totalRounds:        input.totalRounds,
+      activeCompetitions: input.activeCompetitions,
+    },
+  };
+}
+
+// ─── WEEKLY TICK ──────────────────────────────────────────────────────────────
+
+/**
+ * Advance game time by exactly one week.
+ *
+ * @param gameState   Current persisted game state.
+ * @param squadNames  id → display name map for scorer attribution.
+ * @param leagueLevel 1–4 (affects opponent strength).
+ * @param clubName    Club display name (for display, not logic).
+ */
+export function applyWeeklyTick(
+  gameState:   GameState,
+  squadNames:  Map<number, string>,
+  leagueLevel: number,
+  clubName:    string,
+): WeeklyTickResult {
+  const season = gameState.season;
+
+  // ── Week window ──
+  const weekStart = season.currentDate || season.startDate || isoDate(new Date());
+  const weekEnd   = isoDate(addDays(new Date(weekStart), 7));
+
+  // Matches whose date is inside (weekStart, weekEnd] and not yet played
+  const weekMatches = season.schedule
+    .filter(m => !m.played && m.date > weekStart && m.date <= weekEnd)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  // ── Snapshot which players were already injured BEFORE this tick ──
+  // Only pre-existing injuries are healed at the end of the week.
+  // Injuries sustained during this week's matches keep their full duration.
+  const preTickInjuredIds = new Set(
+    gameState.playerStates.filter(p => !!p.injury).map(p => p.id)
+  );
+
+  // ── Simulate each match in chronological order ──
+  let playerStates = [...gameState.playerStates];
+  const matchesPlayed:    MatchSummary[] = [];
+  const injuriesOccurred: InjuryEvent[]  = [];
+  let updatedSchedule   = [...season.schedule];
+  let leagueRound       = season.leagueRound;
+
+  for (const match of weekMatches) {
+    const output = simulateMatch({
+      match,
+      playerStates,
+      squadNames,
+      coach:       gameState.coach,
+      leagueLevel,
+      clubName,
+    });
+
+    // Detect new injuries (present in output but not in input)
+    const prevInjuryMap = new Map(playerStates.map(p => [p.id, p.injury]));
+    for (const ps of output.updatedPlayerStates) {
+      if (ps.injury && !prevInjuryMap.get(ps.id)) {
+        injuriesOccurred.push({
+          playerId:   ps.id,
+          playerName: squadNames.get(ps.id) ?? `Игрок #${ps.id}`,
+          injuryType: ps.injury.type,
+        });
+      }
+    }
+
+    playerStates = output.updatedPlayerStates;
+
+    updatedSchedule = updatedSchedule.map(m =>
+      m.id === match.id ? { ...m, played: true, result: output.result } : m
+    );
+
+    if (match.competition === 'league') leagueRound++;
+
+    matchesPlayed.push({
+      match,
+      myGoals:  match.isHome ? output.result.homeGoals : output.result.awayGoals,
+      oppGoals: match.isHome ? output.result.awayGoals : output.result.homeGoals,
+      output,
+    });
+  }
+
+  // ── Post-week player updates ──
+  // Each match requires ~1.5 effective rest days to recover from.
+  const matchDays = weekMatches.length;
+  const restDays  = Math.max(0, 7 - Math.ceil(matchDays * 1.5));
+
+  const injuriesHealed: number[] = [];
+
+  const finalPlayerStates = playerStates.map(p => {
+    // ── Injury healing: ONLY for injuries that existed before this tick ──
+    // Injuries sustained during this week's matches keep their full duration.
+    let newInjury = p.injury;
+    if (newInjury && preTickInjuredIds.has(p.id)) {
+      const remaining = Math.max(0, newInjury.weeksLeft - 1);
+      if (remaining === 0) {
+        injuriesHealed.push(p.id);
+        newInjury = null;
+      } else {
+        newInjury = { ...newInjury, weeksLeft: remaining };
+      }
+    }
+
+    // ── Fatigue recovery (rest days) ──
+    // Recovery rate: 8–14 per rest day, better fitness = faster recovery
+    const recoveryPerDay   = 8 + Math.floor(p.fitness / 15); // 8..14
+    const fatigueRecovered = restDays * recoveryPerDay;
+    const newFatigue       = Math.max(0, Math.round(p.fatigue - fatigueRecovered));
+
+    // ── Fitness: slight recovery when not overplayed ──
+    const newFitness = newInjury
+      ? clamp(p.fitness + 2, 0, 100)               // injured players rest
+      : clamp(p.fitness + (matchDays > 2 ? -1 : 1), 0, 100);
+
+    // ── Sharpness decay for rest weeks (simulateMatch already updated starters) ──
+    const newSharpness = matchDays > 0
+      ? p.sharpness
+      : clamp(p.sharpness - 4, 0, 100);            // no matches → lose edge
+
+    // ── Morale: drift toward 65 (natural equilibrium) ──
+    const moraleDrift = p.morale > 65 ? -1 : p.morale < 65 ? 1 : 0;
+    const newMorale   = clamp(p.morale + moraleDrift, 0, 100);
+
+    // ── Burnout risk: computed from post-recovery fatigue ──
+    const newBurnout = newFatigue > 70
+      ? clamp(p.burnoutRisk + 4, 0, 100)
+      : clamp(p.burnoutRisk - 5, 0, 100);
+
+    return {
+      ...p,
+      fatigue:     newFatigue,
+      fitness:     newFitness,
+      sharpness:   newSharpness,
+      morale:      newMorale,
+      burnoutRisk: newBurnout,
+      injury:      newInjury,
+    };
+  });
+
+  // ── Assemble new state ──
+  const newState: GameState = {
+    ...gameState,
+    playerStates: finalPlayerStates,
+    lastWeekTick: isoDate(new Date()),
+    season: {
+      ...season,
+      currentDate: weekEnd,
+      leagueRound,
+      schedule:    updatedSchedule,
+    },
+  };
+
+  return { newState, weekStart, weekEnd, matchesPlayed, injuriesHealed, injuriesOccurred };
+}
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+
+function clamp(v: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, v));
+}
+
+// ─── QUERY HELPERS ────────────────────────────────────────────────────────────
+
+/** Matches scheduled for the next 7-day window from currentDate. */
+export function getThisWeekMatches(
+  schedule:    ScheduledMatch[],
+  currentDate: string,
+): ScheduledMatch[] {
+  if (!currentDate) return [];
+  const weekEnd = isoDate(addDays(new Date(currentDate), 7));
+  return schedule.filter(m => !m.played && m.date > currentDate && m.date <= weekEnd);
+}
+
+/** How many real weeks remain in the season (based on latest unplayed match). */
+export function weeksRemaining(
+  schedule:    ScheduledMatch[],
+  currentDate: string,
+): number {
+  const remaining = schedule.filter(m => !m.played && m.date > currentDate);
+  if (remaining.length === 0) return 0;
+  const lastDate = remaining[remaining.length - 1].date;
+  const msLeft   = new Date(lastDate).getTime() - new Date(currentDate).getTime();
+  return Math.ceil(msLeft / (7 * 24 * 60 * 60 * 1000));
+}
