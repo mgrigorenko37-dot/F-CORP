@@ -32,20 +32,20 @@ const REGIONS: { label: string; countries: string[] }[] = [
 // ── Club-name generator (fills gaps beyond rivals list) ───────────────────────
 
 const LANG_CITIES: Record<string, string[]> = {
-  ru: ['Велгород','Карзань','Урфа','Брелин','Волонеж','Турла','Рязок','Тварь','Курнов','Орелск','Ярград','Иваск','Брянок','Тамров','Линецк','Саратол','Ульянов'],
-  en: ['Burtwick','Oldmark','Manswick','Stockfield','Chestmark','Rochdark','Maccleswick','Shrewmark','Grimwick','Carlwick','Exmark','Wycfield','Stevenwick','Leywood','Burwick'],
-  es: ['Badajola','Huelva Norte','Salamola','Burgola','Logroñol','Cádizol','Jaénola','Castellola','Tarragola','Lugola','Ponferola','Ferrola','Ourensol','Linolares','Jaénol'],
-  de: ['Münmark','Kielburg','Lübmark','Erfmark','Hallburg','Magmark','Rostmark','Padermark','Osnamark','Darmmark','Aalburg','Saarmark','Ulmburg','Würzmark'],
-  it: ['Catanola','Messinola','Foggiola','Tarantola','Cosenzola','Beneventola','Avellinola','Casertola','Pescarola','Cittanola','Crotonola','Reggiola','Ternanola','Bresciola'],
-  fr: ['Nîmol','Caennol','Clermontol','Touranol','Angerol','Rouennol','Troyol','Lensol','Valenciol','Lavollan','Chateaurol','Nioranol','Belfortol','Bézieranol'],
-  pt: ['Bragola','Coimbrola','Aveirola','Viseola','Guardola','Évorola','Bejola','Portimola','Setúbola','Cascola','Estorola','Almadola','Barreirola','Caldasol'],
-  nl: ['Utrechtol','Gronmark','Eindhovel','Tilmark','Bredamark','Nijmark','Arnmark','Enschmark','Maasmark','Haarmark','Delftmark','Leidmark','Devenmark'],
-  tr: ['Adanark','Izmirk','Burmark','Antalark','Konyark','Gaziark','Kaymark','Mermark','Eskiark','Erzmark','Trabmark','Sammark','Elazark'],
-  pl: ['Gdańmark','Wrocmark','Łódmark','Lubmark','Bydmark','Białmark','Rzeszmark','Torumark','Kielmark','Radomark','Częstmark','Sosnmark'],
-  br: ['Fortoleza','Recifola','Manaola','Natola','Maceióla','Belémola','Teresinola','Campola','Cuiabola','Macapola','Porto Nola','Rio Bola'],
-  ar: ['Tucumola','Rosariola','Córdobola','Mendozola','La Platola','Mar del Platola','Saltola','Formosola','Corriola','Posadasola','Santa Fola','Bahíola'],
-  jp: ['Sapporion','Sendaion','Kanazion','Okayaion','Hiroshion','Matsuyion','Kochion','Nagasion','Kagoshion','Nahaion','Mitoion','Takasion'],
-  generic: ['Olympion','Sportinon','Athletion','Unitedion','Cityion','Starion','FC Metrion','SC Centrion'],
+  ru: ['Самара','Казань','Уфа','Пермь','Воронеж','Тула','Рязань','Тверь','Курск','Орёл','Ярославль','Иваново','Брянск','Тамбов','Липецк','Саратов','Ульяновск'],
+  en: ['Burton','Oldham','Mansfield','Stockport','Chester','Rochdale','Macclesfield','Shrewsbury','Grimsby','Carlisle','Exeter','Wycombe','Stevenage','Leyton','Bury'],
+  es: ['Badajoz','Huelva','Salamanca','Burgos','Logroño','Cádiz','Jaén','Castellón','Tarragona','Lugo','Ponferrada','Ferrol','Ourense','Jaén','Linares'],
+  de: ['Münster','Kiel','Lübeck','Erfurt','Halle','Magdeburg','Rostock','Paderborn','Osnabrück','Darmstadt','Aalen','Saarbrücken','Ulm','Würzburg'],
+  it: ['Catania','Messina','Foggia','Taranto','Cosenza','Benevento','Avellino','Caserta','Pescara','Cittadella','Crotone','Reggio','Ternana','Brescia'],
+  fr: ['Nîmes','Caen','Clermont','Tours','Angers','Rouen','Troyes','Lens','Valenciennes','Laval','Chateauroux','Niort','Belfort','Béziers'],
+  pt: ['Braga','Coimbra','Aveiro','Viseu','Guarda','Évora','Beja','Portimão','Setúbal','Cascais','Estoril','Almada','Barreiro','Caldas'],
+  nl: ['Utrecht','Groningen','Eindhoven','Tilburg','Breda','Nijmegen','Arnhem','Enschede','Maastricht','Haarlem','Delft','Leiden','Deventer'],
+  tr: ['Adana','Izmir','Bursa','Antalya','Konya','Gaziantep','Kayseri','Mersin','Eskişehir','Erzurum','Trabzon','Samsun','Elazığ'],
+  pl: ['Gdańsk','Wrocław','Łódź','Lublin','Bydgoszcz','Białystok','Rzeszów','Toruń','Kielce','Radom','Częstochowa','Sosnowiec'],
+  br: ['Fortaleza','Recife','Manaus','Natal','Maceió','Belém','Teresina','Campo Grande','Cuiabá','Macapá','Porto Velho','Rio Branco'],
+  ar: ['Tucumán','Rosario','Córdoba','Mendoza','La Plata','Mar del Plata','Salta','Formosa','Corrientes','Posadas','Santa Fe','Bahía Blanca'],
+  jp: ['Sapporo','Sendai','Kanazawa','Okayama','Hiroshima','Matsuyama','Kochi','Nagasaki','Kagoshima','Naha','Mito','Takasaki'],
+  generic: ['Olympic','Sporting','Athletic','United','City','Stars','FC Metro','SC Central'],
 };
 
 const LANG_SUFFIX: Record<string, string[]> = {
