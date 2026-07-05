@@ -224,6 +224,11 @@ export function saveGameState(state: GameState): void {
   localStorage.setItem(KEY, JSON.stringify(state));
 }
 
+/** Wipe all persisted game progress (coach, squad, season, finances). */
+export function resetGameState(): void {
+  localStorage.removeItem(KEY);
+}
+
 export function updateGameState(updater: (s: GameState) => GameState): GameState {
   const current = loadGameState();
   const next = updater(current);

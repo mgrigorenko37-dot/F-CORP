@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { getClub, saveClub, completeOnboarding } from '../lib/storage';
+import { resetGameState } from '../lib/gameState';
 
 interface Props {
   onNext: () => void;
@@ -26,8 +27,10 @@ export default function ClubCreationScreen({ onNext }: Props) {
 
   const handleFound = () => {
     if (isValid) {
-      // Clear old inbox statuses so the new club gets fresh messages
+      // Wipe all progress from any previous club so the new club starts clean:
+      // inbox messages, coach/squad/season state, wallet, transfers, staff, etc.
       localStorage.removeItem('fcorp_inbox_statuses');
+      resetGameState();
       saveClub({ name: clubName.trim(), stadium: stadiumName.trim(), primaryColor, secondaryColor });
       completeOnboarding();
       onNext();
