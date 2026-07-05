@@ -53,7 +53,9 @@ function posGroupColor(pos: string): string {
 
 // ─── Formation definitions ────────────────────────────────────────────────────
 
-type FormationId = '4-4-2' | '4-3-3' | '4-2-3-1' | '3-5-2' | '5-3-2';
+type FormationId =
+  | '4-4-2' | '4-3-3' | '4-2-3-1' | '3-5-2' | '5-3-2'
+  | '4-1-4-1' | '4-4-1-1' | '4-5-1' | '3-4-3' | '3-4-2-1' | '4-3-2-1' | '5-4-1';
 
 interface Slot {
   pos:   string;   // preferred position
@@ -62,7 +64,24 @@ interface Slot {
   y:     number;   // 0–100 % of pitch height (0=top / opponent end, 100=bottom / our goal)
 }
 
+// Formation metadata: description shown to the owner
+const FORMATION_META: Record<FormationId, { desc: string; style: string }> = {
+  '4-4-2':   { desc: 'Классика',          style: 'Баланс атаки и обороны' },
+  '4-3-3':   { desc: 'Атака',             style: 'Три нападающих, давление' },
+  '4-2-3-1': { desc: 'Современная',       style: 'Двойной опорник, единственный форвард' },
+  '3-5-2':   { desc: 'Контроль',          style: 'Три защитника, насыщенная середина' },
+  '5-3-2':   { desc: 'Оборонительная',    style: 'Пять защитников, прочный тыл' },
+  '4-1-4-1': { desc: 'Компактность',      style: 'Один опорник, плотный блок' },
+  '4-4-1-1': { desc: 'С десяткой',        style: 'Атакующий хав за единственным форвардом' },
+  '4-5-1':   { desc: 'Контратака',        style: 'Пять в средней линии, один форвард' },
+  '3-4-3':   { desc: 'Тотальная атака',   style: 'Три защитника, три форварда' },
+  '3-4-2-1': { desc: 'Ёлочка (3-атт)',    style: 'Три сзади, два атакующих хава' },
+  '4-3-2-1': { desc: 'Ёлочка',            style: 'Пирамида: 4-3-2-1, два АМ' },
+  '5-4-1':   { desc: 'Бетон',             style: 'Ультра-оборонительная, один форвард' },
+};
+
 const FORMATIONS: Record<FormationId, Slot[]> = {
+  // ── Классика ──────────────────────────────────────────────────────────────
   '4-4-2': [
     { pos:'GK',  role:'ВРТ', x:50, y:86 },
     { pos:'LB',  role:'ЛЗ',  x:14, y:70 },
@@ -76,6 +95,7 @@ const FORMATIONS: Record<FormationId, Slot[]> = {
     { pos:'ST',  role:'НАП', x:36, y:24 },
     { pos:'ST',  role:'НАП', x:64, y:24 },
   ],
+  // ── 4-3-3 ─────────────────────────────────────────────────────────────────
   '4-3-3': [
     { pos:'GK',  role:'ВРТ', x:50, y:86 },
     { pos:'LB',  role:'ЛЗ',  x:14, y:70 },
@@ -89,6 +109,7 @@ const FORMATIONS: Record<FormationId, Slot[]> = {
     { pos:'ST',  role:'НАП', x:50, y:16 },
     { pos:'RW',  role:'ПВ',  x:86, y:22 },
   ],
+  // ── 4-2-3-1 ───────────────────────────────────────────────────────────────
   '4-2-3-1': [
     { pos:'GK',  role:'ВРТ', x:50, y:86 },
     { pos:'LB',  role:'ЛЗ',  x:14, y:70 },
@@ -102,6 +123,7 @@ const FORMATIONS: Record<FormationId, Slot[]> = {
     { pos:'RW',  role:'ПАМ', x:86, y:40 },
     { pos:'ST',  role:'НАП', x:50, y:18 },
   ],
+  // ── 3-5-2 ─────────────────────────────────────────────────────────────────
   '3-5-2': [
     { pos:'GK',  role:'ВРТ', x:50, y:86 },
     { pos:'CB',  role:'ЦЗ',  x:26, y:70 },
@@ -115,6 +137,7 @@ const FORMATIONS: Record<FormationId, Slot[]> = {
     { pos:'ST',  role:'НАП', x:36, y:24 },
     { pos:'ST',  role:'НАП', x:64, y:24 },
   ],
+  // ── 5-3-2 ─────────────────────────────────────────────────────────────────
   '5-3-2': [
     { pos:'GK',  role:'ВРТ', x:50, y:86 },
     { pos:'LB',  role:'ЛЗ',  x:9,  y:70 },
@@ -127,6 +150,104 @@ const FORMATIONS: Record<FormationId, Slot[]> = {
     { pos:'CM',  role:'ЦП',  x:74, y:50 },
     { pos:'ST',  role:'НАП', x:36, y:24 },
     { pos:'ST',  role:'НАП', x:64, y:24 },
+  ],
+  // ── 4-1-4-1 ───────────────────────────────────────────────────────────────
+  '4-1-4-1': [
+    { pos:'GK',  role:'ВРТ', x:50, y:86 },
+    { pos:'LB',  role:'ЛЗ',  x:14, y:70 },
+    { pos:'CB',  role:'ЦЗ',  x:36, y:70 },
+    { pos:'CB',  role:'ЦЗ',  x:64, y:70 },
+    { pos:'RB',  role:'ПЗ',  x:86, y:70 },
+    { pos:'CDM', role:'ОП',  x:50, y:59 },
+    { pos:'LM',  role:'ЛП',  x:9,  y:45 },
+    { pos:'CM',  role:'ЦП',  x:34, y:44 },
+    { pos:'CM',  role:'ЦП',  x:66, y:44 },
+    { pos:'RM',  role:'ПП',  x:91, y:45 },
+    { pos:'ST',  role:'НАП', x:50, y:20 },
+  ],
+  // ── 4-4-1-1 ───────────────────────────────────────────────────────────────
+  '4-4-1-1': [
+    { pos:'GK',  role:'ВРТ', x:50, y:86 },
+    { pos:'LB',  role:'ЛЗ',  x:14, y:70 },
+    { pos:'CB',  role:'ЦЗ',  x:36, y:70 },
+    { pos:'CB',  role:'ЦЗ',  x:64, y:70 },
+    { pos:'RB',  role:'ПЗ',  x:86, y:70 },
+    { pos:'LM',  role:'ЛП',  x:9,  y:53 },
+    { pos:'CM',  role:'ЦП',  x:34, y:53 },
+    { pos:'CM',  role:'ЦП',  x:66, y:53 },
+    { pos:'RM',  role:'ПП',  x:91, y:53 },
+    { pos:'CAM', role:'АМ',  x:50, y:36 },
+    { pos:'ST',  role:'НАП', x:50, y:20 },
+  ],
+  // ── 4-5-1 ─────────────────────────────────────────────────────────────────
+  '4-5-1': [
+    { pos:'GK',  role:'ВРТ', x:50, y:86 },
+    { pos:'LB',  role:'ЛЗ',  x:14, y:70 },
+    { pos:'CB',  role:'ЦЗ',  x:36, y:70 },
+    { pos:'CB',  role:'ЦЗ',  x:64, y:70 },
+    { pos:'RB',  role:'ПЗ',  x:86, y:70 },
+    { pos:'LM',  role:'ЛП',  x:8,  y:50 },
+    { pos:'CDM', role:'ОП',  x:29, y:50 },
+    { pos:'CM',  role:'ЦП',  x:50, y:50 },
+    { pos:'CDM', role:'ОП',  x:71, y:50 },
+    { pos:'RM',  role:'ПП',  x:92, y:50 },
+    { pos:'ST',  role:'НАП', x:50, y:20 },
+  ],
+  // ── 3-4-3 ─────────────────────────────────────────────────────────────────
+  '3-4-3': [
+    { pos:'GK',  role:'ВРТ', x:50, y:86 },
+    { pos:'CB',  role:'ЦЗ',  x:25, y:70 },
+    { pos:'CB',  role:'ЦЗ',  x:50, y:70 },
+    { pos:'CB',  role:'ЦЗ',  x:75, y:70 },
+    { pos:'LM',  role:'ЛП',  x:10, y:52 },
+    { pos:'CM',  role:'ЦП',  x:36, y:52 },
+    { pos:'CM',  role:'ЦП',  x:64, y:52 },
+    { pos:'RM',  role:'ПП',  x:90, y:52 },
+    { pos:'LW',  role:'ЛВ',  x:15, y:22 },
+    { pos:'ST',  role:'НАП', x:50, y:16 },
+    { pos:'RW',  role:'ПВ',  x:85, y:22 },
+  ],
+  // ── 3-4-2-1 ───────────────────────────────────────────────────────────────
+  '3-4-2-1': [
+    { pos:'GK',  role:'ВРТ', x:50, y:86 },
+    { pos:'CB',  role:'ЦЗ',  x:25, y:71 },
+    { pos:'CB',  role:'ЦЗ',  x:50, y:71 },
+    { pos:'CB',  role:'ЦЗ',  x:75, y:71 },
+    { pos:'LM',  role:'ЛФЗ', x:9,  y:55 },
+    { pos:'CM',  role:'ЦП',  x:35, y:54 },
+    { pos:'CM',  role:'ЦП',  x:65, y:54 },
+    { pos:'RM',  role:'ПФЗ', x:91, y:55 },
+    { pos:'CAM', role:'ЛАМ', x:32, y:34 },
+    { pos:'CAM', role:'ПАМ', x:68, y:34 },
+    { pos:'ST',  role:'НАП', x:50, y:16 },
+  ],
+  // ── 4-3-2-1 (Рождественская ёлка) ────────────────────────────────────────
+  '4-3-2-1': [
+    { pos:'GK',  role:'ВРТ', x:50, y:86 },
+    { pos:'LB',  role:'ЛЗ',  x:14, y:70 },
+    { pos:'CB',  role:'ЦЗ',  x:36, y:70 },
+    { pos:'CB',  role:'ЦЗ',  x:64, y:70 },
+    { pos:'RB',  role:'ПЗ',  x:86, y:70 },
+    { pos:'CM',  role:'ЦП',  x:26, y:55 },
+    { pos:'CM',  role:'ЦП',  x:50, y:55 },
+    { pos:'CM',  role:'ЦП',  x:74, y:55 },
+    { pos:'CAM', role:'ЛАМ', x:32, y:36 },
+    { pos:'CAM', role:'ПАМ', x:68, y:36 },
+    { pos:'ST',  role:'НАП', x:50, y:18 },
+  ],
+  // ── 5-4-1 ─────────────────────────────────────────────────────────────────
+  '5-4-1': [
+    { pos:'GK',  role:'ВРТ', x:50, y:86 },
+    { pos:'LB',  role:'ЛЗ',  x:9,  y:70 },
+    { pos:'CB',  role:'ЦЗ',  x:28, y:70 },
+    { pos:'CB',  role:'ЦЗ',  x:50, y:70 },
+    { pos:'CB',  role:'ЦЗ',  x:72, y:70 },
+    { pos:'RB',  role:'ПЗ',  x:91, y:70 },
+    { pos:'LM',  role:'ЛП',  x:12, y:50 },
+    { pos:'CM',  role:'ЦП',  x:36, y:50 },
+    { pos:'CM',  role:'ЦП',  x:64, y:50 },
+    { pos:'RM',  role:'ПП',  x:88, y:50 },
+    { pos:'ST',  role:'НАП', x:50, y:22 },
   ],
 };
 
@@ -632,25 +753,35 @@ export default function TacticsView() {
 
       {/* ── Formation selector ── */}
       <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 10, color: C.dim, letterSpacing: '0.5px', marginBottom: 8 }}>
-          СХЕМА ИГРЫ
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
+          <span style={{ fontSize: 10, color: C.dim, letterSpacing: '0.5px' }}>СХЕМА ИГРЫ</span>
+          <span style={{ fontSize: 10, color: C.teal }}>{FORMATION_META[formation].desc}</span>
         </div>
-        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
-          {(Object.keys(FORMATIONS) as FormationId[]).map(f => (
-            <button key={f} onClick={() => handleFormationChange(f)}
-              style={{
-                flexShrink: 0,
-                padding: '7px 14px',
-                borderRadius: 20,
-                border: f === formation ? 'none' : `0.5px solid ${C.border2}`,
-                background: f === formation ? C.teal : 'transparent',
-                color: f === formation ? C.bg : C.muted,
-                fontSize: 12, fontWeight: f === formation ? 700 : 500,
-                cursor: 'pointer', whiteSpace: 'nowrap',
-              }}>
-              {f}
-            </button>
-          ))}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+          {(Object.keys(FORMATIONS) as FormationId[]).map(f => {
+            const active = f === formation;
+            return (
+              <button key={f} onClick={() => handleFormationChange(f)}
+                style={{
+                  padding: '8px 6px',
+                  borderRadius: 10,
+                  border: active ? `1px solid ${C.teal}90` : `0.5px solid ${C.border2}`,
+                  background: active ? `${C.teal}18` : C.card,
+                  cursor: 'pointer',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: active ? C.teal : C.white }}>
+                  {f}
+                </span>
+                <span style={{ fontSize: 8, color: active ? C.teal : C.vdim, letterSpacing: '0.2px' }}>
+                  {FORMATION_META[f].desc}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <div style={{ fontSize: 10, color: C.dim, marginTop: 7, textAlign: 'center' }}>
+          {FORMATION_META[formation].style}
         </div>
       </div>
 
