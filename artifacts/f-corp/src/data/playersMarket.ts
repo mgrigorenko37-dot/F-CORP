@@ -1,4 +1,4 @@
-// 10,000 generated players with English names
+// 10,000 generated players with fictional names
 // Ratings distributed realistically: most 30-65, fewer 66-79, rare 80-99
 
 export interface MarketPlayer {
@@ -13,29 +13,29 @@ export interface MarketPlayer {
 }
 
 const FIRST: string[] = [
-  'James','Oliver','Harry','Jack','George','Noah','Charlie','Jacob','Alfie','Freddie',
-  'Oscar','Thomas','William','Leo','Henry','Joshua','Ethan','Isaac','Lucas','Mason',
-  'Liam','Logan','Nathan','Caleb','Dylan','Adam','Elijah','Ryan','Connor','Tyler',
-  'Jordan','Sam','Alex','Chris','Daniel','Matthew','Andrew','David','Michael','Robert',
-  'Carlos','Diego','Luis','Pablo','Sergio','Ivan','Marco','Luca','Bruno','Rafael',
-  'Gabriel','Eduardo','Felipe','Ricardo','Antonio','Francisco','Miguel','Andre','Pedro','Victor',
-  'Kevin','Patrick','Sean','Brendan','Cian','Rory','Declan','Finn','Eoin','Niall',
-  'Lars','Erik','Magnus','Bjorn','Sven','Gunnar','Olaf','Torben','Axel','Henrik',
-  'Karim','Youssef','Omar','Hamza','Mehdi','Sofiane','Bilal','Samir','Amine','Rachid',
-  'Emmanuel','Kofi','Kwame','Yaw','Ama','Kojo','Akwasi','Nana','Abena','Fiifi',
+  'Zavar','Orin','Thalec','Brenn','Yoskel','Dranik','Farvel','Gunto','Imrek','Jorav',
+  'Kelash','Lorven','Mindo','Norec','Osval','Pelkon','Ryzel','Servo','Thaldo','Unark',
+  'Valto','Wyrek','Xandro','Yarkon','Zornel','Aldric','Brenco','Ceval','Daxon','Elron',
+  'Fenrik','Gorvil','Harnek','Irzel','Jelkon','Korvan','Ledric','Mercon','Narkel','Olven',
+  'Prindo','Queln','Rovak','Sultar','Talnek','Urven','Valkon','Welric','Xevorn','Yarzel',
+  'Zolvan','Askel','Bolnir','Crendo','Dorval','Enkar','Ferzon','Galdric','Henvel','Idrec',
+  'Jarkon','Keldric','Lomver','Narco','Ovrek','Peldar','Ruvek','Skelto','Torvin','Umrek',
+  'Vandel','Wovric','Xornek','Yelvar','Zorkel','Aldrak','Bunvar','Calrec','Delvon','Evrec',
+  'Fornec','Golvar','Herkon','Indrec','Jorval','Kerzon','Lenvic','Morval','Nedric','Ondrek',
+  'Pelvar','Roknec','Salvon','Thunec','Urdek','Volnar','Wardec','Xelvon','Yandric','Zumark',
 ];
 
 const LAST: string[] = [
-  'Smith','Jones','Williams','Taylor','Brown','Davies','Evans','Wilson','Thomas','Roberts',
-  'Johnson','Walker','Wright','Thompson','White','Hughes','Edwards','Green','Hall','Wood',
-  'Martinez','Garcia','Rodriguez','Lopez','Sanchez','Perez','Gonzalez','Fernandez','Diaz','Torres',
-  'Silva','Santos','Ferreira','Costa','Oliveira','Souza','Rodrigues','Alves','Martins','Carvalho',
-  'Muller','Schmidt','Schneider','Fischer','Weber','Meyer','Wagner','Becker','Schulz','Hofmann',
-  'Rossi','Ferrari','Russo','Romano','Colombo','Ricci','Marino','Greco','Bruno','Gallo',
-  'Dubois','Martin','Bernard','Petit','Durand','Moreau','Simon','Michel','Lefebvre','Leroy',
-  'Okafor','Musa','Ibrahim','Abdullahi','Adeyemi','Okonkwo','Nwosu','Eze','Chukwu','Onuoha',
-  'Nielsen','Hansen','Pedersen','Andersen','Christensen','Larsen','Sorensen','Rasmussen','Jensen','Mogensen',
-  'Kowalski','Nowak','Wisniewski','Wojciech','Kaminski','Lewandowski','Zielinski','Szymanski','Wozniak','Kaczmarek',
+  'Varkon','Theldric','Omrek','Belzon','Farvec','Guldric','Henkar','Invor','Jornek','Kelvar',
+  'Lornec','Meldric','Narzon','Ovkar','Pelrec','Rosvon','Sultec','Tharvon','Undrek','Veldric',
+  'Wornek','Xalvar','Yondric','Zornek','Aldrec','Balvon','Crender','Dornek','Elvark','Forcon',
+  'Grelvar','Hornek','Indrec','Jolvon','Keldrac','Lorvec','Mendric','Norvar','Oldrek','Prevon',
+  'Rondec','Seldric','Torvar','Ulvon','Vandrek','Welcon','Xordric','Yelvon','Zunrek','Arndec',
+  'Bolvark','Crondric','Delnec','Elvork','Fornkar','Greldric','Hornec','Invork','Joldvon','Krenec',
+  'Lornvar','Melzork','Nardec','Olvron','Peldric','Renvon','Soldrec','Thonvar','Undvon','Velkar',
+  'Wornec','Xaldrec','Yelvark','Zundric','Aldvon','Bolnec','Crelvar','Dolnrek','Endrec','Forvon',
+  'Grelnek','Holvon','Indrark','Jolnec','Kelvark','Lordrec','Menvon','Nordrek','Olvec','Prelvon',
+  'Rondark','Selvon','Thornek','Uldrec','Vandvon','Welvark','Xordrec','Yolvon','Zundek','Arelvon',
 ];
 
 const NATS: string[] = [

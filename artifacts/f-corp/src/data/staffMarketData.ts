@@ -1,4 +1,4 @@
-// 10,000 generated staff members with English names
+// 10,000 generated staff members with fictional names
 
 export interface MarketStaff {
   id: number;
@@ -11,29 +11,29 @@ export interface MarketStaff {
 }
 
 const FIRST: string[] = [
-  'Aaron','Adrian','Alan','Albert','Alec','Alessandro','Alex','Alfred','Allan','Amos',
-  'Andre','Andrew','Angelo','Anthony','Artur','Ashley','Axel','Barry','Ben','Bernard',
-  'Bill','Boris','Brad','Brian','Bruce','Bryan','Calvin','Carl','Charles','Christian',
-  'Christopher','Claudio','Colin','Craig','Damian','Dan','Darren','Dave','Dean','Dennis',
-  'Derek','Diego','Dominic','Douglas','Drew','Duncan','Eddie','Emilio','Eric','Ethan',
-  'Eugene','Evan','Felix','Fernando','Frank','Fred','Gary','Gerard','Glenn','Gordon',
-  'Graham','Grant','Greg','Gustavo','Harvey','Herbert','Howard','Hugo','Ian','Jack',
-  'Jason','Jeff','Jeremy','Jim','Joe','Joel','John','Jonathan','Jorge','Jose',
-  'Juan','Julian','Keith','Kenneth','Kevin','Kyle','Lance','Lawrence','Lee','Leon',
-  'Lewis','Liam','Marco','Marcus','Mark','Martin','Matt','Max','Michael','Nick',
+  'Aldron','Belvec','Candro','Delvar','Endrik','Forvel','Gandro','Helrec','Indrok','Jelvon',
+  'Kelvar','Lornek','Mandro','Neldric','Ondvon','Pelrec','Quelvar','Rendrik','Solnec','Thorvon',
+  'Undrek','Veldric','Wornel','Xandro','Yelvon','Zornak','Ardrec','Bolvon','Creldric','Dolnek',
+  'Ervon','Fornec','Gelvark','Hondric','Indrec','Jolvar','Krenoc','Lendvon','Mornek','Naldric',
+  'Olvon','Preldec','Rundric','Selvon','Thornak','Ulvark','Vendric','Wolvon','Xalnek','Yondec',
+  'Zoldric','Aldvon','Brelnec','Calvark','Dolvon','Erndrec','Folvon','Greldrik','Hendvon','Invark',
+  'Jolnec','Keldrec','Lornvon','Mendrik','Norvon','Oldvark','Prelnec','Rolvon','Seldrec','Thonvark',
+  'Undvon','Valnec','Worldric','Xelvar','Yornek','Zundvon','Ardnec','Bolvark','Crondec','Delvon',
+  'Endrec','Forvon','Grelnec','Holvark','Indrec','Joldvon','Kelnec','Lordvark','Menvon','Nordrec',
+  'Olvark','Prelvon','Rondnec','Selvark','Thorvon','Ulndec','Valdric','Welnec','Xorvon','Yaldrek',
 ];
 
 const LAST: string[] = [
-  'Adams','Allen','Anderson','Bailey','Baker','Barnes','Bell','Bennett','Black','Bradley',
-  'Brooks','Brown','Burke','Burns','Butler','Campbell','Carter','Chapman','Clark','Clarke',
-  'Cole','Collins','Cook','Cooper','Cox','Crawford','Curtis','Davidson','Davis','Dixon',
-  'Douglas','Duncan','Ellis','Evans','Fisher','Fletcher','Ford','Foster','Fox','Freeman',
-  'Gibson','Graham','Grant','Gray','Green','Griffin','Hall','Hamilton','Harris','Harrison',
-  'Hart','Harvey','Henderson','Hill','Holmes','Howard','Hudson','Hughes','Hunter','Jackson',
-  'James','Jenkins','Johnson','Johnston','Jones','Kelly','Kennedy','King','Knight','Lane',
-  'Lawrence','Lee','Lewis','Long','Marshall','Martin','Mason','Matthews','Miller','Mitchell',
-  'Moore','Morgan','Morris','Morrison','Murphy','Murray','Nelson','Newton','Nixon','Oliver',
-  'Owen','Palmer','Parker','Patterson','Pearson','Peters','Phillips','Powell','Price','Reid',
+  'Tharvon','Ombrek','Feldric','Gundvon','Helnec','Indrak','Jolnvon','Keldrek','Lornvark','Mendric',
+  'Noldvon','Ovdrek','Pelnak','Relvon','Soldric','Thunvon','Undrek','Veldvon','Wornec','Xaldrik',
+  'Yondvon','Zurnec','Aldrak','Belvon','Crondrek','Dolnvon','Endrec','Forvark','Grelnak','Holvon',
+  'Indrec','Joldrak','Kelnvon','Lorndek','Menvark','Noldrec','Oldvon','Prelnec','Rondvark','Selvon',
+  'Thorndek','Ulvon','Vandrek','Welnvon','Xordek','Yelvark','Zundvon','Arndrec','Bolnvark','Creldvon',
+  'Dolnrek','Evondek','Fornvark','Greldvon','Hendrek','Invon','Jorndek','Kelvark','Lornvon','Mendrek',
+  'Nordvon','Olvark','Prelvon','Rondrek','Selvark','Thondvon','Uldrec','Vandvon','Wornark','Xelnek',
+  'Yondrek','Zuldvon','Arndek','Bolvark','Crolvon','Doldrec','Envon','Forvon','Grelnark','Holvark',
+  'Indrec','Jolvon','Kelnark','Lorndvon','Menvon','Noldrek','Olvon','Prelnark','Rondvon','Selvrek',
+  'Thondark','Ulvon','Vandvark','Welndek','Xolvon','Yeldrek','Zundark','Arelvon','Bolvon','Crondark',
 ];
 
 const ROLES: string[] = ['Coach','Scout','Doctor','Analyst','Fitness Coach','GK Coach'];
