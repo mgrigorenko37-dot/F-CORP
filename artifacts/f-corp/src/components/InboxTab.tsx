@@ -11,7 +11,7 @@ const STATIC_DATE = '2025-08-01';
 
 interface Message {
   id:             string;
-  type:           'REPORT' | 'OFFER' | 'REQUEST';
+  type:           'REPORT' | 'OFFER' | 'REQUEST' | 'ALERT';
   date:           string;  // ISO date — newest-first sort key
   time:           string;
   sender:         string;
@@ -94,9 +94,17 @@ function mergeMessages(
 }
 
 const TYPE_LABEL: Record<Message['type'], string> = {
-  REPORT: 'ОТЧЁТ',
-  OFFER: 'ПРЕДЛОЖЕНИЕ',
+  REPORT:  'ОТЧЁТ',
+  OFFER:   'ПРЕДЛОЖЕНИЕ',
   REQUEST: 'ЗАПРОС',
+  ALERT:   'ВАЖНО',
+};
+
+const TYPE_COLOR: Record<Message['type'], string> = {
+  REPORT:  '#0fd4a8',  // teal
+  OFFER:   '#f0b429',  // yellow
+  REQUEST: '#f0b429',  // yellow
+  ALERT:   '#f0997b',  // salmon / red-orange
 };
 
 const C = {
@@ -290,7 +298,7 @@ export default function InboxTab() {
                     <span className="text-[11px] font-bold uppercase leading-none shrink-0"
                       style={{
                         letterSpacing: '0.06em',
-                        color: msg.requiresAction ? '#f0b429' : C.teal,
+                        color: TYPE_COLOR[msg.type] ?? C.teal,
                       }}>
                       {TYPE_LABEL[msg.type]}
                     </span>

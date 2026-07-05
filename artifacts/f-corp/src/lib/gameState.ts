@@ -185,7 +185,7 @@ export interface WeeklyTrainingPlan {
 
 export interface InboxMessage {
   id:             string;
-  type:           'REPORT' | 'OFFER' | 'REQUEST';
+  type:           'REPORT' | 'OFFER' | 'REQUEST' | 'ALERT';
   date:           string;
   time:           string;
   sender:         string;

@@ -242,33 +242,79 @@ export function applyWeeklyTick(
 
   // ── Generate inbox messages ──
   const inboxMessages: InboxMessage[] = [];
+  const mySide = (m: ScheduledMatch) => m.isHome ? 'home' : 'away';
 
-  // Match result messages
-  for (const { match, myGoals, oppGoals } of matchesPlayed) {
+  // ── Season start notification (first time any league match is played) ──
+  const wasFirstLeagueMatch = season.leagueRound === 0 && leagueRound > 0;
+  if (wasFirstLeagueMatch) {
+    inboxMessages.push({
+      id:             `season_start_${weekEnd}`,
+      type:           'REPORT',
+      date:           weekStart,
+      time:           '08:00',
+      sender:         'Футбольная лига',
+      text:           `Сезон начался! Первый тур позади. Удачи в предстоящей борьбе!`,
+      requiresAction: false,
+    });
+  }
+
+  // ── Rich match result messages (event-driven) ──
+  for (const { match, myGoals, oppGoals, output } of matchesPlayed) {
     const won      = myGoals > oppGoals;
     const drew     = myGoals === oppGoals;
     const opponent = (match.isHome ? match.away : match.home).replace('MY_CLUB', clubName);
     const scoreStr = match.isHome ? `${myGoals}:${oppGoals}` : `${oppGoals}:${myGoals}`;
     const homeTeam = match.isHome ? clubName : opponent;
     const awayTeam = match.isHome ? opponent : clubName;
-    const outcome  = won ? 'ПОБЕДА! 🏆' : drew ? 'Ничья ⚡' : 'Поражение ❌';
+    const outcome  = won ? 'ПОБЕДА 🏆' : drew ? 'Ничья ⚡' : 'Поражение ❌';
+    const roundStr = typeof match.round === 'string' ? match.round : `Тур ${match.round}`;
+
+    // Pull real events for my side
+    const side           = mySide(match);
+    const events         = output.result.events ?? [];
+    const myGoalEvents   = events.filter(e => (e.type === 'goal' || e.type === 'own_goal') && e.team === side);
+    const myRedEvents    = events.filter(e => e.type === 'red_card' && e.team === side);
+
+    let text = `${match.competitionName} · ${roundStr}\n${homeTeam} ${scoreStr} ${awayTeam} — ${outcome}`;
+
+    if (myGoalEvents.length > 0) {
+      const scorerList = myGoalEvents.map(e => `${e.playerName} ${e.minute}'`).join(', ');
+      text += `\nГолы: ${scorerList}`;
+    }
+    if (myRedEvents.length > 0) {
+      const redList = myRedEvents.map(e => `${e.playerName} (${e.minute}')`).join(', ');
+      text += `\nУдалён: ${redList}`;
+    }
+
     inboxMessages.push({
       id:             `match_${match.id}`,
       type:           'REPORT',
       date:           match.date,
       time:           '20:45',
       sender:         'Пресс-служба',
-      text:           `${match.competitionName} · ${typeof match.round === 'string' ? match.round : `Тур ${match.round}`}\n${homeTeam} ${scoreStr} ${awayTeam} — ${outcome}`,
+      text,
       requiresAction: false,
     });
+
+    // ── Red card → suspension alert (separate urgent message) ──
+    for (const red of myRedEvents) {
+      inboxMessages.push({
+        id:             `redcard_${match.id}_${red.playerId ?? red.playerName}`,
+        type:           'ALERT',
+        date:           match.date,
+        time:           '21:30',
+        sender:         'Дисциплинарный комитет',
+        text:           `${red.playerName} дисквалифицирован на 1 матч после красной карточки в игре против ${opponent} (${match.competitionName}).`,
+        requiresAction: false,
+      });
+    }
   }
 
-  // Injury messages (new this tick) — use playerId not name to avoid collision if two
-  // players share a display name; playerId is unique per player in the roster.
+  // ── Injury messages ──
   for (const { playerId, playerName, injuryType } of injuriesOccurred) {
     inboxMessages.push({
       id:             `injury_${playerId}_${weekEnd}`,
-      type:           'REPORT',
+      type:           'ALERT',
       date:           weekEnd,
       time:           '22:00',
       sender:         'Медицинский штаб',
@@ -277,7 +323,7 @@ export function applyWeeklyTick(
     });
   }
 
-  // Recovery messages
+  // ── Recovery messages ──
   for (const playerId of injuriesHealed) {
     const name = squadNames.get(playerId) ?? `Игрок #${playerId}`;
     inboxMessages.push({
@@ -287,6 +333,51 @@ export function applyWeeklyTick(
       time:           '09:00',
       sender:         'Медицинский штаб',
       text:           `${name} полностью восстановился после травмы и готов к тренировкам.`,
+      requiresAction: false,
+    });
+  }
+
+  // ── Weekly coach report (only when there are notable issues) ──
+  {
+    const burnout  = finalPlayerStates.filter(p => p.burnoutRisk > 70);
+    const tired    = finalPlayerStates.filter(p => p.fatigue > 75 && !p.injury);
+    const lowMoral = finalPlayerStates.filter(p => p.morale < 40);
+
+    if (burnout.length > 0 || tired.length > 0 || lowMoral.length > 0) {
+      const lines: string[] = ['Еженедельный отчёт штаба:'];
+      if (burnout.length > 0) {
+        const names = burnout.map(p => squadNames.get(p.id) ?? `#${p.id}`).join(', ');
+        lines.push(`⚠️ Риск выгорания: ${names}`);
+      }
+      if (tired.length > 0) {
+        lines.push(`😓 Высокая усталость у ${tired.length} игр. — рекомендую снизить нагрузку`);
+      }
+      if (lowMoral.length > 0) {
+        const names = lowMoral.map(p => squadNames.get(p.id) ?? `#${p.id}`).join(', ');
+        lines.push(`📉 Низкий моральный дух: ${names}`);
+      }
+      inboxMessages.push({
+        id:             `coach_report_${weekEnd}`,
+        type:           burnout.length > 0 ? 'ALERT' : 'REPORT',
+        date:           weekEnd,
+        time:           '10:00',
+        sender:         'Главный тренер',
+        text:           lines.join('\n'),
+        requiresAction: false,
+      });
+    }
+  }
+
+  // ── Season end notification ──
+  const allPlayed = updatedSchedule.every(m => m.played);
+  if (allPlayed && season.schedule.some(m => !m.played)) {
+    inboxMessages.push({
+      id:             `season_end_${weekEnd}`,
+      type:           'REPORT',
+      date:           weekEnd,
+      time:           '23:00',
+      sender:         'Футбольная лига',
+      text:           `Сезон завершён! Все матчи сыграны. Итоговая таблица сформирована.`,
       requiresAction: false,
     });
   }

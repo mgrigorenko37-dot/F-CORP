@@ -72,11 +72,19 @@ description: Key decisions for the football manager game engine — training, co
 - `getThisWeekMatches(schedule, currentDate)` — used by UI to preview upcoming week
 
 ## Inbox (InboxTab.tsx + GameState.inbox) — built, in production
-- `GameState.inbox: InboxMessage[]` — dynamic messages, newest first, capped at 200
-- `tickEngine.applyWeeklyTick` generates: match result, injury, recovery messages
+- `InboxMessage.type` = `'REPORT' | 'OFFER' | 'REQUEST' | 'ALERT'` — ALERT = salmon/red-orange badge
+- `tickEngine.applyWeeklyTick` generates (all event-driven):
+  - **Match report**: pulls scorer names + minutes from `result.events` filtered by `mySide`, lists red cards inline
+  - **Red card ALERT**: separate message per red card → suspension notice
+  - **Injury ALERT**: `injury_${playerId}_${weekEnd}` — safe from double-injury same week (injured players skipped in match 2)
+  - **Recovery REPORT**: `healed_${playerId}_${weekEnd}`
+  - **Coach REPORT/ALERT**: generated only when burnout>70, fatigue>75, or morale<40; ALERT if burnout present
+  - **Season start REPORT**: fires when leagueRound transitions 0→1
+  - **Season end REPORT**: fires when updatedSchedule all played but season.schedule had unplayed — one-shot
 - Static messages in `buildMessages()` have `date: '2025-08-01'` so they sort below dynamic messages
 - `mergeMessages(static, dynamic, statuses)` applies `fcorp_inbox_statuses` to both static and dynamic messages
 - `InboxTab` uses `useEffect([])` to reload on every mount — picks up new tick messages without app reload
+- **Event-side filtering rule**: `mySide(match)` returns `'home'|'away'`; `matchEngine` writes events with same convention
 
 ## Auto-Tick / Cron System
 - `src/lib/autoTick.ts` — pure timing utilities: `TICK_INTERVAL_MS` (1 real hour = 1 game week), `getLastTickTs/setLastTickTs` (key: `fcorp_tick_ts`), `getMissedTicks` (capped at `MAX_CATCH_UP=4`), `msUntilNextTick`, `formatCountdown`, `tickProgress`
