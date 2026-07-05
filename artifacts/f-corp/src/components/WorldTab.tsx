@@ -95,12 +95,12 @@ function generateClubName(country: string, index: number, seed: number): string 
   const lang = COUNTRY_LANG[country] ?? 'generic';
   const cities   = LANG_CITIES[lang]  ?? LANG_CITIES.generic;
   const suffixes = LANG_SUFFIX[lang]  ?? LANG_SUFFIX.generic;
-  const city = cities[hashStr(seed + index + 'city') % cities.length];
-  const suf  = suffixes[hashStr(seed + index + 'suf') % suffixes.length];
+  const city = cities[hashStr(seed + index * 7 + 'city') % cities.length];
+  const suf  = suffixes[hashStr(seed + index * 13 + 'suf') % suffixes.length];
   return `${city} ${suf}`;
 }
 
-// ── Build a full league table ─────────────────────────────────────────────────
+// ── Build tables for ALL leagues of a country at once (prevents cross-league duplicate names) ──
 
 interface Team {
   pos: number; name: string;
@@ -108,33 +108,56 @@ interface Team {
   gf: number; ga: number; points: number;
 }
 
-function buildLeagueTable(league: LeagueInfo, country: string): Team[] {
-  const seed  = hashStr(country + league.name);
-  const total = Math.min(league.totalClubs, 20); // cap display at 20
+function buildAllCountryTables(country: string, leagues: LeagueInfo[]): Map<number, Team[]> {
+  const usedNames = new Set<string>();
+  const result    = new Map<number, Team[]>();
 
-  // Start with real rivals, fill the rest with generated names
-  const known = league.rivals.slice();
-  const names: string[] = [...known];
-  let genIdx = 0;
-  while (names.length < total) {
-    const candidate = generateClubName(country, genIdx++, seed);
-    if (!names.includes(candidate)) names.push(candidate);
+  // Process level 1 → 4 so higher leagues claim names first
+  const sorted = [...leagues].sort((a, b) => a.level - b.level);
+
+  for (const league of sorted) {
+    // Each league gets a unique seed that includes its level to prevent same-level collisions
+    const seed  = hashStr(country + league.level + '|' + league.name);
+    const total = Math.min(league.totalClubs, 20);
+
+    // Seed the name list with this league's hand-crafted rivals
+    const names: string[] = [];
+    for (const r of league.rivals) {
+      names.push(r);
+      usedNames.add(r);
+    }
+
+    // Fill remaining slots with generated names, ensuring no cross-league repeats
+    let genIdx = 0;
+    let safety = 0;
+    while (names.length < total && safety < 2000) {
+      safety++;
+      const candidate = generateClubName(country, genIdx++, seed);
+      if (!usedNames.has(candidate)) {
+        names.push(candidate);
+        usedNames.add(candidate);
+      }
+    }
+
+    // Simulate a COMPLETED season (full single round-robin = totalClubs - 1 matches)
+    const played = Math.min(league.totalClubs - 1, 38);
+
+    const teams: Team[] = names.map((name, i) => {
+      const basePts  = Math.round((played * 3) * (1 - i / total));
+      const variance = (hashStr(seed + name + i) % 7) - 3;
+      const pts      = Math.max(0, basePts + variance);
+      const won      = Math.floor(pts / 3);
+      const drawn    = pts % 3;
+      const lost     = Math.max(0, played - won - drawn);
+      const gf       = won * 2 + drawn + ((hashStr(seed + name + 'gf') % 10) + 3);
+      const ga       = lost * 2 + drawn + ((hashStr(seed + name + 'ga') % 7) + 2);
+      return { pos: i + 1, name, played, won, drawn, lost, gf: Math.max(gf, 0), ga: Math.max(ga, 0), points: pts };
+    });
+
+    result.set(league.level, teams);
   }
 
-  // Spread from 3×played to 0 across positions
-  const played = 14;
-
-  return names.map((name, i) => {
-    const basePts  = Math.round((played * 3) * (1 - i / total));
-    const variance = (hashStr(seed + name + i) % 5) - 2;
-    const pts      = Math.max(0, basePts + variance);
-    const won      = Math.floor(pts / 3);
-    const drawn    = pts % 3;
-    const lost     = Math.max(0, played - won - drawn);
-    const gf       = won * 2 + drawn + ((hashStr(seed + name + 'gf') % 8) + 4);
-    const ga       = lost * 2 + drawn + ((hashStr(seed + name + 'ga') % 6) + 2);
-    return { pos: i + 1, name, played, won, drawn, lost, gf: Math.max(gf, 0), ga: Math.max(ga, 0), points: pts };
-  });
+  return result;
 }
 
 // ── Navigation state ──────────────────────────────────────────────────────────
@@ -280,9 +303,11 @@ function LeaguesView({ country, onBack, onSelect }: { country: string; onBack: (
 // ── League table ──────────────────────────────────────────────────────────────
 
 function TableView({ country, level, onBack }: { country: string; level: number; onBack: () => void }) {
-  const { flag } = getCountryLeagues(country);
+  const { flag, leagues } = getCountryLeagues(country);
   const league = getLeagueAtLevel(country, level);
-  const table  = buildLeagueTable(league, country);
+  // Build all leagues together so names are globally unique within a country
+  const allTables = useMemo(() => buildAllCountryTables(country, leagues), [country, leagues]);
+  const table = allTables.get(level) ?? [];
   const col    = LEVEL_COLOR[level];
 
   return (
@@ -303,7 +328,7 @@ function TableView({ country, level, onBack }: { country: string; level: number;
           </span>
         </div>
         <div style={{ fontSize: 11, letterSpacing: '0.5px', color: C.dim, marginBottom: 16 }}>
-          {country.toUpperCase()} · {league.totalClubs} КЛУБОВ · ТУР 14
+          {country.toUpperCase()} · {league.totalClubs} КЛУБОВ · ИТОГОВАЯ ТАБЛИЦА
         </div>
       </div>
 
