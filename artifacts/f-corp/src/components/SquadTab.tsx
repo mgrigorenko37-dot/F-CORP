@@ -8,6 +8,7 @@ import {
   FIRST_SQUAD_TMPL, U23_SQUAD_TMPL, U19_SQUAD_TMPL, U15_SQUAD_TMPL,
   scaleRating, LEVEL_LABEL, LEVEL_COLOR,
 } from '../data/squadData';
+import TacticsView from './TacticsView';
 
 const C = {
   card: '#1a1c25', border: '#1c1f28', border2: '#2a2d38',
@@ -27,6 +28,7 @@ function getStoredCountry(): string {
   try { return localStorage.getItem('fcorp_league_country') ?? ''; } catch { return ''; }
 }
 
+type MainView  = 'list' | 'tactics';
 type SquadView = 'first' | 'reserve' | 'youth';
 type YouthTeam = 'U15' | 'U19' | 'U23';
 type PosFilter = 'ALL'|'GK'|'CB'|'LB'|'RB'|'CDM'|'CM'|'CAM'|'LM'|'RM'|'LW'|'RW'|'ST'|'CF';
@@ -37,6 +39,7 @@ const YOUTH_TEAMS: YouthTeam[] = ['U15','U19','U23'];
 const avg = (arr: number[]) => arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1) : '—';
 
 export default function SquadTab() {
+  const [mainView, setMainView]       = useState<MainView>('list');
   const [view, setView]               = useState<SquadView>('first');
   const [youthTeam, setYouthTeam]     = useState<YouthTeam>('U23');
   const [posFilter, setPosFilter]     = useState<PosFilter>('ALL');
@@ -61,9 +64,6 @@ export default function SquadTab() {
     setReserveIds(s => { const n = new Set(s); n.delete(id); return n; });
   }, []);
 
-  // levelFraction: 1.0 = full scaling, 0.5 = half, 0 = no scaling.
-  // First team scales fully with league level; younger academies scale less
-  // (a 14-yo talent is rated similarly regardless of the club's league).
   type PlayerTemplateWithName = (typeof FIRST_SQUAD_TMPL)[number] & { name: string };
   const withNames = (tmpl: typeof FIRST_SQUAD_TMPL, levelFraction = 1.0): PlayerTemplateWithName[] =>
     tmpl.map(p => ({
@@ -92,7 +92,9 @@ export default function SquadTab() {
     <motion.div initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-10}}
       className="flex flex-col h-full overflow-y-auto">
 
+      {/* ── Sticky header (title + main toggle) ── */}
       <div style={{padding:'16px 18px 0'}}>
+
         {/* Title */}
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
           <span style={{fontSize:22,fontWeight:700,color:'#ffffff',fontFamily:'Inter,sans-serif'}}>Состав</span>
@@ -104,129 +106,161 @@ export default function SquadTab() {
             }}>
               {LEVEL_LABEL[level] ?? `Лига ${level}`}
             </span>
-            <span style={{fontSize:22,fontWeight:700,color:C.teal,fontFamily:'Inter,sans-serif'}}>{activePlayers.length}</span>
+            {mainView === 'list' && (
+              <span style={{fontSize:22,fontWeight:700,color:C.teal}}>{activePlayers.length}</span>
+            )}
           </div>
         </div>
-        <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:16}}>
-          <span style={{fontSize:11,letterSpacing:'0.5px',color:C.dim}}>
-            {view === 'first' ? 'ОСНОВНОЙ СОСТАВ' : view === 'reserve' ? 'РЕЗЕРВ' : `АКАДЕМИЯ · ${youthTeam}`} · {activePlayers.length} ИГРОКОВ
-          </span>
-          <span style={{fontSize:11,letterSpacing:'0.5px',color:C.dim}}>СР. {avgRating}</span>
-        </div>
 
-        {/* First team / Reserve / Youth toggle */}
-        <div style={{display:'flex',background:C.card,borderRadius:20,padding:3,marginBottom:12}}>
-          {([{id:'first',label:'МОЙ СОСТАВ'},{id:'reserve',label:'РЕЗЕРВ'},{id:'youth',label:'АКАДЕМИЯ'}] as const).map(v => (
-            <button key={v.id} onClick={() => { setView(v.id); setPosFilter('ALL'); }}
-              style={{flex:1,textAlign:'center',fontSize:10,fontWeight:v.id===view?700:600,
-                color:v.id===view?C.tealText:C.vdim,background:v.id===view?C.teal:'transparent',
-                padding:'7px 0',borderRadius:20,border:'none',cursor:'pointer'}}>
+        {/* LIST / TACTICS main toggle */}
+        <div style={{display:'flex',background:C.card,borderRadius:20,padding:3,marginBottom:14}}>
+          {([
+            {id:'list'    as MainView, label:'📋  СПИСОК'},
+            {id:'tactics' as MainView, label:'🗺️  ТАКТИКА'},
+          ]).map(v => (
+            <button key={v.id} onClick={() => setMainView(v.id)}
+              style={{flex:1,textAlign:'center',fontSize:11,fontWeight:v.id===mainView?700:600,
+                color:v.id===mainView?C.tealText:C.vdim,
+                background:v.id===mainView?C.teal:'transparent',
+                padding:'8px 0',borderRadius:20,border:'none',cursor:'pointer',letterSpacing:'0.3px'}}>
               {v.label}
             </button>
           ))}
         </div>
 
-        {/* Youth sub-teams */}
-        <AnimatePresence>
-          {view === 'youth' && (
-            <motion.div
-              initial={{opacity:0,height:0}} animate={{opacity:1,height:'auto'}} exit={{opacity:0,height:0}}
-              style={{overflow:'hidden',marginBottom:12}}>
-              <div style={{display:'flex',gap:6}}>
-                {YOUTH_TEAMS.map(t => (
-                  <button key={t} onClick={() => { setYouthTeam(t); setPosFilter('ALL'); }}
-                    style={{flex:1,textAlign:'center',fontSize:12,fontWeight:t===youthTeam?700:500,
-                      color:t===youthTeam?C.tealText:C.vdim,
-                      background:t===youthTeam?C.teal:'transparent',
-                      border:t===youthTeam?'none':`0.5px solid ${C.border2}`,
-                      padding:'7px 0',borderRadius:14,cursor:'pointer'}}>
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+      </div>
 
-        {/* Position filters */}
-        <div style={{display:'flex',gap:6,overflowX:'auto',paddingBottom:14}}>
-          {POS_FILTERS.map(f => (
-            <button key={f} onClick={() => setPosFilter(f)}
-              style={{flexShrink:0,fontSize:11,fontWeight:f===posFilter?700:400,
-                color:f===posFilter?C.tealText:C.vdim,
-                background:f===posFilter?C.teal:'transparent',
-                border:f===posFilter?'none':`0.5px solid ${C.border2}`,
-                padding:'5px 12px',borderRadius:14,cursor:'pointer',whiteSpace:'nowrap'}}>
-              {f}
-            </button>
-          ))}
+      {/* ── TACTICS VIEW ── */}
+      {mainView === 'tactics' && (
+        <div style={{padding:'0 18px 80px'}}>
+          <TacticsView />
         </div>
-      </div>
+      )}
 
-      {/* Player list */}
-      <div style={{padding:'0 18px 80px'}}>
-        {/* Reserve empty state */}
-        {view === 'reserve' && reserveIds.size === 0 && (
-          <div style={{textAlign:'center',padding:'40px 0'}}>
-            <div style={{fontSize:32,marginBottom:12}}>🪑</div>
-            <div style={{fontSize:13,color:C.dim}}>Резерв пуст</div>
-            <div style={{fontSize:11,color:C.vdim,marginTop:4}}>Переведите игроков из основного состава</div>
-          </div>
-        )}
-        {filtered.length === 0 && view !== 'reserve' && (
-          <div style={{textAlign:'center',color:C.dim,fontSize:12,padding:'32px 0'}}>Игроки не найдены</div>
-        )}
-        {filtered.map((p, i) => {
-          const col       = POS_COLOR[p.pos] ?? C.muted;
-          const inReserve = reserveIds.has(p.id);
-          return (
-            <div key={p.id} style={{display:'flex',alignItems:'center',gap:12,
-              padding:'10px 0',borderBottom: i < filtered.length-1 ? `0.5px solid ${C.border}` : 'none'}}>
-              <div style={{width:32,height:32,borderRadius:'50%',
-                background:inReserve ? `${C.purple}26` : `${col}26`,
-                color:inReserve ? C.purple : col,
-                display:'flex',alignItems:'center',justifyContent:'center',
-                fontSize:9,fontWeight:700,flexShrink:0}}>
-                {p.pos}
-              </div>
-              <div style={{flex:1}}>
-                <div style={{fontSize:13,color:inReserve ? C.vdim : C.white}}>{p.name}</div>
-                <div style={{fontSize:10,color:C.vdim}}>{p.sub} · {p.age} лет</div>
-              </div>
-              <span style={{fontSize:14,fontWeight:700,color:inReserve ? C.vdim : '#ffffff',marginRight:4}}>{p.rating}</span>
-              {/* Reserve / restore button */}
-              {view === 'first' && (
-                <button
-                  onClick={() => inReserve ? handleMoveFromReserve(p.id) : handleMoveToReserve(p.id)}
-                  title={inReserve ? 'Вернуть в состав' : 'В резерв'}
-                  style={{
-                    background: inReserve ? `${C.purple}18` : 'transparent',
-                    border: `0.5px solid ${inReserve ? C.purple : C.border2}`,
-                    color: inReserve ? C.purple : C.vdim,
-                    borderRadius: 8, padding: '5px 7px', cursor: 'pointer', flexShrink: 0,
-                    display: 'flex', alignItems: 'center',
-                  }}>
-                  {inReserve
-                    ? <ArrowUpFromLine size={12} />
-                    : <ArrowDownToLine size={12} />}
-                </button>
-              )}
-              {view === 'reserve' && (
-                <button
-                  onClick={() => handleMoveFromReserve(p.id)}
-                  title="Вернуть в состав"
-                  style={{
-                    background: `${C.teal}18`, border: `0.5px solid ${C.teal}40`,
-                    color: C.teal, borderRadius: 8, padding: '5px 7px',
-                    cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center',
-                  }}>
-                  <ArrowUpFromLine size={12} />
-                </button>
-              )}
+      {/* ── LIST VIEW ── */}
+      {mainView === 'list' && (
+        <div>
+          <div style={{padding:'0 18px'}}>
+
+            <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:12}}>
+              <span style={{fontSize:11,letterSpacing:'0.5px',color:C.dim}}>
+                {view === 'first' ? 'ОСНОВНОЙ СОСТАВ' : view === 'reserve' ? 'РЕЗЕРВ' : `АКАДЕМИЯ · ${youthTeam}`} · {activePlayers.length} ИГРОКОВ
+              </span>
+              <span style={{fontSize:11,letterSpacing:'0.5px',color:C.dim}}>СР. {avgRating}</span>
             </div>
-          );
-        })}
-      </div>
+
+            {/* First team / Reserve / Youth toggle */}
+            <div style={{display:'flex',background:C.card,borderRadius:20,padding:3,marginBottom:12}}>
+              {([{id:'first',label:'МОЙ СОСТАВ'},{id:'reserve',label:'РЕЗЕРВ'},{id:'youth',label:'АКАДЕМИЯ'}] as const).map(v => (
+                <button key={v.id} onClick={() => { setView(v.id); setPosFilter('ALL'); }}
+                  style={{flex:1,textAlign:'center',fontSize:10,fontWeight:v.id===view?700:600,
+                    color:v.id===view?C.tealText:C.vdim,background:v.id===view?C.teal:'transparent',
+                    padding:'7px 0',borderRadius:20,border:'none',cursor:'pointer'}}>
+                  {v.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Youth sub-teams */}
+            <AnimatePresence>
+              {view === 'youth' && (
+                <motion.div
+                  initial={{opacity:0,height:0}} animate={{opacity:1,height:'auto'}} exit={{opacity:0,height:0}}
+                  style={{overflow:'hidden',marginBottom:12}}>
+                  <div style={{display:'flex',gap:6}}>
+                    {YOUTH_TEAMS.map(t => (
+                      <button key={t} onClick={() => { setYouthTeam(t); setPosFilter('ALL'); }}
+                        style={{flex:1,textAlign:'center',fontSize:12,fontWeight:t===youthTeam?700:500,
+                          color:t===youthTeam?C.tealText:C.vdim,
+                          background:t===youthTeam?C.teal:'transparent',
+                          border:t===youthTeam?'none':`0.5px solid ${C.border2}`,
+                          padding:'7px 0',borderRadius:14,cursor:'pointer'}}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Position filters */}
+            <div style={{display:'flex',gap:6,overflowX:'auto',paddingBottom:14}}>
+              {POS_FILTERS.map(f => (
+                <button key={f} onClick={() => setPosFilter(f)}
+                  style={{flexShrink:0,fontSize:11,fontWeight:f===posFilter?700:400,
+                    color:f===posFilter?C.tealText:C.vdim,
+                    background:f===posFilter?C.teal:'transparent',
+                    border:f===posFilter?'none':`0.5px solid ${C.border2}`,
+                    padding:'5px 12px',borderRadius:14,cursor:'pointer',whiteSpace:'nowrap'}}>
+                  {f}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Player list */}
+          <div style={{padding:'0 18px 80px'}}>
+            {view === 'reserve' && reserveIds.size === 0 && (
+              <div style={{textAlign:'center',padding:'40px 0'}}>
+                <div style={{fontSize:32,marginBottom:12}}>🪑</div>
+                <div style={{fontSize:13,color:C.dim}}>Резерв пуст</div>
+                <div style={{fontSize:11,color:C.vdim,marginTop:4}}>Переведите игроков из основного состава</div>
+              </div>
+            )}
+            {filtered.length === 0 && view !== 'reserve' && (
+              <div style={{textAlign:'center',color:C.dim,fontSize:12,padding:'32px 0'}}>Игроки не найдены</div>
+            )}
+            {filtered.map((p, i) => {
+              const col       = POS_COLOR[p.pos] ?? C.muted;
+              const inReserve = reserveIds.has(p.id);
+              return (
+                <div key={p.id} style={{display:'flex',alignItems:'center',gap:12,
+                  padding:'10px 0',borderBottom: i < filtered.length-1 ? `0.5px solid ${C.border}` : 'none'}}>
+                  <div style={{width:32,height:32,borderRadius:'50%',
+                    background:inReserve ? `${C.purple}26` : `${col}26`,
+                    color:inReserve ? C.purple : col,
+                    display:'flex',alignItems:'center',justifyContent:'center',
+                    fontSize:9,fontWeight:700,flexShrink:0}}>
+                    {p.pos}
+                  </div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:13,color:inReserve ? C.vdim : C.white}}>{p.name}</div>
+                    <div style={{fontSize:10,color:C.vdim}}>{p.sub} · {p.age} лет</div>
+                  </div>
+                  <span style={{fontSize:14,fontWeight:700,color:inReserve ? C.vdim : '#ffffff',marginRight:4}}>{p.rating}</span>
+                  {view === 'first' && (
+                    <button
+                      onClick={() => inReserve ? handleMoveFromReserve(p.id) : handleMoveToReserve(p.id)}
+                      title={inReserve ? 'Вернуть в состав' : 'В резерв'}
+                      style={{
+                        background: inReserve ? `${C.purple}18` : 'transparent',
+                        border: `0.5px solid ${inReserve ? C.purple : C.border2}`,
+                        color: inReserve ? C.purple : C.vdim,
+                        borderRadius: 8, padding: '5px 7px', cursor: 'pointer', flexShrink: 0,
+                        display: 'flex', alignItems: 'center',
+                      }}>
+                      {inReserve ? <ArrowUpFromLine size={12} /> : <ArrowDownToLine size={12} />}
+                    </button>
+                  )}
+                  {view === 'reserve' && (
+                    <button
+                      onClick={() => handleMoveFromReserve(p.id)}
+                      title="Вернуть в состав"
+                      style={{
+                        background: `${C.teal}18`, border: `0.5px solid ${C.teal}40`,
+                        color: C.teal, borderRadius: 8, padding: '5px 7px',
+                        cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center',
+                      }}>
+                      <ArrowUpFromLine size={12} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
     </motion.div>
   );
 }
