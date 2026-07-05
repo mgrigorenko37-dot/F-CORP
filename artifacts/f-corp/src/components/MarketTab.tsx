@@ -129,9 +129,9 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
   const shownPlayers = visiblePlayers.slice(0, playerPage * PAGE_SIZE);
   const shownStaff   = visibleStaff.slice(0, staffPage * PAGE_SIZE);
 
-  const buy = (id: number, price: number) => {
+  const buy = (id: number, price: number, pos: string, rating: number) => {
     if (price > budget) return;
-    buyPlayer(id, price);
+    buyPlayer(id, price, pos, rating);
     setPurchased(s => new Set(s).add(id));
     setBudget(b => b - price);
     setPlayerPage(1);
@@ -333,7 +333,7 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
                   </span>
                 </div>
                 <div style={{display:'flex',gap:8}}>
-                  <button onClick={() => buy(p.id, p.price)} disabled={!canBuy}
+                  <button onClick={() => buy(p.id, p.price, p.pos, p.rating)} disabled={!canBuy}
                     style={{flex:1,background:canBuy?C.teal:C.border2,border:'none',
                       color:canBuy?C.tealText:C.dim,fontWeight:700,fontSize:11,
                       padding:'8px',borderRadius:20,cursor:canBuy?'pointer':'default'}}>

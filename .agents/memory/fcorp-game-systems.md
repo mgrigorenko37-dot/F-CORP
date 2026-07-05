@@ -1,6 +1,6 @@
 ---
 name: F-CORP game systems architecture
-description: Key decisions for the football manager game engine — training, competitions, schedule, match engine
+description: Key decisions for the football manager game engine — training, competitions, schedule, match engine, player states
 ---
 
 ## Training System
@@ -25,44 +25,59 @@ description: Key decisions for the football manager game engine — training, co
 - Cups: dynamically generated actual Wednesdays via `generateCupWednesdays()` — NOT hardcoded day=10 dates
 - Same-day conflict: `usedDates` Set prevents collisions; cup dates skipped if already taken by European matches
 
-## Match Engine (src/lib/matchEngine.ts) — built, in production
+## Match Engine v2 (src/lib/matchEngine.ts) — position-aware
 - `simulateMatch(input)` → `{ result, updatedPlayerStates, performances }`
+- **XI selection**: `selectStartingXI()` picks 1 GK + 4 DEF + 4 MID + 2 FWD by role, fallback fills from best remaining
+- **Position roles**: GK, DEF (CB/LB/RB), MID (CDM/CM/CAM/LM/RM), FWD (LW/RW/ST/CF) — `positionRole()` exported from gameState.ts
+- **Team strength**: position-aware weights (GK 0/1, DEF 0.25/0.75, MID 0.5/0.5, FWD 0.85/0.15) normalized by accumulated role weights
+- **Performance rating**: `computeMatchRating()` derives from real events — base 6.0, +0.4 win, −0.5 loss, +1.5/goal, −0.5 yellow, −2.0 red, −0.8 injury
+- **lastFiveResults** uses actual computed rating, not Math.random()
+- **Events**: goals, yellow cards, red cards (~1.5% per team per match), injury events in timeline
 - **Opponent strength**: deterministic from match ID hash + competition base (UCL=76, UEL=68, league varies by level)
-- **Team strength**: best 11 available (non-injured), weighted by fatigue/fitness/form/morale/sharpness modifiers
 - **Goal probability**: `0.12 + (attack − defense) / 300`, clamped 0.04–0.55
 - Home advantage: +6 attack, +3 defense
-- **Injury healing MUST NOT happen in simulateMatch** — healing belongs to the weekly tick system only. Injured players return `p` unchanged.
-- **simulateMatch is called synchronously** — use `simulatingRef` (useRef) in TournamentTab to prevent double-execution; `setSimulating` alone is insufficient.
-- Events stored in `ScheduledMatch.result.events: MatchEvent[]`
+- **Injury healing MUST NOT happen in simulateMatch** — healing belongs to the weekly tick system only
 
-## Game State
-- `src/lib/gameState.ts` — VERSION=3 (bumped when `MatchEvent` added to result type)
-- `normaliseSchedule()` runs on every load to ensure `result.events` is always an array — guards against partial writes and version migrations
-- Coach stored as `HeadCoach` under `fcorp_game_state` → `coach`
-- Player states: fatigue/fitness/form/sharpness/morale per player
-- Weekly plan cached by week number, regenerated if stale
+## Game State (src/lib/gameState.ts) — VERSION 5
+- `PlayerGameState` now includes `pos: string` and `rating: number`
+- `generateAttributesForPosition(pos, rating)` creates position-appropriate attribute distributions using weight multipliers (stored in `POSITION_WEIGHTS` map)
+- `createDefaultPlayerState(id, pos?, rating?)` — pos defaults to 'CM', rating to 60
+- `buyPlayer(id, price, pos, rating)` now also creates a `PlayerGameState` immediately
+- Migration: v4→v5 migrates existing players with `pos:'CM'`, `rating:60` and regenerates flat-60 attributes by position
+- `normaliseSchedule()` runs on every load to guard against partial writes
+
+## Squad Templates (src/data/squadData.ts) — shared source of truth
+- `FIRST_SQUAD_TMPL`, `U23_SQUAD_TMPL`, `U19_SQUAD_TMPL`, `U15_SQUAD_TMPL` — exported here
+- `scaleRating(raw, level)` — reduces rating by LEVEL_STEP (8) per division below top, floor 28
+- Used by both `SquadTab.tsx` (display) and `TournamentTab.tsx` (playerState init)
+- **Why**: templates were duplicated in SquadTab inline; extracting to squadData.ts connected the display system to the simulation system
+
+## Player State Initialization Flow
+- On first "Advance Week" press in TournamentTab: if `playerStates.length === 0`, initializes from `FIRST_SQUAD_TMPL` with scaled ratings for current league level
+- `MarketTab` passes `pos` + `rating` when calling `buyPlayer` so purchased players enter the simulation immediately
+- IDs 1–25 = first squad; 101–116 = U15; 201–218 = U19; 301–319 = U23
 
 ## TournamentTab real-data integration
 - `buildTableWithRealResults()`: MY_CLUB rows use real played-match stats; rival rows use mock formula (rivals never play each other in schedule)
 - `leagueRound` = count of played league matches in schedule
 - Falls back to mock `buildUpcomingMatches()` when `schedule.length === 0`
 - `Map as MapIcon` import alias required — `Map` from lucide-react shadows the global Map constructor
+- `simulatingRef` (useRef) prevents double-execution; `setSimulating` alone is insufficient
 
 ## Tick Engine (src/lib/tickEngine.ts) — built, in production
-- `initializeSeason(gameState, SeasonScheduleInput)` → builds full schedule via `generateSeasonSchedule`, anchors `currentDate` 7 days before first fixture
-- `applyWeeklyTick(gameState, squadNames, leagueLevel, clubName)` → one-week tick: simulate matches → heal injuries → recover fatigue
-- **Injury healing rule**: snapshot `preTickInjuredIds` BEFORE simulating matches. Only pre-existing injuries heal at end of week. Injuries sustained during the week keep full `weeksLeft` — prevents same-tick heal bug.
-- **Fatigue recovery**: `restDays = max(0, 7 - ceil(matchDays * 1.5))` × `(8–14 per day)`. Burnout computed from post-recovery fatigue.
-- **Integration in TournamentTab**: `handleAdvanceWeek` uses try/finally to always clear `simulatingRef` even on errors. "Старт сезона" on first press (no schedule) → calls `initializeSeason` then `applyWeeklyTick`.
-- `getThisWeekMatches(schedule, currentDate)` — used by UI to preview matches in the upcoming week window.
+- `initializeSeason(gameState, SeasonScheduleInput)` → builds full schedule, anchors `currentDate` 7 days before first fixture
+- `applyWeeklyTick(gameState, squadNames, leagueLevel, clubName)` → simulate matches → heal injuries → recover fatigue
+- **Injury healing rule**: snapshot `preTickInjuredIds` BEFORE simulating matches. Only pre-existing injuries heal. Injuries sustained during the week keep full `weeksLeft`.
+- **Fatigue recovery**: `restDays = max(0, 7 - ceil(matchDays * 1.5))` × `(8–14 per day)`. Burnout from post-recovery fatigue.
+- `getThisWeekMatches(schedule, currentDate)` — used by UI to preview upcoming week
 
 ## Inbox (InboxTab.tsx + GameState.inbox) — built, in production
-- `GameState.inbox: InboxMessage[]` — dynamic messages, newest first, capped at 200. Version 4.
-- `tickEngine.applyWeeklyTick` generates: match result (per match), injury (per new injury, ID = `injury_${playerId}_${weekEnd}`), recovery (per healed player)
+- `GameState.inbox: InboxMessage[]` — dynamic messages, newest first, capped at 200
+- `tickEngine.applyWeeklyTick` generates: match result, injury, recovery messages
 - Static messages in `buildMessages()` have `date: '2025-08-01'` so they sort below dynamic messages
-- `mergeMessages(static, dynamic, statuses)` applies `fcorp_inbox_statuses` to **both** static and dynamic messages — critical, static status must not regress on remount
-- `InboxTab` uses `useEffect([])` to reload on every mount — picks up new tick messages without app reload (works because MainGame conditionally mounts tabs)
+- `mergeMessages(static, dynamic, statuses)` applies `fcorp_inbox_statuses` to both static and dynamic messages
+- `InboxTab` uses `useEffect([])` to reload on every mount — picks up new tick messages without app reload
 
-**Why:** Decisions on Day 1 of implementation should be consistent. Future work (inbox events, transfer AI) should extend GameState and use applyWeeklyTick as the time-progression entry point.
+**Why:** All time-based progression (injuries, fatigue, aging) belongs in tickEngine, not matchEngine. Position data must flow from squad templates → playerStates → match engine to produce realistic simulation.
 
-**How to apply:** When adding new game systems, read gameState.ts first and extend the `GameState` interface rather than creating new localStorage keys. All time-based progression (injuries, fatigue, aging) belongs in tickEngine, not matchEngine.
+**How to apply:** When adding new game systems, extend `GameState` interface in gameState.ts. Player physical state always goes through tickEngine. Match events always go through simulateMatch → result.events array.

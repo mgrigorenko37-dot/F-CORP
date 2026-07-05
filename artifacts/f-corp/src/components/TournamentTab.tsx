@@ -12,9 +12,10 @@ import { Trophy, ArrowUp, ArrowDown, Minus, Calendar, Map as MapIcon } from 'luc
 import { getLeagueAtLevel } from '../data/leaguesData';
 import { getDomesticCups, getContinentalComps, getConfederation, getQualificationMap } from '../data/competitions';
 import { getLeagueLevel } from '../lib/storage';
-import { loadGameState, updateGameState, type GameState, type ScheduledMatch } from '../lib/gameState';
+import { loadGameState, updateGameState, createDefaultPlayerState, type GameState, type ScheduledMatch } from '../lib/gameState';
 import { applyWeeklyTick, initializeSeason, getThisWeekMatches } from '../lib/tickEngine';
 import { ALL_MARKET_PLAYERS } from '../data/playersMarket';
+import { FIRST_SQUAD_TMPL, scaleRating } from '../data/squadData';
 
 const C = {
   card: '#1a1c25', card2: '#1f222d', border: '#1c1f28', border2: '#2a2d38',
@@ -436,6 +437,15 @@ export default function TournamentTab() {
         activeCompetitions: comps,
         seasonStartDate:    '2025-08-09',
       });
+    }
+
+    // Initialise playerStates from first-squad templates if empty.
+    // This connects the squad display (SquadTab) with the match simulation engine.
+    if (state.playerStates.length === 0) {
+      const playerStates = FIRST_SQUAD_TMPL.map(tmpl =>
+        createDefaultPlayerState(tmpl.id, tmpl.pos, scaleRating(tmpl.rating, level))
+      );
+      state = { ...state, playerStates };
     }
 
     // Build squad name map

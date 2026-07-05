@@ -1,34 +1,58 @@
 /**
- * F-CORP Match Engine
+ * F-CORP Match Engine v2
  *
- * Simulates a single football match:
- *   - Derives team strength from PlayerGameState attributes + physical condition
- *   - Derives opponent strength from competition type + league level
- *   - Generates realistic scorelines and per-event timeline
- *   - Returns updated PlayerGameState[] with fatigue / form / injury changes
- *   - Returns MatchEvent[] ready to be stored in ScheduledMatch.result.events
+ * Improvements over v1:
+ *   - Position-aware XI selection (1 GK + 4 DEF + 4 MID + 2 FWD, fallback fill)
+ *   - Position-specific attack/defense contribution weights
+ *   - Performance ratings derived from real match events (goals, cards, result)
+ *   - Red card events (~3% per match total)
+ *   - Injury events in the timeline
+ *   - lastFiveResults updated from actual match rating, not random
  */
 
 import type { ScheduledMatch, PlayerGameState, HeadCoach } from './gameState';
 import type { MatchEvent } from './gameState';
+import { positionRole } from './gameState';
+
+// ─── POSITION HELPERS ─────────────────────────────────────────────────────────
+
+/**
+ * Select the starting XI using positional balance: 1 GK, 4 DEF, 4 MID, 2 FWD.
+ * If a group is short, remaining slots are filled from the next-best available.
+ */
+export function selectStartingXI(players: PlayerGameState[]): PlayerGameState[] {
+  const available = players.filter(p => !p.injury);
+  const byAttr    = (arr: PlayerGameState[]) =>
+    [...arr].sort((a, b) => avgAttr(b) - avgAttr(a));
+
+  const gks  = byAttr(available.filter(p => positionRole(p.pos) === 'GK')).slice(0, 1);
+  const defs = byAttr(available.filter(p => positionRole(p.pos) === 'DEF')).slice(0, 4);
+  const mids = byAttr(available.filter(p => positionRole(p.pos) === 'MID')).slice(0, 4);
+  const fwds = byAttr(available.filter(p => positionRole(p.pos) === 'FWD')).slice(0, 2);
+
+  const xi     = [...gks, ...defs, ...mids, ...fwds];
+  const picked = new Set(xi.map(p => p.id));
+
+  // Fill remaining slots with best available from any position
+  if (xi.length < 11) {
+    const rest = byAttr(available.filter(p => !picked.has(p.id)));
+    xi.push(...rest.slice(0, 11 - xi.length));
+  }
+
+  return xi.slice(0, 11);
+}
 
 // ─── OPPONENT STRENGTH ────────────────────────────────────────────────────────
 
-/**
- * Derive a 20–99 opponent strength from competition tier and league level.
- * The jitter is deterministic from the match ID so the same fixture always
- * yields the same opponent — but the user's result still varies via chance.
- */
 export function computeOpponentStrength(
   competition: string,
   leagueLevel: number,
-  matchId: string
+  matchId:     string,
 ): number {
-  // Deterministic jitter [-15, +15] from match ID hash
   let h = 2166136261;
   for (let i = 0; i < matchId.length; i++) {
     h ^= matchId.charCodeAt(i);
-    h = Math.imul(h, 16777619) | 0;
+    h  = Math.imul(h, 16777619) | 0;
   }
   const jitter = ((h >>> 0) % 31) - 15;
 
@@ -40,65 +64,71 @@ export function computeOpponentStrength(
   if (competitionBase[competition] !== undefined) {
     return clamp(competitionBase[competition] + jitter, 20, 99);
   }
-
-  // League: strength scales with league level (1 = hardest)
-  const levelBase = [0, 70, 60, 52, 44]; // index = leagueLevel
+  const levelBase = [0, 70, 60, 52, 44];
   return clamp((levelBase[leagueLevel] ?? 52) + jitter, 20, 99);
 }
 
 // ─── TEAM STRENGTH ────────────────────────────────────────────────────────────
 
 export interface TeamStrength {
-  attack: number;
+  attack:  number;
   defense: number;
   overall: number;
 }
 
 /**
- * Compute the effective team strength from up to 11 available players.
- * Modifiers: fatigue, fitness, form, morale, sharpness.
- * Coach bonus: up to +5 for a 99-rated coach.
+ * Compute effective team strength using position-aware weights.
+ *
+ * GK:  contributes 100% to defense, 0% to attack
+ * DEF: 75% defense, 25% attack
+ * MID: 50% / 50%
+ * FWD: 15% defense, 85% attack
+ *
+ * Physical modifiers: fatigue, fitness, form, morale, sharpness.
  */
 export function computeTeamStrength(
   playerStates: PlayerGameState[],
-  coach: HeadCoach
+  coach:        HeadCoach,
 ): TeamStrength {
-  const available = playerStates
-    .filter(p => !p.injury)
-    .sort((a, b) => avgAttr(b) - avgAttr(a))
-    .slice(0, 11);
+  const xi = selectStartingXI(playerStates);
+  if (xi.length === 0) return { attack: 42, defense: 42, overall: 42 };
 
-  if (available.length === 0) return { attack: 42, defense: 42, overall: 42 };
+  let sumAtk = 0, sumDef = 0, wAtk = 0, wDef = 0;
 
-  let sumAttack = 0;
-  let sumDefense = 0;
+  for (const p of xi) {
+    const a    = p.attributes;
+    const role = positionRole(p.pos);
 
-  for (const p of available) {
-    const a = p.attributes;
+    let rawAtk: number, rawDef: number, aw: number, dw: number;
 
-    // Raw attacking ability
-    const rawAtk = (a.shooting + a.dribbling + a.technique + a.positioning + a.pace) / 5;
-    // Raw defensive ability
-    const rawDef = (a.strength + a.concentration + a.decision + a.positioning + a.endurance) / 5;
+    if (role === 'GK') {
+      rawAtk = 0;
+      rawDef = (a.concentration + a.decision + a.strength) / 3;
+      aw = 0.0; dw = 1.0;
+    } else if (role === 'DEF') {
+      rawAtk = (a.passing + a.technique + a.pace) / 3;
+      rawDef = (a.strength + a.concentration + a.decision + a.endurance) / 4;
+      aw = 0.25; dw = 0.75;
+    } else if (role === 'MID') {
+      rawAtk = (a.passing + a.technique + a.dribbling + a.shooting) / 4;
+      rawDef = (a.endurance + a.decision + a.concentration) / 3;
+      aw = 0.50; dw = 0.50;
+    } else { // FWD
+      rawAtk = (a.shooting + a.dribbling + a.technique + a.positioning + a.pace) / 5;
+      rawDef = (a.endurance + a.positioning) / 2;
+      aw = 0.85; dw = 0.15;
+    }
 
-    // Physical condition multiplier (each component in [~0.85, ~1.10])
-    const fatigueMod   = 1 - Math.max(0, p.fatigue - 70) / 300;
-    const fitnessMod   = 0.85 + (p.fitness   / 100) * 0.15;
-    const formMod      = 0.90 + (p.form      / 100) * 0.20;
-    const moraleMod    = 0.92 + (p.morale    / 100) * 0.16;
-    const sharpnessMod = 0.88 + (p.sharpness / 100) * 0.20;
-
-    const mod = fatigueMod * fitnessMod * formMod * moraleMod * sharpnessMod;
-
-    sumAttack  += rawAtk * mod;
-    sumDefense += rawDef * mod;
+    const mod = physicalMod(p);
+    sumAtk += rawAtk * mod * aw;
+    sumDef += rawDef * mod * dw;
+    wAtk   += aw;
+    wDef   += dw;
   }
 
-  const n = available.length;
   const coachBonus = (coach.rating / 99) * 5;
-
-  const attack  = clamp(sumAttack  / n + coachBonus, 20, 99);
-  const defense = clamp(sumDefense / n + coachBonus, 20, 99);
+  const attack  = clamp((wAtk > 0 ? sumAtk / wAtk : 42) + coachBonus, 20, 99);
+  const defense = clamp((wDef > 0 ? sumDef / wDef : 42) + coachBonus, 20, 99);
 
   return { attack, defense, overall: (attack + defense) / 2 };
 }
@@ -108,7 +138,6 @@ export function computeTeamStrength(
 export interface SimulateMatchInput {
   match:        ScheduledMatch;
   playerStates: PlayerGameState[];
-  /** id → display name for scorer attribution */
   squadNames:   Map<number, string>;
   coach:        HeadCoach;
   leagueLevel:  number;
@@ -119,7 +148,7 @@ export interface PlayerMatchPerformance {
   id:            number;
   minutesPlayed: number;
   goals:         number;
-  rating:        number; // 1–10
+  rating:        number; // 1–10, derived from match events
   fatigueGained: number;
 }
 
@@ -127,10 +156,10 @@ export interface SimulateMatchOutput {
   result: {
     homeGoals: number;
     awayGoals: number;
-    events: MatchEvent[];
+    events:    MatchEvent[];
   };
-  updatedPlayerStates:  PlayerGameState[];
-  performances:         PlayerMatchPerformance[];
+  updatedPlayerStates: PlayerGameState[];
+  performances:        PlayerMatchPerformance[];
 }
 
 export function simulateMatch(input: SimulateMatchInput): SimulateMatchOutput {
@@ -139,14 +168,12 @@ export function simulateMatch(input: SimulateMatchInput): SimulateMatchOutput {
   const team   = computeTeamStrength(playerStates, coach);
   const oppStr = computeOpponentStrength(match.competition, leagueLevel, match.id);
 
-  // Home advantage: +6 attack, +3 defense for the home side
   const HOME_ADV_ATK = 6;
   const HOME_ADV_DEF = 3;
 
   const myAtk = team.attack  + (match.isHome ? HOME_ADV_ATK : 0);
   const myDef = team.defense + (match.isHome ? HOME_ADV_DEF : 0);
 
-  // Scoring attempts per side (~9-13 each, realistic range)
   const attemptsMe  = randInt(9, 14);
   const attemptsOpp = randInt(8, 13);
 
@@ -161,42 +188,48 @@ export function simulateMatch(input: SimulateMatchInput): SimulateMatchOutput {
   const homeGoals = match.isHome ? myGoals  : oppGoals;
   const awayGoals = match.isHome ? oppGoals : myGoals;
 
-  // ── Build event timeline ──
-  const events: MatchEvent[] = [];
+  const myWon  = myGoals > oppGoals;
+  const myDrew = myGoals === oppGoals;
+
+  // ── Starters ──
+  const starters    = selectStartingXI(playerStates.filter(p => !p.injury));
+  const starterIds  = new Set(starters.map(p => p.id));
   const usedMinutes = new Set<number>();
 
-  // Select starters for event attribution
-  const starters = bestN(playerStates.filter(p => !p.injury), 11);
-  const starterIds = new Set(starters.map(p => p.id));
+  // ── Phase 1: Goal events ──
+  const events: MatchEvent[] = [];
 
-  // Goals — my club
+  const OPP_SCORERS = [
+    'Вильяррос','Мартинель','Крузос','Брандао','Феррейра',
+    'Оконкво','Дибала','Ромеро','Клейтон','Поль',
+    'Сантьяго','Рикарде','Андерссон','Нджи','Козак',
+  ];
+
+  // My goals — weighted by shooting+positioning
   spreadMinutes(myGoals, 1, 90, usedMinutes).forEach(minute => {
     const scorer = weightedPick(starters, p => p.attributes.shooting + p.attributes.positioning);
     events.push({
       minute,
-      type: 'goal',
-      team: match.isHome ? 'home' : 'away',
+      type:       'goal',
+      team:       match.isHome ? 'home' : 'away',
       playerId:   scorer?.id,
       playerName: scorer ? (squadNames.get(scorer.id) ?? `Игрок #${scorer.id}`) : 'Неизвестен',
     });
   });
 
-  // Goals — opponent
-  const OPP_SCORERS = [
-    'Вильяррос', 'Мартинель', 'Крузос', 'Брандао', 'Феррейра',
-    'Оконкво', 'Дибала', 'Ромеро', 'Клейтон', 'Поль',
-    'Сантьяго', 'Рикарде', 'Андерссон', 'Нджи', 'Козак',
-  ];
+  // Opponent goals
   spreadMinutes(oppGoals, 1, 90, usedMinutes).forEach((minute, i) => {
     events.push({
       minute,
-      type: 'goal',
-      team: match.isHome ? 'away' : 'home',
+      type:       'goal',
+      team:       match.isHome ? 'away' : 'home',
       playerName: OPP_SCORERS[i % OPP_SCORERS.length],
     });
   });
 
-  // Yellow cards (~1-3 total)
+  // ── Phase 2: Card events ──
+
+  // Yellow cards (1–3 total)
   const yellows = randInt(1, 4);
   for (let i = 0; i < yellows; i++) {
     const minute = uniqueMinute(10, 88, usedMinutes);
@@ -205,29 +238,47 @@ export function simulateMatch(input: SimulateMatchInput): SimulateMatchOutput {
       const p = starters[randInt(0, starters.length)];
       events.push({
         minute, type: 'yellow_card',
-        team: match.isHome ? 'home' : 'away',
-        playerId: p.id,
+        team:       match.isHome ? 'home' : 'away',
+        playerId:   p.id,
         playerName: squadNames.get(p.id) ?? `Игрок #${p.id}`,
       });
     } else {
       events.push({
         minute, type: 'yellow_card',
-        team: match.isHome ? 'away' : 'home',
+        team:       match.isHome ? 'away' : 'home',
         playerName: OPP_SCORERS[randInt(0, OPP_SCORERS.length)],
       });
     }
   }
 
-  events.sort((a, b) => a.minute - b.minute);
+  // Red cards (~1.5% per team per match → ~3% total, realistic)
+  if (Math.random() < 0.015 && starters.length > 0) {
+    const minute = uniqueMinute(30, 90, usedMinutes);
+    const p      = starters[randInt(0, starters.length)];
+    events.push({
+      minute, type: 'red_card',
+      team:       match.isHome ? 'home' : 'away',
+      playerId:   p.id,
+      playerName: squadNames.get(p.id) ?? `Игрок #${p.id}`,
+    });
+  }
+  if (Math.random() < 0.015) {
+    const minute = uniqueMinute(30, 90, usedMinutes);
+    events.push({
+      minute, type: 'red_card',
+      team:       match.isHome ? 'away' : 'home',
+      playerName: OPP_SCORERS[randInt(0, OPP_SCORERS.length)],
+    });
+  }
 
-  // ── Update player states ──
-  const myWon  = myGoals > oppGoals;
-  const myDrew = myGoals === oppGoals;
-  const fatigueCost = competitionFatigue(match.competition);
+  // ── Phase 3: Update player states + collect injury events ──
+  const fatigueCost     = competitionFatigue(match.competition);
+  const injuryMinutes   = new Set<number>();
+  const updatedPlayerStates: PlayerGameState[] = [];
 
-  const updatedPlayerStates = playerStates.map(p => {
-    // Injured players skip the match — healing is handled by the weekly tick system, not per-match
-    if (p.injury) return p;
+  for (const p of playerStates) {
+    // Injured players sit out — healing handled by weekly tick
+    if (p.injury) { updatedPlayerStates.push(p); continue; }
 
     const isStarter = starterIds.has(p.id);
 
@@ -237,46 +288,66 @@ export function simulateMatch(input: SimulateMatchInput): SimulateMatchOutput {
     const moraleDelta  = myWon ? 5 : myDrew ? 1 : -4;
     const newMorale    = clamp(p.morale + moraleDelta, 0, 100);
 
+    // Performance rating from real events (for starters)
     let newLastFive = [...p.lastFiveResults];
     if (isStarter) {
-      const perfRating = 5 + Math.random() * 4;
-      const perf = perfRating >= 7 ? 1 : perfRating >= 5.5 ? 0 : -1;
+      const myTeam = match.isHome ? 'home' : 'away';
+      const pGoals = events.filter(
+        e => e.type === 'goal' && e.playerId === p.id && e.team === myTeam,
+      ).length;
+      const gotYellow = events.some(e => e.type === 'yellow_card' && e.playerId === p.id);
+      const gotRed    = events.some(e => e.type === 'red_card'    && e.playerId === p.id);
+      const perfRating = computeMatchRating(p, pGoals, gotYellow, gotRed, false, myWon, myDrew);
+      const perf = perfRating >= 7.0 ? 1 : perfRating >= 5.5 ? 0 : -1;
       newLastFive = [...newLastFive.slice(1), perf];
     }
     const newForm = clamp(50 + (newLastFive.reduce((s, v) => s + v, 0) / 5) * 30, 0, 100);
 
-    // Injury check for starters
-    let newInjury: PlayerGameState['injury'] = p.injury;
+    // Injury check
+    let newInjury: PlayerGameState['injury'] = null;
     if (isStarter) {
       const basePct    = 0.018;
       const fatigueMul = newFatigue > 80 ? 2.0 : newFatigue > 65 ? 1.4 : 1.0;
       const proneMul   = p.hidden.injuryProne / 3;
       if (Math.random() < basePct * fatigueMul * proneMul) {
         newInjury = rollInjury();
+        // Add injury event to the timeline
+        events.push({
+          minute:     uniqueMinute(10, 88, injuryMinutes),
+          type:       'injury',
+          team:       match.isHome ? 'home' : 'away',
+          playerId:   p.id,
+          playerName: squadNames.get(p.id) ?? `Игрок #${p.id}`,
+        });
       }
     }
 
-    return {
+    updatedPlayerStates.push({
       ...p,
-      fatigue:    newFatigue,
-      fitness:    Math.round(newFitness),
-      form:       Math.round(newForm),
-      sharpness:  newSharpness,
-      morale:     newMorale,
-      injury:     newInjury,
+      fatigue:            newFatigue,
+      fitness:            Math.round(newFitness),
+      form:               Math.round(newForm),
+      sharpness:          newSharpness,
+      morale:             newMorale,
+      injury:             newInjury,
       lastFiveResults:    newLastFive,
       matchesWithoutPlay: isStarter ? 0 : p.matchesWithoutPlay + 1,
-    };
-  });
+    });
+  }
 
-  // Performances summary
-  const performances: PlayerMatchPerformance[] = starters.map(p => ({
-    id:            p.id,
-    minutesPlayed: 90,
-    goals:         events.filter(e => e.type === 'goal' && e.playerId === p.id).length,
-    rating:        parseFloat((5 + Math.random() * 4).toFixed(1)),
-    fatigueGained: fatigueCost,
-  }));
+  // ── Final sort ──
+  events.sort((a, b) => a.minute - b.minute);
+
+  // ── Performances ──
+  const myTeam = match.isHome ? 'home' : 'away';
+  const performances: PlayerMatchPerformance[] = starters.map(p => {
+    const goals     = events.filter(e => e.type === 'goal'   && e.playerId === p.id && e.team === myTeam).length;
+    const gotYellow = events.some(e => e.type === 'yellow_card' && e.playerId === p.id);
+    const gotRed    = events.some(e => e.type === 'red_card'    && e.playerId === p.id);
+    const gotInjured = events.some(e => e.type === 'injury'     && e.playerId === p.id);
+    const rating    = computeMatchRating(p, goals, gotYellow, gotRed, gotInjured, myWon, myDrew);
+    return { id: p.id, minutesPlayed: 90, goals, rating, fatigueGained: fatigueCost };
+  });
 
   return {
     result: { homeGoals, awayGoals, events },
@@ -304,14 +375,49 @@ function goalProbability(attack: number, defense: number): number {
   return clamp(0.12 + (attack - defense) / 300, 0.04, 0.55);
 }
 
-function bestN(players: PlayerGameState[], n: number): PlayerGameState[] {
-  return [...players].sort((a, b) => avgAttr(b) - avgAttr(a)).slice(0, n);
+/** Physical condition multiplier for a player. */
+function physicalMod(p: PlayerGameState): number {
+  const fatigueMod   = 1 - Math.max(0, p.fatigue - 70) / 300;
+  const fitnessMod   = 0.85 + (p.fitness   / 100) * 0.15;
+  const formMod      = 0.90 + (p.form      / 100) * 0.20;
+  const moraleMod    = 0.92 + (p.morale    / 100) * 0.16;
+  const sharpnessMod = 0.88 + (p.sharpness / 100) * 0.20;
+  return fatigueMod * fitnessMod * formMod * moraleMod * sharpnessMod;
 }
 
-function weightedPick<T>(
-  items: T[],
-  weight: (item: T) => number
-): T | null {
+/**
+ * Compute a player's match rating (1–10) from real in-match events.
+ *
+ * Base:     6.0
+ * Result:   Win +0.4, Draw 0, Loss −0.5
+ * Goals:    +1.5 each
+ * Yellow:   −0.5
+ * Red:      −2.0
+ * Injury:   −0.8
+ * Fatigue:  −0.2 above 65%, −0.4 above 80%
+ */
+export function computeMatchRating(
+  p:           PlayerGameState,
+  goals:       number,
+  gotYellow:   boolean,
+  gotRed:      boolean,
+  gotInjured:  boolean,
+  won:         boolean,
+  drew:        boolean,
+): number {
+  const base     = 6.0;
+  const result   = won ? 0.4 : drew ? 0.0 : -0.5;
+  const gBonus   = goals * 1.5;
+  const cards    = gotRed ? -2.0 : gotYellow ? -0.5 : 0;
+  const injury   = gotInjured ? -0.8 : 0;
+  const fatigue  = p.fatigue > 80 ? -0.4 : p.fatigue > 65 ? -0.2 : 0;
+  return clamp(
+    parseFloat((base + result + gBonus + cards + injury + fatigue).toFixed(1)),
+    1.0, 10.0,
+  );
+}
+
+function weightedPick<T>(items: T[], weight: (item: T) => number): T | null {
   if (items.length === 0) return null;
   const total = items.reduce((s, it) => s + weight(it), 0);
   let r = Math.random() * total;
@@ -344,10 +450,10 @@ function competitionFatigue(competition: string): number {
 
 function rollInjury(): import('./gameState').InjuryRecord {
   const r = Math.random();
-  if (r < 0.40) return { type: 'bruise',        weeksLeft: 1,                               ratingPenalty: 0 };
-  if (r < 0.65) return { type: 'muscle_strain',  weeksLeft: 1 + randInt(0, 2),              ratingPenalty: 0 };
-  if (r < 0.80) return { type: 'sprain',         weeksLeft: 2 + randInt(0, 3),              ratingPenalty: 0 };
-  if (r < 0.92) return { type: 'muscle_tear',    weeksLeft: 4 + randInt(0, 5),              ratingPenalty: -1 };
-  if (r < 0.98) return { type: 'fracture',       weeksLeft: 6 + randInt(0, 7),              ratingPenalty: -1 };
-               return { type: 'acl',             weeksLeft: 26 + randInt(0, 14),            ratingPenalty: -2 };
+  if (r < 0.40) return { type: 'bruise',        weeksLeft: 1,               ratingPenalty:  0 };
+  if (r < 0.65) return { type: 'muscle_strain',  weeksLeft: 1 + randInt(0,2), ratingPenalty: 0 };
+  if (r < 0.80) return { type: 'sprain',         weeksLeft: 2 + randInt(0,3), ratingPenalty: 0 };
+  if (r < 0.92) return { type: 'muscle_tear',    weeksLeft: 4 + randInt(0,5), ratingPenalty: -1 };
+  if (r < 0.98) return { type: 'fracture',       weeksLeft: 6 + randInt(0,7), ratingPenalty: -1 };
+                return { type: 'acl',             weeksLeft: 26 + randInt(0,14), ratingPenalty: -2 };
 }
