@@ -93,6 +93,15 @@ description: Key decisions for the football manager game engine — training, co
 - `TournamentTab.tsx` — extracted `runOneTick(state)` useCallback (season init + playerStates init + applyWeeklyTick); `handleAdvanceWeek` calls it + `setLastTickTs`; 1s interval uses elapsed-threshold check (`now - lastAutoTickRef.current >= TICK_INTERVAL_MS`) — more robust than countdown-window approach; countdown progress bar visible in Calendar view when season active
 - **Critical design rule**: both offline catch-up and live interval must guard `schedule.some(m => !m.played)` to prevent post-season drift
 
+## Match Engine v3 — 5 core fixes (now in production)
+- **Tactic**: `coach.philosophy` → `PHILOSOPHY_MODIFIERS` (atk/def deltas: attacking +9/-6, defensive -6/+9, physical +3/+4, technical +5/+2, possession +2/+5) applied in `computeTeamStrength`
+- **Suspension**: `PlayerGameState.suspendedMatches: number` — red card sets to 1; `selectStartingXI` filters `suspendedMatches === 0`; decremented at END of each `simulateMatch` loop (not in tickEngine); coach report lists suspended players
+- **Opponent strength**: `computeOpponentStrength` now uses `rivalStrengths: Record<string,number>` from GameState (persistent, seeded from FNV hash of rival name + leagueLevel base); cups/euro fall back to competition-base + name-hash jitter ±10
+- **Opponent form**: `rivalForms: Record<string,number[]>` — last-5 results per rival; adds ±7.5 to opponent strength; updated each tick via `updateRivalForms` (virtual results weighted by strength vs leagueAvg) and `recordRivalMatchResult` (real result when MY_CLUB plays them)
+- **Substitutions**: up to 3 subs at min 62/67/72 for fatigued starters (fatigue>60); prefers same position role; generates `substitution` MatchEvent; `minutesPlayed` now accurate per player; fatigue cost proportional to actual minutes; `PlayerMatchPerformance` has `subbedIn/subbedOut` flags
+- **VERSION bumped to 6**: migration adds `suspendedMatches:0` to all playerStates, `rivalStrengths:{}`, `rivalForms:{}`; `initializeSeason` seeds both from rivals list
+- **SimulateMatchInput** now requires `rivalStrengths` + `rivalForms`; `applyWeeklyTick` reads them from GameState and passes through; no TournamentTab signature change needed
+
 **Why:** All time-based progression (injuries, fatigue, aging) belongs in tickEngine, not matchEngine. Position data must flow from squad templates → playerStates → match engine to produce realistic simulation.
 
 **How to apply:** When adding new game systems, extend `GameState` interface in gameState.ts. Player physical state always goes through tickEngine. Match events always go through simulateMatch → result.events array.

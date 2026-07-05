@@ -6,13 +6,14 @@
  *   2. Applies post-week recovery to all players (fatigue↓, injury healing, morale drift).
  *   3. Advances season.currentDate by 7 days.
  *   4. Updates season.leagueRound for every league match played.
+ *   5. Updates rivalStrengths (slight drift) and rivalForms (virtual results).
  *
  * Injury healing lives here, NOT in matchEngine — so a double-fixture week
  * still counts as just one healing tick.
  *
  * Season initialisation:
- *   `initializeSeason()` builds the full schedule from `generateSeasonSchedule`
- *   and anchors currentDate 7 days before the first fixture.
+ *   `initializeSeason()` builds the full schedule from `generateSeasonSchedule`,
+ *   anchors `currentDate` 7 days before the first fixture, and seeds rival data.
  */
 
 import type { GameState, ScheduledMatch, InjuryType, InboxMessage } from './gameState';
@@ -70,10 +71,117 @@ function addDays(d: Date, n: number): Date {
   return r;
 }
 
+// ─── RIVAL STRENGTH SEEDING ───────────────────────────────────────────────────
+
+/**
+ * Generate initial rival strengths seeded from opponent name + league level.
+ * Called once at season start; stored in GameState for the season.
+ *
+ * Level base: L1→68, L2→58, L3→50, L4→42 (below our typical squad rating)
+ * Jitter: ±14 from FNV hash of name → spread of ~28 points across the table
+ */
+export function generateRivalStrengths(
+  rivals:      string[],
+  leagueLevel: number,
+): Record<string, number> {
+  const levelBase = [0, 68, 58, 50, 42];
+  const base = levelBase[leagueLevel] ?? 58;
+  const result: Record<string, number> = {};
+
+  for (const rival of rivals) {
+    let h = 2166136261;
+    for (let i = 0; i < rival.length; i++) {
+      h ^= rival.charCodeAt(i);
+      h  = Math.imul(h, 16777619) | 0;
+    }
+    const jitter = ((h >>> 0) % 29) - 14; // −14..+14
+    result[rival] = Math.max(20, Math.min(99, base + jitter));
+  }
+
+  return result;
+}
+
+/**
+ * Update rival strengths each tick with a tiny ±1 drift (simulates form cycles).
+ * Also accepts any club in the rivalForms keys (cups / euro opponents).
+ */
+function driftRivalStrengths(
+  strengths: Record<string, number>,
+): Record<string, number> {
+  const result: Record<string, number> = {};
+  for (const [name, str] of Object.entries(strengths)) {
+    const drift = Math.random() < 0.5 ? 1 : Math.random() < 0.5 ? -1 : 0;
+    result[name] = Math.max(20, Math.min(99, str + drift));
+  }
+  return result;
+}
+
+/**
+ * Simulate a virtual weekly result for a rival (they played other fixtures this week).
+ * Uses their strength vs the league average to bias the outcome.
+ *
+ * Returns 1=win, 0=draw, -1=loss from the rival's perspective.
+ */
+function simulateRivalResult(rivalStr: number, leagueAvgStr: number): number {
+  const advantage = (rivalStr - leagueAvgStr) / 60; // normalised
+  const r = Math.random();
+  // Stronger sides win more often; weaker sides lose more
+  if (r < 0.38 + advantage * 0.3) return  1; // win
+  if (r < 0.62 + advantage * 0.1) return  0; // draw
+  return -1;                                   // loss
+}
+
+/**
+ * Update rivalForms for all rivals by appending a virtual result this week.
+ * Rivals whose names appear in weekMatches (they played vs MY_CLUB) are skipped
+ * because their form gets updated implicitly through the match result.
+ */
+function updateRivalForms(
+  rivalForms:   Record<string, number[]>,
+  rivalStrengths: Record<string, number>,
+  weekOpponents: Set<string>,
+): Record<string, number[]> {
+  const allStrs   = Object.values(rivalStrengths);
+  const leagueAvg = allStrs.length > 0
+    ? allStrs.reduce((s, v) => s + v, 0) / allStrs.length
+    : 60;
+
+  const result: Record<string, number[]> = { ...rivalForms };
+
+  for (const [name, str] of Object.entries(rivalStrengths)) {
+    if (weekOpponents.has(name)) continue; // they played us — handled below
+    const prev = rivalForms[name] ?? [0, 0, 0, 0, 0];
+    const vResult = simulateRivalResult(str, leagueAvg);
+    result[name] = [...prev.slice(1), vResult];
+  }
+
+  return result;
+}
+
+/**
+ * Record actual match result in a rival's form.
+ * We track results from the RIVAL's perspective (did they beat us or not).
+ */
+function recordRivalMatchResult(
+  rivalForms:   Record<string, number[]>,
+  opponentName: string,
+  myGoals:      number,
+  oppGoals:     number,
+): Record<string, number[]> {
+  const prev = rivalForms[opponentName] ?? [0, 0, 0, 0, 0];
+  // From rival's perspective: they scored oppGoals vs our myGoals
+  const rivalResult = oppGoals > myGoals ? 1 : oppGoals === myGoals ? 0 : -1;
+  return {
+    ...rivalForms,
+    [opponentName]: [...prev.slice(1), rivalResult],
+  };
+}
+
 // ─── SEASON INITIALISATION ────────────────────────────────────────────────────
 
 /**
  * Generate the full season schedule and set the initial currentDate.
+ * Also seeds rivalStrengths from opponent names + level.
  * Call this once when the player starts a new game (schedule is empty).
  */
 export function initializeSeason(
@@ -83,14 +191,23 @@ export function initializeSeason(
   const schedule  = generateSeasonSchedule(input);
   const first     = schedule[0];
 
-  // currentDate starts 7 days before the first fixture so the first tick
-  // falls on match week 1.
   const startDate = first
     ? isoDate(addDays(new Date(first.date), -7))
     : input.seasonStartDate;
 
+  // Seed rival strengths from the league rivals list
+  const rivalStrengths = generateRivalStrengths(input.rivals, input.leagueLevel);
+
+  // Init forms as neutral
+  const rivalForms: Record<string, number[]> = {};
+  for (const rival of input.rivals) {
+    rivalForms[rival] = [0, 0, 0, 0, 0];
+  }
+
   return {
     ...gameState,
+    rivalStrengths,
+    rivalForms,
     season: {
       ...gameState.season,
       schedule,
@@ -132,8 +249,6 @@ export function applyWeeklyTick(
     .sort((a, b) => a.date.localeCompare(b.date));
 
   // ── Snapshot which players were already injured BEFORE this tick ──
-  // Only pre-existing injuries are healed at the end of the week.
-  // Injuries sustained during this week's matches keep their full duration.
   const preTickInjuredIds = new Set(
     gameState.playerStates.filter(p => !!p.injury).map(p => p.id)
   );
@@ -145,17 +260,33 @@ export function applyWeeklyTick(
   let updatedSchedule   = [...season.schedule];
   let leagueRound       = season.leagueRound;
 
+  // Track which opponents we faced this week (for rivalForms update)
+  const weekOpponents = new Set<string>();
+  // Running rival forms updated as we process matches
+  let currentRivalForms = { ...gameState.rivalForms };
+
   for (const match of weekMatches) {
     const output = simulateMatch({
       match,
       playerStates,
       squadNames,
-      coach:       gameState.coach,
+      coach:          gameState.coach,
       leagueLevel,
       clubName,
+      rivalStrengths: gameState.rivalStrengths,
+      rivalForms:     currentRivalForms,
     });
 
-    // Detect new injuries (present in output but not in input)
+    // Record opponent
+    const opponentName = (match.isHome ? match.away : match.home).replace('MY_CLUB', '').trim();
+    weekOpponents.add(opponentName);
+
+    // Update rival form with real match result
+    const myGoals  = match.isHome ? output.result.homeGoals : output.result.awayGoals;
+    const oppGoals = match.isHome ? output.result.awayGoals : output.result.homeGoals;
+    currentRivalForms = recordRivalMatchResult(currentRivalForms, opponentName, myGoals, oppGoals);
+
+    // Detect new injuries
     const prevInjuryMap = new Map(playerStates.map(p => [p.id, p.injury]));
     for (const ps of output.updatedPlayerStates) {
       if (ps.injury && !prevInjuryMap.get(ps.id)) {
@@ -177,14 +308,23 @@ export function applyWeeklyTick(
 
     matchesPlayed.push({
       match,
-      myGoals:  match.isHome ? output.result.homeGoals : output.result.awayGoals,
-      oppGoals: match.isHome ? output.result.awayGoals : output.result.homeGoals,
+      myGoals,
+      oppGoals,
       output,
     });
   }
 
+  // ── Update rival forms for teams who didn't play us this week ──
+  const finalRivalForms = updateRivalForms(
+    currentRivalForms,
+    gameState.rivalStrengths,
+    weekOpponents,
+  );
+
+  // ── Drift rival strengths slightly each week ──
+  const finalRivalStrengths = driftRivalStrengths(gameState.rivalStrengths);
+
   // ── Post-week player updates ──
-  // Each match requires ~1.5 effective rest days to recover from.
   const matchDays = weekMatches.length;
   const restDays  = Math.max(0, 7 - Math.ceil(matchDays * 1.5));
 
@@ -192,7 +332,6 @@ export function applyWeeklyTick(
 
   const finalPlayerStates = playerStates.map(p => {
     // ── Injury healing: ONLY for injuries that existed before this tick ──
-    // Injuries sustained during this week's matches keep their full duration.
     let newInjury = p.injury;
     if (newInjury && preTickInjuredIds.has(p.id)) {
       const remaining = Math.max(0, newInjury.weeksLeft - 1);
@@ -205,26 +344,25 @@ export function applyWeeklyTick(
     }
 
     // ── Fatigue recovery (rest days) ──
-    // Recovery rate: 8–14 per rest day, better fitness = faster recovery
     const recoveryPerDay   = 8 + Math.floor(p.fitness / 15); // 8..14
     const fatigueRecovered = restDays * recoveryPerDay;
     const newFatigue       = Math.max(0, Math.round(p.fatigue - fatigueRecovered));
 
     // ── Fitness: slight recovery when not overplayed ──
     const newFitness = newInjury
-      ? clamp(p.fitness + 2, 0, 100)               // injured players rest
+      ? clamp(p.fitness + 2, 0, 100)
       : clamp(p.fitness + (matchDays > 2 ? -1 : 1), 0, 100);
 
-    // ── Sharpness decay for rest weeks (simulateMatch already updated starters) ──
+    // ── Sharpness decay for rest weeks ──
     const newSharpness = matchDays > 0
       ? p.sharpness
-      : clamp(p.sharpness - 4, 0, 100);            // no matches → lose edge
+      : clamp(p.sharpness - 4, 0, 100);
 
     // ── Morale: drift toward 65 (natural equilibrium) ──
     const moraleDrift = p.morale > 65 ? -1 : p.morale < 65 ? 1 : 0;
     const newMorale   = clamp(p.morale + moraleDrift, 0, 100);
 
-    // ── Burnout risk: computed from post-recovery fatigue ──
+    // ── Burnout risk ──
     const newBurnout = newFatigue > 70
       ? clamp(p.burnoutRisk + 4, 0, 100)
       : clamp(p.burnoutRisk - 5, 0, 100);
@@ -244,7 +382,7 @@ export function applyWeeklyTick(
   const inboxMessages: InboxMessage[] = [];
   const mySide = (m: ScheduledMatch) => m.isHome ? 'home' : 'away';
 
-  // ── Season start notification (first time any league match is played) ──
+  // ── Season start notification ──
   const wasFirstLeagueMatch = season.leagueRound === 0 && leagueRound > 0;
   if (wasFirstLeagueMatch) {
     inboxMessages.push({
@@ -258,28 +396,32 @@ export function applyWeeklyTick(
     });
   }
 
-  // ── Rich match result messages (event-driven) ──
-  for (const { match, myGoals, oppGoals, output } of matchesPlayed) {
-    const won      = myGoals > oppGoals;
-    const drew     = myGoals === oppGoals;
+  // ── Rich match result messages ──
+  for (const { match, myGoals: mg, oppGoals: og, output } of matchesPlayed) {
+    const won      = mg > og;
+    const drew     = mg === og;
     const opponent = (match.isHome ? match.away : match.home).replace('MY_CLUB', clubName);
-    const scoreStr = match.isHome ? `${myGoals}:${oppGoals}` : `${oppGoals}:${myGoals}`;
+    const scoreStr = match.isHome ? `${mg}:${og}` : `${og}:${mg}`;
     const homeTeam = match.isHome ? clubName : opponent;
     const awayTeam = match.isHome ? opponent : clubName;
     const outcome  = won ? 'ПОБЕДА 🏆' : drew ? 'Ничья ⚡' : 'Поражение ❌';
     const roundStr = typeof match.round === 'string' ? match.round : `Тур ${match.round}`;
 
-    // Pull real events for my side
     const side           = mySide(match);
     const events         = output.result.events ?? [];
     const myGoalEvents   = events.filter(e => (e.type === 'goal' || e.type === 'own_goal') && e.team === side);
     const myRedEvents    = events.filter(e => e.type === 'red_card' && e.team === side);
+    const mySubEvents    = events.filter(e => e.type === 'substitution' && e.team === side);
 
     let text = `${match.competitionName} · ${roundStr}\n${homeTeam} ${scoreStr} ${awayTeam} — ${outcome}`;
 
     if (myGoalEvents.length > 0) {
       const scorerList = myGoalEvents.map(e => `${e.playerName} ${e.minute}'`).join(', ');
       text += `\nГолы: ${scorerList}`;
+    }
+    if (mySubEvents.length > 0) {
+      const subList = mySubEvents.map(e => `${e.minute}'`).join(', ');
+      text += `\nЗамены (${mySubEvents.length}): мин. ${subList}`;
     }
     if (myRedEvents.length > 0) {
       const redList = myRedEvents.map(e => `${e.playerName} (${e.minute}')`).join(', ');
@@ -296,7 +438,7 @@ export function applyWeeklyTick(
       requiresAction: false,
     });
 
-    // ── Red card → suspension alert (separate urgent message) ──
+    // ── Red card → suspension alert ──
     for (const red of myRedEvents) {
       inboxMessages.push({
         id:             `redcard_${match.id}_${red.playerId ?? red.playerName}`,
@@ -304,7 +446,7 @@ export function applyWeeklyTick(
         date:           match.date,
         time:           '21:30',
         sender:         'Дисциплинарный комитет',
-        text:           `${red.playerName} дисквалифицирован на 1 матч после красной карточки в игре против ${opponent} (${match.competitionName}).`,
+        text:           `${red.playerName} дисквалифицирован на 1 матч после красной карточки в игре против ${opponent.replace('MY_CLUB', clubName)} (${match.competitionName}).`,
         requiresAction: false,
       });
     }
@@ -337,13 +479,14 @@ export function applyWeeklyTick(
     });
   }
 
-  // ── Weekly coach report (only when there are notable issues) ──
+  // ── Weekly coach report ──
   {
     const burnout  = finalPlayerStates.filter(p => p.burnoutRisk > 70);
     const tired    = finalPlayerStates.filter(p => p.fatigue > 75 && !p.injury);
     const lowMoral = finalPlayerStates.filter(p => p.morale < 40);
+    const suspended = finalPlayerStates.filter(p => p.suspendedMatches > 0);
 
-    if (burnout.length > 0 || tired.length > 0 || lowMoral.length > 0) {
+    if (burnout.length > 0 || tired.length > 0 || lowMoral.length > 0 || suspended.length > 0) {
       const lines: string[] = ['Еженедельный отчёт штаба:'];
       if (burnout.length > 0) {
         const names = burnout.map(p => squadNames.get(p.id) ?? `#${p.id}`).join(', ');
@@ -355,6 +498,10 @@ export function applyWeeklyTick(
       if (lowMoral.length > 0) {
         const names = lowMoral.map(p => squadNames.get(p.id) ?? `#${p.id}`).join(', ');
         lines.push(`📉 Низкий моральный дух: ${names}`);
+      }
+      if (suspended.length > 0) {
+        const names = suspended.map(p => squadNames.get(p.id) ?? `#${p.id}`).join(', ');
+        lines.push(`🟥 Дисквалифицированы (пропускают 1 матч): ${names}`);
       }
       inboxMessages.push({
         id:             `coach_report_${weekEnd}`,
@@ -386,9 +533,11 @@ export function applyWeeklyTick(
   const prevInbox = gameState.inbox ?? [];
   const newState: GameState = {
     ...gameState,
-    playerStates: finalPlayerStates,
-    lastWeekTick: isoDate(new Date()),
-    inbox:        [...inboxMessages, ...prevInbox].slice(0, 200), // cap at 200 messages
+    playerStates:    finalPlayerStates,
+    lastWeekTick:    isoDate(new Date()),
+    inbox:           [...inboxMessages, ...prevInbox].slice(0, 200),
+    rivalStrengths:  finalRivalStrengths,
+    rivalForms:      finalRivalForms,
     season: {
       ...season,
       currentDate: weekEnd,

@@ -1,27 +1,50 @@
 /**
- * F-CORP Match Engine v2
+ * F-CORP Match Engine v3
  *
- * Improvements over v1:
- *   - Position-aware XI selection (1 GK + 4 DEF + 4 MID + 2 FWD, fallback fill)
- *   - Position-specific attack/defense contribution weights
- *   - Performance ratings derived from real match events (goals, cards, result)
- *   - Red card events (~3% per match total)
- *   - Injury events in the timeline
- *   - lastFiveResults updated from actual match rating, not random
+ * v3 improvements over v2:
+ *   1. TACTICS: coach.philosophy modifies team attack/defense strength
+ *   2. SUSPENSIONS: red card → suspendedMatches=1; suspended players excluded from XI
+ *   3. OPPONENT STRENGTH: uses rivalStrengths table (persistent, drifting) instead of pure hash
+ *   4. OPPONENT FORM: rivalForms last-5 results modulate opponent strength ±7.5
+ *   5. SUBSTITUTIONS: up to 3 subs at min ~62/67/72 for fatigued players;
+ *      minutesPlayed is accurate; fatigue cost is proportional to minutes
  */
 
 import type { ScheduledMatch, PlayerGameState, HeadCoach } from './gameState';
 import type { MatchEvent } from './gameState';
 import { positionRole } from './gameState';
 
+// ─── TACTIC MODIFIERS ─────────────────────────────────────────────────────────
+
+/**
+ * Maps coach philosophy → attack and defense bonuses applied to team strength.
+ * These are additive on top of the attribute-derived raw values.
+ *
+ * attacking  → big attack boost, defence suffers
+ * defensive  → vice versa
+ * physical   → moderate boost everywhere (pressing + set-pieces)
+ * technical  → attack-leaning, keeps shape well
+ * possession → balanced but controlled (less exposed on transitions)
+ * balanced   → no modifier (baseline)
+ */
+const PHILOSOPHY_MODIFIERS: Record<string, { atk: number; def: number }> = {
+  balanced:   { atk:  0, def:  0 },
+  attacking:  { atk: +9, def: -6 },
+  defensive:  { atk: -6, def: +9 },
+  physical:   { atk: +3, def: +4 },
+  technical:  { atk: +5, def: +2 },
+  possession: { atk: +2, def: +5 },
+};
+
 // ─── POSITION HELPERS ─────────────────────────────────────────────────────────
 
 /**
  * Select the starting XI using positional balance: 1 GK, 4 DEF, 4 MID, 2 FWD.
+ * Excludes injured AND suspended players.
  * If a group is short, remaining slots are filled from the next-best available.
  */
 export function selectStartingXI(players: PlayerGameState[]): PlayerGameState[] {
-  const available = players.filter(p => !p.injury);
+  const available = players.filter(p => !p.injury && p.suspendedMatches === 0);
   const byAttr    = (arr: PlayerGameState[]) =>
     [...arr].sort((a, b) => avgAttr(b) - avgAttr(a));
 
@@ -33,7 +56,6 @@ export function selectStartingXI(players: PlayerGameState[]): PlayerGameState[] 
   const xi     = [...gks, ...defs, ...mids, ...fwds];
   const picked = new Set(xi.map(p => p.id));
 
-  // Fill remaining slots with best available from any position
   if (xi.length < 11) {
     const rest = byAttr(available.filter(p => !picked.has(p.id)));
     xi.push(...rest.slice(0, 11 - xi.length));
@@ -44,28 +66,52 @@ export function selectStartingXI(players: PlayerGameState[]): PlayerGameState[] 
 
 // ─── OPPONENT STRENGTH ────────────────────────────────────────────────────────
 
+/**
+ * Compute opponent strength using:
+ *   1. Stored rivalStrength for this opponent (set at season init, drifts weekly)
+ *   2. Form modifier from their last 5 results (+1.5 per win, -1.5 per loss)
+ *   3. Competition base fallback when no stored strength exists (cups, euro)
+ *
+ * Replacing the pure matchId-hash with a persistent table means:
+ *   - Same opponent has consistent base strength across the season
+ *   - Rivals in form are harder; slumping rivals are easier
+ */
 export function computeOpponentStrength(
-  competition: string,
-  leagueLevel: number,
-  matchId:     string,
+  competition:    string,
+  leagueLevel:    number,
+  opponentName:   string,
+  rivalStrengths: Record<string, number>,
+  rivalForms:     Record<string, number[]>,
 ): number {
-  let h = 2166136261;
-  for (let i = 0; i < matchId.length; i++) {
-    h ^= matchId.charCodeAt(i);
-    h  = Math.imul(h, 16777619) | 0;
-  }
-  const jitter = ((h >>> 0) % 31) - 15;
+  const storedStr = rivalStrengths[opponentName];
 
-  const competitionBase: Record<string, number> = {
-    ucl: 76, uel: 68, uecl: 62,
-    super_cup: 72, national_cup: 56, league_cup: 50,
-  };
+  let baseStr: number;
+  if (storedStr !== undefined) {
+    baseStr = storedStr;
+  } else {
+    // Cups / European / fallback — use competition-specific base + name-hash jitter
+    const competitionBase: Record<string, number> = {
+      ucl: 76, uel: 68, uecl: 62,
+      super_cup: 72, national_cup: 56, league_cup: 50,
+    };
+    const levelBase = [0, 70, 60, 52, 44];
+    const base = competitionBase[competition] ?? (levelBase[leagueLevel] ?? 52);
 
-  if (competitionBase[competition] !== undefined) {
-    return clamp(competitionBase[competition] + jitter, 20, 99);
+    let h = 2166136261;
+    for (let i = 0; i < opponentName.length; i++) {
+      h ^= opponentName.charCodeAt(i);
+      h  = Math.imul(h, 16777619) | 0;
+    }
+    const jitter = ((h >>> 0) % 21) - 10; // ±10
+    baseStr = base + jitter;
   }
-  const levelBase = [0, 70, 60, 52, 44];
-  return clamp((levelBase[leagueLevel] ?? 52) + jitter, 20, 99);
+
+  // Form modifier: each result in rivalForms is 1=W, 0=D, -1=L → +1.5 pts each
+  const form    = rivalForms[opponentName] ?? [0, 0, 0, 0, 0];
+  const formSum = form.reduce((s, v) => s + v, 0); // -5 to +5
+  const formMod = formSum * 1.5; // -7.5 to +7.5
+
+  return clamp(Math.round(baseStr + formMod), 20, 99);
 }
 
 // ─── TEAM STRENGTH ────────────────────────────────────────────────────────────
@@ -77,7 +123,7 @@ export interface TeamStrength {
 }
 
 /**
- * Compute effective team strength using position-aware weights.
+ * Compute effective team strength using position-aware weights + tactic modifier.
  *
  * GK:  contributes 100% to defense, 0% to attack
  * DEF: 75% defense, 25% attack
@@ -85,6 +131,7 @@ export interface TeamStrength {
  * FWD: 15% defense, 85% attack
  *
  * Physical modifiers: fatigue, fitness, form, morale, sharpness.
+ * Tactic modifier: coach.philosophy shifts the atk/def balance.
  */
 export function computeTeamStrength(
   playerStates: PlayerGameState[],
@@ -127,8 +174,10 @@ export function computeTeamStrength(
   }
 
   const coachBonus = (coach.rating / 99) * 5;
-  const attack  = clamp((wAtk > 0 ? sumAtk / wAtk : 42) + coachBonus, 20, 99);
-  const defense = clamp((wDef > 0 ? sumDef / wDef : 42) + coachBonus, 20, 99);
+  const tacticMod  = PHILOSOPHY_MODIFIERS[coach.philosophy] ?? PHILOSOPHY_MODIFIERS.balanced;
+
+  const attack  = clamp((wAtk > 0 ? sumAtk / wAtk : 42) + coachBonus + tacticMod.atk, 20, 99);
+  const defense = clamp((wDef > 0 ? sumDef / wDef : 42) + coachBonus + tacticMod.def, 20, 99);
 
   return { attack, defense, overall: (attack + defense) / 2 };
 }
@@ -136,12 +185,14 @@ export function computeTeamStrength(
 // ─── MAIN SIMULATION ──────────────────────────────────────────────────────────
 
 export interface SimulateMatchInput {
-  match:        ScheduledMatch;
-  playerStates: PlayerGameState[];
-  squadNames:   Map<number, string>;
-  coach:        HeadCoach;
-  leagueLevel:  number;
-  clubName:     string;
+  match:          ScheduledMatch;
+  playerStates:   PlayerGameState[];
+  squadNames:     Map<number, string>;
+  coach:          HeadCoach;
+  leagueLevel:    number;
+  clubName:       string;
+  rivalStrengths: Record<string, number>;
+  rivalForms:     Record<string, number[]>;
 }
 
 export interface PlayerMatchPerformance {
@@ -150,6 +201,8 @@ export interface PlayerMatchPerformance {
   goals:         number;
   rating:        number; // 1–10, derived from match events
   fatigueGained: number;
+  subbedIn:      boolean; // true if this player came on as a sub
+  subbedOut:     boolean; // true if this player was replaced
 }
 
 export interface SimulateMatchOutput {
@@ -163,10 +216,15 @@ export interface SimulateMatchOutput {
 }
 
 export function simulateMatch(input: SimulateMatchInput): SimulateMatchOutput {
-  const { match, playerStates, squadNames, coach, leagueLevel } = input;
+  const { match, playerStates, squadNames, coach, leagueLevel, rivalStrengths, rivalForms } = input;
 
   const team   = computeTeamStrength(playerStates, coach);
-  const oppStr = computeOpponentStrength(match.competition, leagueLevel, match.id);
+
+  // Opponent name is whichever side isn't MY_CLUB
+  const opponentName = (match.isHome ? match.away : match.home).replace('MY_CLUB', '').trim();
+  const oppStr = computeOpponentStrength(
+    match.competition, leagueLevel, opponentName, rivalStrengths, rivalForms,
+  );
 
   const HOME_ADV_ATK = 6;
   const HOME_ADV_DEF = 3;
@@ -191,10 +249,16 @@ export function simulateMatch(input: SimulateMatchInput): SimulateMatchOutput {
   const myWon  = myGoals > oppGoals;
   const myDrew = myGoals === oppGoals;
 
-  // ── Starters ──
-  const starters    = selectStartingXI(playerStates.filter(p => !p.injury));
-  const starterIds  = new Set(starters.map(p => p.id));
+  // ── Starters (excludes injured + suspended) ──
+  const starters   = selectStartingXI(playerStates);
+  const starterIds = new Set(starters.map(p => p.id));
   const usedMinutes = new Set<number>();
+
+  // ── Bench pool: available non-starters ──
+  const benchPool: PlayerGameState[] = [...playerStates]
+    .filter(p => !starterIds.has(p.id) && !p.injury && p.suspendedMatches === 0)
+    .sort((a, b) => avgAttr(b) - avgAttr(a))
+    .slice(0, 7);
 
   // ── Phase 1: Goal events ──
   const events: MatchEvent[] = [];
@@ -251,10 +315,12 @@ export function simulateMatch(input: SimulateMatchInput): SimulateMatchOutput {
     }
   }
 
-  // Red cards (~1.5% per team per match → ~3% total, realistic)
+  // Red cards (~1.5% per team per match → realistic)
+  let myRedCardPlayerId: number | undefined;
   if (Math.random() < 0.015 && starters.length > 0) {
     const minute = uniqueMinute(30, 90, usedMinutes);
     const p      = starters[randInt(0, starters.length)];
+    myRedCardPlayerId = p.id;
     events.push({
       minute, type: 'red_card',
       team:       match.isHome ? 'home' : 'away',
@@ -271,30 +337,101 @@ export function simulateMatch(input: SimulateMatchInput): SimulateMatchOutput {
     });
   }
 
-  // ── Phase 3: Update player states + collect injury events ──
-  const fatigueCost     = competitionFatigue(match.competition);
-  const injuryMinutes   = new Set<number>();
+  // ── Phase 3: Substitutions (up to 3, minutes ~62/67/72) ──
+  const SUB_MINUTES = [62, 67, 72];
+  // Track which starters got subbed out: id → minute subbed out
+  const subbedOutAt  = new Map<number, number>(); // starterId → minute
+  // Track which bench players came on: id → minute subbed in
+  const subbedInAt   = new Map<number, number>(); // benchId → minute
+  let remainingBench = [...benchPool];
+
+  for (const subMinute of SUB_MINUTES) {
+    if (remainingBench.length === 0) break;
+
+    // Find the most fatigued eligible starter (not already subbed, no red card just received)
+    const eligibleStarters = starters
+      .filter(p => !subbedOutAt.has(p.id) && p.id !== myRedCardPlayerId)
+      .sort((a, b) => b.fatigue - a.fatigue);
+
+    const candidate = eligibleStarters.find(p => p.fatigue > 60);
+    if (!candidate) break; // No tired starters — no tactical subs (realistic)
+
+    // Prefer same role, else best available
+    const role       = positionRole(candidate.pos);
+    const compatSub  = remainingBench.find(p => positionRole(p.pos) === role);
+    const chosenSub  = compatSub ?? remainingBench[0];
+    if (!chosenSub) break;
+
+    subbedOutAt.set(candidate.id, subMinute);
+    subbedInAt.set(chosenSub.id, subMinute);
+    remainingBench = remainingBench.filter(p => p.id !== chosenSub.id);
+
+    const outName = squadNames.get(candidate.id) ?? `#${candidate.id}`;
+    const inName  = squadNames.get(chosenSub.id) ?? `#${chosenSub.id}`;
+    events.push({
+      minute:     subMinute,
+      type:       'substitution',
+      team:       match.isHome ? 'home' : 'away',
+      playerId:   chosenSub.id,
+      playerName: `${inName} ↔ ${outName}`,
+    });
+  }
+
+  // ── Phase 4: Injury events (starters only) ──
+  const injuryMinutes = new Set<number>();
+
+  // ── Phase 5: Update all player states ──
+  const baseFatigueCost = competitionFatigue(match.competition);
   const updatedPlayerStates: PlayerGameState[] = [];
 
   for (const p of playerStates) {
-    // Injured players sit out — healing handled by weekly tick
-    if (p.injury) { updatedPlayerStates.push(p); continue; }
+    // ── Suspended players: served their ban ──
+    if (p.suspendedMatches > 0 && !starterIds.has(p.id)) {
+      updatedPlayerStates.push({
+        ...p,
+        suspendedMatches: Math.max(0, p.suspendedMatches - 1),
+      });
+      continue;
+    }
 
-    const isStarter = starterIds.has(p.id);
+    // ── Injured players sit out (healing handled by weekly tick) ──
+    if (p.injury) {
+      updatedPlayerStates.push(p);
+      continue;
+    }
 
-    const newFatigue   = clamp(p.fatigue + (isStarter ? fatigueCost : Math.round(fatigueCost * 0.12)), 0, 100);
-    const newSharpness = clamp(p.sharpness + (isStarter ? 8 : -3), 0, 100);
-    const newFitness   = clamp(p.fitness + (isStarter ? -(1 + Math.random() * 2) : 2), 0, 100);
+    const isStarter   = starterIds.has(p.id);
+    const subbedOut   = subbedOutAt.has(p.id);
+    const subbedIn    = subbedInAt.has(p.id);
+    const isActive    = isStarter || subbedIn; // played any minutes
+
+    // Compute actual minutes played
+    let minutesPlayed: number;
+    if (subbedOut) {
+      minutesPlayed = subbedOutAt.get(p.id)!;
+    } else if (subbedIn) {
+      minutesPlayed = 90 - subbedInAt.get(p.id)!;
+    } else if (isStarter) {
+      minutesPlayed = 90;
+    } else {
+      minutesPlayed = 0;
+    }
+
+    // Fatigue proportional to minutes; bench warms up a little
+    const fatigueCost  = isActive
+      ? Math.round(baseFatigueCost * (minutesPlayed / 90))
+      : Math.round(baseFatigueCost * 0.08);
+    const newFatigue   = clamp(p.fatigue + fatigueCost, 0, 100);
+    const newSharpness = clamp(p.sharpness + (isActive ? 8 : -3), 0, 100);
+    const newFitness   = clamp(p.fitness + (isActive ? -(1 + Math.random() * 2) : 2), 0, 100);
     const moraleDelta  = myWon ? 5 : myDrew ? 1 : -4;
     const newMorale    = clamp(p.morale + moraleDelta, 0, 100);
 
-    // Performance rating from real events (for starters)
+    // Performance rating from real events (for those who played)
     let newLastFive = [...p.lastFiveResults];
-    if (isStarter) {
-      const myTeam = match.isHome ? 'home' : 'away';
-      const pGoals = events.filter(
-        e => e.type === 'goal' && e.playerId === p.id && e.team === myTeam,
-      ).length;
+    if (isActive) {
+      const myTeam    = match.isHome ? 'home' : 'away';
+      const pGoals    = events.filter(e => e.type === 'goal' && e.playerId === p.id && e.team === myTeam).length;
       const gotYellow = events.some(e => e.type === 'yellow_card' && e.playerId === p.id);
       const gotRed    = events.some(e => e.type === 'red_card'    && e.playerId === p.id);
       const perfRating = computeMatchRating(p, pGoals, gotYellow, gotRed, false, myWon, myDrew);
@@ -303,17 +440,20 @@ export function simulateMatch(input: SimulateMatchInput): SimulateMatchOutput {
     }
     const newForm = clamp(50 + (newLastFive.reduce((s, v) => s + v, 0) / 5) * 30, 0, 100);
 
-    // Injury check
+    // Suspension: red card → miss next match
+    const gotRed = events.some(e => e.type === 'red_card' && e.playerId === p.id);
+    const newSuspendedMatches = gotRed ? 1 : 0;
+
+    // Injury check (only for those who played substantial minutes)
     let newInjury: PlayerGameState['injury'] = null;
-    if (isStarter) {
-      const basePct    = 0.018;
+    if (isActive && minutesPlayed >= 30) {
+      const basePct    = 0.018 * (minutesPlayed / 90);
       const fatigueMul = newFatigue > 80 ? 2.0 : newFatigue > 65 ? 1.4 : 1.0;
       const proneMul   = p.hidden.injuryProne / 3;
       if (Math.random() < basePct * fatigueMul * proneMul) {
         newInjury = rollInjury();
-        // Add injury event to the timeline
         events.push({
-          minute:     uniqueMinute(10, 88, injuryMinutes),
+          minute:     uniqueMinute(10, minutesPlayed > 0 ? minutesPlayed : 88, injuryMinutes),
           type:       'injury',
           team:       match.isHome ? 'home' : 'away',
           playerId:   p.id,
@@ -324,30 +464,63 @@ export function simulateMatch(input: SimulateMatchInput): SimulateMatchOutput {
 
     updatedPlayerStates.push({
       ...p,
-      fatigue:            newFatigue,
-      fitness:            Math.round(newFitness),
-      form:               Math.round(newForm),
-      sharpness:          newSharpness,
-      morale:             newMorale,
-      injury:             newInjury,
-      lastFiveResults:    newLastFive,
-      matchesWithoutPlay: isStarter ? 0 : p.matchesWithoutPlay + 1,
+      fatigue:             newFatigue,
+      fitness:             Math.round(newFitness),
+      form:                Math.round(newForm),
+      sharpness:           newSharpness,
+      morale:              newMorale,
+      injury:              newInjury,
+      suspendedMatches:    newSuspendedMatches,
+      lastFiveResults:     newLastFive,
+      matchesWithoutPlay:  isActive ? 0 : p.matchesWithoutPlay + 1,
     });
   }
 
   // ── Final sort ──
   events.sort((a, b) => a.minute - b.minute);
 
-  // ── Performances ──
+  // ── Performances (starters + subs-in) ──
   const myTeam = match.isHome ? 'home' : 'away';
-  const performances: PlayerMatchPerformance[] = starters.map(p => {
-    const goals     = events.filter(e => e.type === 'goal'   && e.playerId === p.id && e.team === myTeam).length;
+
+  const performances: PlayerMatchPerformance[] = [];
+
+  for (const p of starters) {
+    const mins       = subbedOutAt.has(p.id) ? subbedOutAt.get(p.id)! : 90;
+    const goals      = events.filter(e => e.type === 'goal' && e.playerId === p.id && e.team === myTeam).length;
+    const gotYellow  = events.some(e => e.type === 'yellow_card' && e.playerId === p.id);
+    const gotRed     = events.some(e => e.type === 'red_card'    && e.playerId === p.id);
+    const gotInjured = events.some(e => e.type === 'injury'      && e.playerId === p.id);
+    const rating     = computeMatchRating(p, goals, gotYellow, gotRed, gotInjured, myWon, myDrew);
+    performances.push({
+      id:            p.id,
+      minutesPlayed: mins,
+      goals,
+      rating,
+      fatigueGained: Math.round(baseFatigueCost * (mins / 90)),
+      subbedIn:      false,
+      subbedOut:     subbedOutAt.has(p.id),
+    });
+  }
+
+  for (const [subId, entryMinute] of subbedInAt.entries()) {
+    const p        = playerStates.find(ps => ps.id === subId);
+    if (!p) continue;
+    const mins     = 90 - entryMinute;
+    const goals    = events.filter(e => e.type === 'goal' && e.playerId === p.id && e.team === myTeam).length;
     const gotYellow = events.some(e => e.type === 'yellow_card' && e.playerId === p.id);
     const gotRed    = events.some(e => e.type === 'red_card'    && e.playerId === p.id);
     const gotInjured = events.some(e => e.type === 'injury'     && e.playerId === p.id);
-    const rating    = computeMatchRating(p, goals, gotYellow, gotRed, gotInjured, myWon, myDrew);
-    return { id: p.id, minutesPlayed: 90, goals, rating, fatigueGained: fatigueCost };
-  });
+    const rating   = computeMatchRating(p, goals, gotYellow, gotRed, gotInjured, myWon, myDrew);
+    performances.push({
+      id:            p.id,
+      minutesPlayed: mins,
+      goals,
+      rating,
+      fatigueGained: Math.round(baseFatigueCost * (mins / 90)),
+      subbedIn:      true,
+      subbedOut:     false,
+    });
+  }
 
   return {
     result: { homeGoals, awayGoals, events },
@@ -450,9 +623,9 @@ function competitionFatigue(competition: string): number {
 
 function rollInjury(): import('./gameState').InjuryRecord {
   const r = Math.random();
-  if (r < 0.40) return { type: 'bruise',        weeksLeft: 1,               ratingPenalty:  0 };
-  if (r < 0.65) return { type: 'muscle_strain',  weeksLeft: 1 + randInt(0,2), ratingPenalty: 0 };
-  if (r < 0.80) return { type: 'sprain',         weeksLeft: 2 + randInt(0,3), ratingPenalty: 0 };
+  if (r < 0.40) return { type: 'bruise',        weeksLeft: 1,                ratingPenalty: 0  };
+  if (r < 0.65) return { type: 'muscle_strain',  weeksLeft: 1 + randInt(0,2), ratingPenalty: 0  };
+  if (r < 0.80) return { type: 'sprain',         weeksLeft: 2 + randInt(0,3), ratingPenalty: 0  };
   if (r < 0.92) return { type: 'muscle_tear',    weeksLeft: 4 + randInt(0,5), ratingPenalty: -1 };
   if (r < 0.98) return { type: 'fracture',       weeksLeft: 6 + randInt(0,7), ratingPenalty: -1 };
                 return { type: 'acl',             weeksLeft: 26 + randInt(0,14), ratingPenalty: -2 };

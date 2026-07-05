@@ -118,7 +118,9 @@ export interface PlayerGameState {
   sharpness:  number;   // 0–100 (match readiness, drops without games)
   morale:     number;   // 0–100
 
-  injury:     InjuryRecord | null;
+  injury:           InjuryRecord | null;
+  /** Matches remaining to serve for a red-card ban. 0 = eligible to play. */
+  suspendedMatches: number;
 
   attributes: PlayerAttributes;
   hidden:     HiddenAttributes;
@@ -197,7 +199,7 @@ export interface InboxMessage {
 
 export interface MatchEvent {
   minute:     number;
-  type:       'goal' | 'yellow_card' | 'red_card' | 'injury' | 'own_goal';
+  type:       'goal' | 'yellow_card' | 'red_card' | 'injury' | 'own_goal' | 'substitution';
   team:       'home' | 'away';
   playerId?:  number;
   playerName: string;
@@ -242,12 +244,22 @@ export interface GameState {
   hiredStaffIds:      number[];
   reservePlayerIds:   number[];
   inbox:              InboxMessage[];
+  /**
+   * Rival team strengths (0–99) keyed by team name.
+   * Initialised when the season starts; drifts ±1 per week.
+   */
+  rivalStrengths:     Record<string, number>;
+  /**
+   * Rival form — last 5 virtual results: 1=win, 0=draw, -1=loss.
+   * Keyed by team name. Updated every tick.
+   */
+  rivalForms:         Record<string, number[]>;
 }
 
 // ─── STORAGE HELPERS ──────────────────────────────────────────────────────────
 
 const KEY     = 'fcorp_game_state';
-const VERSION = 5; // bumped: added pos + rating to PlayerGameState; position-aware attributes
+const VERSION = 6; // v6: suspendedMatches, rivalStrengths, rivalForms, substitution event
 
 const DEFAULT_MARKET_BUDGET = 2_400_000;
 const DEFAULT_WALLET         = 5_000_000;
@@ -274,6 +286,8 @@ function buildDefaultGameState(): GameState {
     hiredStaffIds:      [],
     reservePlayerIds:   [],
     inbox:              [],
+    rivalStrengths:     {},
+    rivalForms:         {},
   };
 }
 
@@ -286,7 +300,7 @@ function normaliseSchedule(schedule: ScheduledMatch[]): ScheduledMatch[] {
   });
 }
 
-/** Migrate old PlayerGameState entries that are missing pos / rating / attributes. */
+/** Migrate old PlayerGameState entries that are missing pos / rating / attributes / suspendedMatches. */
 function migratePlayerState(p: PlayerGameState): PlayerGameState {
   const pos    = (p as PlayerGameState & { pos?: string }).pos    ?? 'CM';
   const rating = (p as PlayerGameState & { rating?: number }).rating ?? 60;
@@ -295,6 +309,7 @@ function migratePlayerState(p: PlayerGameState): PlayerGameState {
     ...p,
     pos,
     rating,
+    suspendedMatches: (p as PlayerGameState).suspendedMatches ?? 0,
     attributes: hasRealAttrs ? p.attributes : generateAttributesForPosition(pos, rating),
   };
 }
@@ -323,15 +338,23 @@ export function loadGameState(): GameState {
         reservePlayerIds:   (parsed as GameState).reservePlayerIds ?? def.reservePlayerIds,
         inbox:              (parsed as GameState).inbox             ?? def.inbox,
         season:             { ...season, schedule: normaliseSchedule(season.schedule ?? []) },
+        rivalStrengths:     (parsed as GameState).rivalStrengths ?? {},
+        rivalForms:         (parsed as GameState).rivalForms     ?? {},
         version:            VERSION,
       };
     }
 
     const state = parsed as GameState;
-    if (state.season?.schedule?.length) {
-      return { ...state, season: { ...state.season, schedule: normaliseSchedule(state.season.schedule) } };
+    const migrated: GameState = {
+      ...state,
+      rivalStrengths: state.rivalStrengths ?? {},
+      rivalForms:     state.rivalForms     ?? {},
+      playerStates:   (state.playerStates ?? []).map(migratePlayerState),
+    };
+    if (migrated.season?.schedule?.length) {
+      return { ...migrated, season: { ...migrated.season, schedule: normaliseSchedule(migrated.season.schedule) } };
     }
-    return state;
+    return migrated;
   } catch {
     return buildDefaultGameState();
   }
@@ -432,6 +455,7 @@ export function createDefaultPlayerState(
     sharpness:  70,
     morale:     65,
     injury:     null,
+    suspendedMatches: 0,
     attributes: generateAttributesForPosition(pos, rating),
     hidden: {
       injuryProne:     Math.ceil(Math.random() * 5),
