@@ -1,11 +1,14 @@
 import { motion } from 'framer-motion';
-import { ClipboardList, Binoculars, HeartPulse, BarChart2, Dumbbell, Shield, Plus } from 'lucide-react';
+import {
+  ClipboardList, Binoculars, HeartPulse, BarChart2, Dumbbell,
+  Shield, Plus, Video, Stethoscope, Users, Target, Activity,
+} from 'lucide-react';
 
 const C = {
   card:'#1a1c25', border:'#1c1f28',
   teal:'#0fd4a8', tealText:'#04342c',
   white:'#e4e5ea', muted:'#c8cad4', dim:'#6b6f7d', vdim:'#5a5d6a',
-  salmon:'#f0997b', yellow:'#f0b429', blue:'#3ba1e0',
+  salmon:'#f0997b', yellow:'#f0b429', blue:'#3ba1e0', purple:'#a78bfa',
 };
 
 interface StaffMember {
@@ -33,9 +36,22 @@ const DEPARTMENTS: Department[] = [
     label: 'СПОРТИВНЫЙ',
     accentColor: C.blue,
     members: [
-      { id:1, icon:ClipboardList, iconColor:C.blue,    iconBg:'rgba(59,161,224,0.15)',   name:'Orvel Thaldric',  role:'Главный тренер',       rating:82, morale:88, salary:18_000 },
-      { id:5, icon:Dumbbell,      iconColor:'#a78bfa',  iconBg:'rgba(167,139,250,0.15)',  name:'Brenco Felnar',   role:'Тренер по физподготовке', rating:71, morale:82, salary:9_500 },
-      { id:6, icon:Shield,        iconColor:C.salmon,  iconBg:'rgba(240,153,123,0.15)',  name:'Gorvil Tornek',   role:'Тренер вратарей',      rating:65, morale:76, salary:7_500 },
+      { id:1,  icon:ClipboardList, iconColor:C.blue,   iconBg:'rgba(59,161,224,0.15)',   name:'Orvel Thaldric',   role:'Главный тренер',              rating:82, morale:88, salary:18_000 },
+      { id:2,  icon:ClipboardList, iconColor:C.blue,   iconBg:'rgba(59,161,224,0.12)',   name:'Zarkon Beldric',   role:'Ассистент тренера',           rating:74, morale:85, salary:11_000 },
+      { id:3,  icon:Target,        iconColor:C.salmon, iconBg:'rgba(240,153,123,0.15)',  name:'Fenrik Ornvak',    role:'Тренер по атаке',             rating:76, morale:82, salary:10_500 },
+      { id:4,  icon:Shield,        iconColor:C.teal,   iconBg:'rgba(15,212,168,0.15)',   name:'Gorvil Tornek',    role:'Тренер по обороне',           rating:71, morale:80, salary:9_500  },
+      { id:5,  icon:ClipboardList, iconColor:C.purple, iconBg:'rgba(167,139,250,0.15)',  name:'Harnek Veldric',   role:'Тренер по тактике',           rating:79, morale:84, salary:10_000 },
+      { id:6,  icon:Shield,        iconColor:C.muted,  iconBg:'rgba(200,202,212,0.12)',  name:'Imrek Zolnvon',    role:'Тренер вратарей',             rating:68, morale:78, salary:8_500  },
+    ],
+  },
+  {
+    id: 'fitness',
+    label: 'ФИЗПОДГОТОВКА',
+    accentColor: C.yellow,
+    members: [
+      { id:7,  icon:Dumbbell,      iconColor:C.yellow, iconBg:'rgba(240,180,41,0.15)',   name:'Brenco Felnar',    role:'Тренер по физподготовке',     rating:73, morale:83, salary:10_000 },
+      { id:8,  icon:Activity,      iconColor:C.yellow, iconBg:'rgba(240,180,41,0.12)',   name:'Ceval Jorndek',    role:'Специалист по восстановлению',rating:69, morale:80, salary:8_000  },
+      { id:9,  icon:Dumbbell,      iconColor:C.salmon, iconBg:'rgba(240,153,123,0.12)',  name:'Dranek Kelvar',    role:'Диетолог',                    rating:65, morale:77, salary:7_000  },
     ],
   },
   {
@@ -43,16 +59,30 @@ const DEPARTMENTS: Department[] = [
     label: 'МЕДИЦИНСКИЙ',
     accentColor: C.salmon,
     members: [
-      { id:3, icon:HeartPulse,    iconColor:C.salmon,  iconBg:'rgba(240,153,123,0.15)',  name:'Yalka Vendrik',   role:'Спортивный врач',      rating:79, morale:84, salary:12_000 },
+      { id:10, icon:Stethoscope,   iconColor:C.salmon, iconBg:'rgba(240,153,123,0.15)',  name:'Yalka Vendrik',    role:'Главный врач',                rating:81, morale:86, salary:13_000 },
+      { id:11, icon:HeartPulse,    iconColor:C.salmon, iconBg:'rgba(240,153,123,0.12)',  name:'Elron Sovnark',    role:'Физиотерапевт',               rating:74, morale:82, salary:9_000  },
+      { id:12, icon:HeartPulse,    iconColor:C.salmon, iconBg:'rgba(240,153,123,0.10)',  name:'Farvel Lorndek',   role:'Физиотерапевт',               rating:70, morale:79, salary:8_500  },
     ],
   },
   {
-    id: 'scout',
-    label: 'СКАУТИНГ И АНАЛИТИКА',
+    id: 'analytics',
+    label: 'АНАЛИТИКА',
+    accentColor: C.purple,
+    members: [
+      { id:13, icon:BarChart2,     iconColor:C.purple, iconBg:'rgba(167,139,250,0.15)',  name:'Irzel Kolvon',     role:'Главный аналитик',            rating:77, morale:81, salary:11_000 },
+      { id:14, icon:Video,         iconColor:C.purple, iconBg:'rgba(167,139,250,0.12)',  name:'Jelkon Meldvon',   role:'Видеоаналитик',               rating:71, morale:78, salary:8_000  },
+      { id:15, icon:BarChart2,     iconColor:C.purple, iconBg:'rgba(167,139,250,0.10)',  name:'Korvan Noldrec',   role:'Аналитик данных',             rating:68, morale:76, salary:7_500  },
+    ],
+  },
+  {
+    id: 'scouting',
+    label: 'СКАУТИНГ',
     accentColor: C.teal,
     members: [
-      { id:2, icon:Binoculars,    iconColor:C.teal,    iconBg:'rgba(15,212,168,0.15)',   name:'Dranek Solvar',   role:'Скаут',                rating:74, morale:80, salary:10_000 },
-      { id:4, icon:BarChart2,     iconColor:C.yellow,  iconBg:'rgba(240,180,41,0.15)',   name:'Irzel Kolvon',    role:'Аналитик',             rating:68, morale:78, salary:8_000 },
+      { id:16, icon:Users,         iconColor:C.teal,   iconBg:'rgba(15,212,168,0.15)',   name:'Dranek Solvar',    role:'Директор скаутинга',          rating:80, morale:83, salary:12_500 },
+      { id:17, icon:Binoculars,    iconColor:C.teal,   iconBg:'rgba(15,212,168,0.12)',   name:'Ledric Tornvon',   role:'Скаут (Европа)',              rating:74, morale:80, salary:9_000  },
+      { id:18, icon:Binoculars,    iconColor:C.teal,   iconBg:'rgba(15,212,168,0.10)',   name:'Mercon Yelvark',   role:'Скаут (Южная Америка)',       rating:71, morale:77, salary:8_500  },
+      { id:19, icon:Binoculars,    iconColor:C.teal,   iconBg:'rgba(15,212,168,0.08)',   name:'Narkel Zoldvon',   role:'Скаут (Азия / Африка)',       rating:67, morale:74, salary:7_500  },
     ],
   },
 ];
