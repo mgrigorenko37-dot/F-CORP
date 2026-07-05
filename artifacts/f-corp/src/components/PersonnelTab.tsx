@@ -50,29 +50,29 @@ export default function PersonnelTab({ onHireStaff }: Props) {
       {/* Title */}
       <div style={{padding:'16px 18px 0'}}>
         <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:4}}>
-          <span style={{fontSize:22,fontWeight:700,color:'#ffffff',fontFamily:'Inter,sans-serif'}}>Staff</span>
+          <span style={{fontSize:22,fontWeight:700,color:'#ffffff',fontFamily:'Inter,sans-serif'}}>Персонал</span>
           <span style={{fontSize:22,fontWeight:700,color:C.teal,fontFamily:'Inter,sans-serif'}}>
             {fmtSalary(totalSalary)}
           </span>
         </div>
         <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:16}}>
-          <span style={{fontSize:11,letterSpacing:'0.5px',color:C.dim}}>{STAFF.length} MEMBERS · CLUB STAFF</span>
-          <span style={{fontSize:11,letterSpacing:'0.5px',color:C.dim}}>SALARY/MONTH</span>
+          <span style={{fontSize:11,letterSpacing:'0.5px',color:C.dim}}>{STAFF.length} СОТРУДНИКОВ · ШТАБ КЛУБА</span>
+          <span style={{fontSize:11,letterSpacing:'0.5px',color:C.dim}}>ЗАРПЛАТА/МЕС</span>
         </div>
 
         {/* Metrics */}
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:8,marginBottom:18}}>
           <div style={{background:C.card,borderRadius:12,padding:'12px 8px',textAlign:'center'}}>
             <div style={{fontSize:20,fontWeight:700,color:'#ffffff'}}>{avgRating}</div>
-            <div style={{fontSize:9,letterSpacing:'0.5px',color:C.dim,marginTop:2}}>AVG LEVEL</div>
+            <div style={{fontSize:9,letterSpacing:'0.5px',color:C.dim,marginTop:2}}>СР. УРОВЕНЬ</div>
           </div>
           <div style={{background:C.card,borderRadius:12,padding:'12px 8px',textAlign:'center'}}>
             <div style={{fontSize:20,fontWeight:700,color:C.teal}}>{avgMorale}%</div>
-            <div style={{fontSize:9,letterSpacing:'0.5px',color:C.dim,marginTop:2}}>AVG MORALE</div>
+            <div style={{fontSize:9,letterSpacing:'0.5px',color:C.dim,marginTop:2}}>СР. МОРАЛЬ</div>
           </div>
           <div style={{background:C.card,borderRadius:12,padding:'12px 8px',textAlign:'center'}}>
             <div style={{fontSize:20,fontWeight:700,color:C.teal}}>{happy}/{STAFF.length}</div>
-            <div style={{fontSize:9,letterSpacing:'0.5px',color:C.dim,marginTop:2}}>HAPPY</div>
+            <div style={{fontSize:9,letterSpacing:'0.5px',color:C.dim,marginTop:2}}>ДОВОЛЬНЫ</div>
           </div>
         </div>
       </div>
@@ -94,12 +94,12 @@ export default function PersonnelTab({ onHireStaff }: Props) {
 
               <div style={{flex:1}}>
                 <div style={{fontSize:13,color:C.white}}>{m.name}</div>
-                <div style={{fontSize:10,color:C.vdim}}>{m.role} · {fmtSalary(m.salary)}/mo</div>
+                <div style={{fontSize:10,color:C.vdim}}>{m.role} · {fmtSalary(m.salary)}/мес</div>
               </div>
 
               <div style={{textAlign:'right'}}>
                 <div style={{fontSize:14,fontWeight:700,color:'#ffffff'}}>{m.rating}</div>
-                <div style={{fontSize:9,color:m.morale>=80?C.teal:C.salmon}}>{m.morale}% morale</div>
+                <div style={{fontSize:9,color:m.morale>=80?C.teal:C.salmon}}>{m.morale}% мораль</div>
               </div>
             </div>
           );
@@ -117,7 +117,7 @@ export default function PersonnelTab({ onHireStaff }: Props) {
           }}
         >
           <Plus size={14} />
-          Hire Staff Member
+          Нанять сотрудника
         </button>
       </div>
     </motion.div>

@@ -23,7 +23,7 @@ export default function SplashScreen() {
           transition={{ delay: 0.8, duration: 1 }}
           className="text-[10px] font-sans tracking-[0.3em] text-muted-foreground uppercase"
         >
-          Football Corporation
+          Футбольная Корпорация
         </motion.p>
       </motion.div>
       

@@ -107,16 +107,16 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
       {/* ── Title ── */}
       <div style={{padding:'16px 18px 0',flexShrink:0}}>
         <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:4}}>
-          <span style={{fontSize:22,fontWeight:700,color:'#ffffff',fontFamily:'Inter,sans-serif'}}>Market</span>
+          <span style={{fontSize:22,fontWeight:700,color:'#ffffff',fontFamily:'Inter,sans-serif'}}>Маркет</span>
           <span style={{fontSize:22,fontWeight:700,color:C.teal,fontFamily:'Inter,sans-serif'}}>{fmtMoney(budget)}</span>
         </div>
         <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:16}}>
           <span style={{fontSize:11,letterSpacing:'0.5px',color:C.dim}}>
             {tab === 'players'
-              ? `${visiblePlayers.length.toLocaleString()} PLAYERS AVAILABLE`
-              : `${visibleStaff.length.toLocaleString()} STAFF AVAILABLE`}
+              ? `${visiblePlayers.length.toLocaleString()} ИГРОКОВ ДОСТУПНО`
+              : `${visibleStaff.length.toLocaleString()} ПЕРСОНАЛА ДОСТУПНО`}
           </span>
-          <span style={{fontSize:11,letterSpacing:'0.5px',color:C.dim}}>BUDGET</span>
+          <span style={{fontSize:11,letterSpacing:'0.5px',color:C.dim}}>БЮДЖЕТ</span>
         </div>
 
         {/* ── PLAYERS / STAFF toggle ── */}
@@ -128,7 +128,7 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
                 style={{flex:1,textAlign:'center',fontSize:11,fontWeight:active?700:600,
                   color:active?C.tealText:C.vdim,background:active?C.teal:'transparent',
                   padding:'7px 0',borderRadius:20,border:'none',cursor:'pointer'}}>
-                {t === 'players' ? 'PLAYERS' : 'STAFF'}
+                {t === 'players' ? 'ИГРОКИ' : 'ПЕРСОНАЛ'}
               </button>
             );
           })}
@@ -139,7 +139,7 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
           borderRadius:20,padding:'10px 14px',marginBottom:12}}>
           <Search size={15} color={C.vdim} />
           <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search by name..."
+            placeholder="Поиск по имени..."
             style={{background:'transparent',border:'none',outline:'none',
               fontSize:12,color:C.white,width:'100%'}} />
         </div>
@@ -175,7 +175,7 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
 
         {/* ── Rating range ── */}
         <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:14}}>
-          <span style={{fontSize:10,letterSpacing:'0.5px',color:C.vdim,flexShrink:0}}>RATING</span>
+          <span style={{fontSize:10,letterSpacing:'0.5px',color:C.vdim,flexShrink:0}}>РЕЙТИНГ</span>
           {/* Min control */}
           <div style={{display:'flex',alignItems:'center',gap:0,background:C.card,borderRadius:10,overflow:'hidden'}}>
             <button onClick={() => { const v = Math.max(30, ratingMin - 5); setRatingMin(v); setPlayerPage(1); setStaffPage(1); }}
@@ -196,7 +196,7 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
           <button onClick={() => { setRatingMin(30); setRatingMax(99); setPlayerPage(1); setStaffPage(1); }}
             style={{marginLeft:'auto',background:'none',border:'none',
               fontSize:11,color:C.vdim,cursor:'pointer'}}>
-            Reset
+            Сброс
           </button>
         </div>
       </div>
@@ -206,7 +206,7 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
         <div style={{padding:'0 18px 16px',display:'flex',flexDirection:'column',gap:10}}>
           {shownPlayers.length === 0 && (
             <div style={{textAlign:'center',color:C.dim,fontSize:12,padding:'32px 0'}}>
-              No players found
+              Игроки не найдены
             </div>
           )}
           {shownPlayers.map(p => {
@@ -226,7 +226,7 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
                       {p.name} <span style={{fontSize:10,color:C.vdim}}>{p.nat}</span>
                     </div>
                     <div style={{fontSize:10,color:C.vdim}}>
-                      {p.age} yrs · rating {p.rating} · pot. {p.potential}
+                      {p.age} лет · рейтинг {p.rating} · пот. {p.potential}
                     </div>
                   </div>
                   <span style={{fontSize:13,fontWeight:700,color:canBuy?C.teal:C.salmon}}>
@@ -238,12 +238,12 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
                     style={{flex:1,background:canBuy?C.teal:C.border2,border:'none',
                       color:canBuy?C.tealText:C.dim,fontWeight:700,fontSize:11,
                       padding:'8px',borderRadius:20,cursor:canBuy?'pointer':'default'}}>
-                    {canBuy ? 'Buy' : 'Not enough €'}
+                    {canBuy ? 'Купить' : 'Недостаточно €'}
                   </button>
                   <button style={{flex:1,background:'transparent',
                     border:`0.5px solid ${C.border2}`,color:C.vdim,
                     fontSize:11,padding:'8px',borderRadius:20,cursor:'pointer'}}>
-                    Pass
+                    Пропустить
                   </button>
                 </div>
               </div>
@@ -258,7 +258,7 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
                 border:`0.5px solid ${C.border2}`,color:C.dim,fontSize:12,cursor:'pointer',
                 marginBottom:64}}>
               <ChevronDown size={14} />
-              Load more ({visiblePlayers.length - shownPlayers.length} more)
+              Ещё ({visiblePlayers.length - shownPlayers.length})
             </button>
           )}
           {shownPlayers.length >= visiblePlayers.length && shownPlayers.length > 0 && (
@@ -272,7 +272,7 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
         <div style={{padding:'0 18px 16px',display:'flex',flexDirection:'column',gap:10}}>
           {shownStaff.length === 0 && (
             <div style={{textAlign:'center',color:C.dim,fontSize:12,padding:'32px 0'}}>
-              No staff found
+              Персонал не найден
             </div>
           )}
           {shownStaff.map(s => {
@@ -291,11 +291,11 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
                       {s.name} <span style={{fontSize:10,color:C.vdim}}>{s.nat}</span>
                     </div>
                     <div style={{fontSize:10,color:C.vdim}}>
-                      {s.age} yrs · {s.role} · rating {s.rating}
+                      {s.age} лет · {s.role} · рейтинг {s.rating}
                     </div>
                   </div>
                   <span style={{fontSize:12,fontWeight:700,color:C.teal}}>
-                    {fmtMoney(s.salary)}/mo
+                    {fmtMoney(s.salary)}/мес
                   </span>
                 </div>
                 <div style={{display:'flex',gap:8}}>
@@ -303,12 +303,12 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
                     style={{flex:1,background:C.teal,border:'none',
                       color:C.tealText,fontWeight:700,fontSize:11,
                       padding:'8px',borderRadius:20,cursor:'pointer'}}>
-                    Hire
+                    Нанять
                   </button>
                   <button style={{flex:1,background:'transparent',
                     border:`0.5px solid ${C.border2}`,color:C.vdim,
                     fontSize:11,padding:'8px',borderRadius:20,cursor:'pointer'}}>
-                    Pass
+                    Пропустить
                   </button>
                 </div>
               </div>
@@ -323,7 +323,7 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
                 border:`0.5px solid ${C.border2}`,color:C.dim,fontSize:12,cursor:'pointer',
                 marginBottom:64}}>
               <ChevronDown size={14} />
-              Load more ({visibleStaff.length - shownStaff.length} more)
+              Ещё ({visibleStaff.length - shownStaff.length})
             </button>
           )}
           {shownStaff.length >= visibleStaff.length && shownStaff.length > 0 && (

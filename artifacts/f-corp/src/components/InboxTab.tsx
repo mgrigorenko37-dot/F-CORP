@@ -21,7 +21,7 @@ const initialMessages: Message[] = [
     type: 'REPORT',
     time: '08:00',
     sender: 'AI Manager',
-    text: 'Training session was productive. Forward James Williams showed excellent results. Recommend increasing the load for next week.',
+    text: 'Тренировка прошла продуктивно. Нападающий James Williams показал отличные результаты. Рекомендую увеличить нагрузку на следующей неделе.',
     status: 'pending',
     requiresAction: false,
   },
@@ -30,7 +30,7 @@ const initialMessages: Message[] = [
     type: 'OFFER',
     time: '09:15',
     sender: 'FC Dynamo',
-    text: 'Boss, we received a transfer offer for Carlos Mendes from FC Dynamo. Amount: €4.2M. Recommend declining.',
+    text: 'Босс, мы получили трансферное предложение за Carlos Mendes от FC Dynamo. Сумма: €4.2M. Рекомендую отклонить.',
     status: 'pending',
     requiresAction: true,
   },
@@ -38,8 +38,8 @@ const initialMessages: Message[] = [
     id: '3',
     type: 'REPORT',
     time: '11:30',
-    sender: 'Medical Staff',
-    text: 'Midfielder David Lee is out for 3 weeks with a knee injury. Recovery plan is in place.',
+    sender: 'Медицинский штаб',
+    text: 'Полузащитник David Lee выбывает на 3 недели с травмой колена. План восстановления составлен.',
     status: 'pending',
     requiresAction: false,
   },
@@ -47,8 +47,8 @@ const initialMessages: Message[] = [
     id: '4',
     type: 'REQUEST',
     time: '14:00',
-    sender: 'Coaching Staff',
-    text: 'The squad is showing burnout signs. Propose reducing training intensity for this week. Decision required.',
+    sender: 'Тренерский штаб',
+    text: 'Состав показывает признаки усталости. Предлагаю снизить интенсивность тренировок на этой неделе. Требуется решение.',
     status: 'pending',
     requiresAction: true,
   },
@@ -56,8 +56,8 @@ const initialMessages: Message[] = [
     id: '5',
     type: 'REPORT',
     time: '18:45',
-    sender: 'Analytics',
-    text: 'Tomorrow\'s match against Lokomotiv FC. Opponent is strong on the flanks. Defensive plan prepared.',
+    sender: 'Аналитика',
+    text: 'Завтра матч против Lokomotiv FC. Соперник силён на флангах. Оборонительный план готов.',
     status: 'pending',
     requiresAction: false,
   },
@@ -65,8 +65,8 @@ const initialMessages: Message[] = [
     id: '6',
     type: 'OFFER',
     time: '21:00',
-    sender: 'Sponsor: SportMax',
-    text: 'SportMax has extended a new sponsorship offer — €800K per season. This requires your approval as club owner.',
+    sender: 'Спонсор: SportMax',
+    text: 'SportMax выдвинул новое спонсорское предложение — €800K в сезон. Требуется ваше одобрение как владельца клуба.',
     status: 'pending',
     requiresAction: true,
   },
@@ -74,17 +74,17 @@ const initialMessages: Message[] = [
     id: '7',
     type: 'REQUEST',
     time: '22:10',
-    sender: 'Scout John Parker',
-    text: 'Identified a promising striker in the U23 league, rated 74. Requesting €350K scouting budget approval.',
+    sender: 'Скаут John Parker',
+    text: 'Обнаружен перспективный нападающий в лиге U23, рейтинг 74. Запрашиваю бюджет €350K на скаутинг.',
     status: 'pending',
     requiresAction: true,
   },
 ];
 
 const TYPE_LABEL: Record<Message['type'], string> = {
-  REPORT: 'REPORT',
-  OFFER: 'OFFER',
-  REQUEST: 'REQUEST',
+  REPORT: 'ОТЧЁТ',
+  OFFER: 'ПРЕДЛОЖЕНИЕ',
+  REQUEST: 'ЗАПРОС',
 };
 
 const C = {
@@ -94,9 +94,9 @@ const C = {
 };
 
 const FILTERS: { id: InboxFilter; label: string }[] = [
-  { id: 'new',    label: 'NEW MESSAGES' },
-  { id: 'action', label: 'DECISIONS'    },
-  { id: 'all',    label: 'ALL MESSAGES' },
+  { id: 'new',    label: 'НОВЫЕ'   },
+  { id: 'action', label: 'РЕШЕНИЯ' },
+  { id: 'all',    label: 'ВСЕ'     },
 ];
 
 export default function InboxTab() {
@@ -157,24 +157,24 @@ export default function InboxTab() {
       <div className="px-4 pb-3">
         <h2 className="font-bold text-white mb-3"
           style={{ fontFamily: 'Inter, sans-serif', fontSize: '26px', textTransform: 'none', letterSpacing: 'normal', lineHeight: '1.2' }}>
-          Club Office
+          Канцелярия
         </h2>
         <div className="flex gap-2 flex-wrap">
           {pending > 0 && (
             <span className="px-3 py-[5px] rounded-full text-[13px] font-semibold text-primary"
               style={{ background: 'rgba(15,212,168,0.15)' }}>
-              {pending} new
+              {pending} новых
             </span>
           )}
           {actionable > 0 && (
             <span className="px-3 py-[5px] rounded-full text-[13px] font-semibold text-amber-400"
               style={{ background: 'rgba(251,191,36,0.15)' }}>
-              {actionable} decisions
+              {actionable} решений
             </span>
           )}
           {pending === 0 && (
             <span className="px-3 py-[5px] rounded-full text-[13px] font-semibold text-white/40 bg-white/8">
-              All read
+              Всё прочитано
             </span>
           )}
         </div>
@@ -216,7 +216,7 @@ export default function InboxTab() {
         <AnimatePresence initial={false}>
           {filtered.length === 0 && (
             <div style={{ textAlign: 'center', color: C.dim, fontSize: 13, padding: '40px 0' }}>
-              No messages
+              Нет сообщений
             </div>
           )}
           {filtered.map((msg) => (
@@ -270,13 +270,13 @@ export default function InboxTab() {
                           className="flex items-center gap-[6px] px-4 py-[7px] rounded-full text-white text-[13px] font-semibold active:scale-95 transition-transform"
                           style={{ background: '#27AE60' }}>
                           <Check className="w-[13px] h-[13px]" strokeWidth={2.5} />
-                          Approve
+                          Одобрить
                         </button>
                         <button onClick={() => handleAction(msg.id, 'rejected')}
                           className="flex items-center gap-[6px] px-4 py-[7px] rounded-full text-white text-[13px] font-semibold active:scale-95 transition-transform"
                           style={{ background: '#E74C3C' }}>
                           <X className="w-[13px] h-[13px]" strokeWidth={2.5} />
-                          Decline
+                          Отклонить
                         </button>
                       </>
                     ) : (
@@ -284,7 +284,7 @@ export default function InboxTab() {
                         className="flex items-center gap-[6px] px-4 py-[7px] rounded-full text-white/85 text-[13px] font-semibold active:scale-95 transition-transform"
                         style={{ background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.18)' }}>
                         <Check className="w-[13px] h-[13px]" strokeWidth={2.5} />
-                        Mark read
+                        Прочитано
                       </button>
                     )}
                   </div>
@@ -297,7 +297,7 @@ export default function InboxTab() {
                     : msg.status === 'rejected' ? 'text-red-400'
                     : 'text-white/40'}`}>
                     <Check className="w-[12px] h-[12px]" strokeWidth={2.5} />
-                    {msg.status === 'approved' ? 'Approved' : msg.status === 'rejected' ? 'Declined' : 'Read'}
+                    {msg.status === 'approved' ? 'Одобрено' : msg.status === 'rejected' ? 'Отклонено' : 'Прочитано'}
                   </span>
                 )}
               </div>

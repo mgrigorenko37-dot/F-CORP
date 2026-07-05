@@ -28,6 +28,8 @@ if (!APP_URL) {
 
 console.log(`[F-CORP Bot] Starting... Mini App URL: ${APP_URL}`);
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 async function call(method, body = {}) {
   const res = await fetch(`${API}/${method}`, {
     method: 'POST',
@@ -36,7 +38,9 @@ async function call(method, body = {}) {
   });
   const data = await res.json();
   if (!data.ok) {
-    console.error(`[F-CORP Bot] API error on ${method}:`, JSON.stringify(data));
+    const err = new Error(`Telegram API error on ${method}: ${data.description ?? JSON.stringify(data)}`);
+    err.errorCode = data.error_code;
+    throw err;
   }
   return data;
 }
@@ -80,18 +84,34 @@ async function poll() {
         allowed_updates: ['message'],
       });
 
-      if (data.ok && Array.isArray(data.result) && data.result.length > 0) {
+      if (Array.isArray(data.result) && data.result.length > 0) {
         for (const update of data.result) {
           offset = update.update_id + 1;
           handleUpdate(update).catch((err) =>
-            console.error('[F-CORP Bot] Handler error:', err)
+            console.error('[F-CORP Bot] Handler error:', err.message ?? err)
           );
         }
       }
     } catch (err) {
-      console.error('[F-CORP Bot] Network error:', err.message ?? err);
-      // Back off briefly then retry
-      await new Promise((r) => setTimeout(r, 3000));
+      const code = err.errorCode;
+
+      if (code === 401) {
+        // Invalid token — no point retrying
+        console.error('[F-CORP Bot] FATAL: Invalid bot token. Exiting.');
+        process.exit(1);
+      } else if (code === 409) {
+        // Another instance is polling — back off longer
+        console.warn('[F-CORP Bot] Conflict (409): another instance is running. Retrying in 10s...');
+        await sleep(10_000);
+      } else if (code === 429) {
+        // Rate limited — respect retry_after if available, else 5s
+        console.warn('[F-CORP Bot] Rate limited (429). Retrying in 5s...');
+        await sleep(5_000);
+      } else {
+        // Network error or other API error — short backoff
+        console.error('[F-CORP Bot] Error:', err.message ?? err);
+        await sleep(3_000);
+      }
     }
   }
 }
