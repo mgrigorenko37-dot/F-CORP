@@ -110,6 +110,8 @@ const FILTERS: { id: InboxFilter; label: string }[] = [
   { id: 'all',    label: 'ВСЕ'     },
 ];
 
+const INBOX_KEY = 'fcorp_inbox_statuses';
+
 function readStoredClub(): { name: string; league: string } {
   try {
     const raw     = localStorage.getItem('fcorp_club');
@@ -121,14 +123,37 @@ function readStoredClub(): { name: string; league: string } {
   }
 }
 
+function loadStatuses(): Record<string, MessageStatus> {
+  try {
+    const raw = localStorage.getItem(INBOX_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveStatuses(msgs: Message[]) {
+  const map: Record<string, MessageStatus> = {};
+  msgs.forEach(m => { map[m.id] = m.status; });
+  localStorage.setItem(INBOX_KEY, JSON.stringify(map));
+}
+
 export default function InboxTab() {
   const stored   = readStoredClub();
   const clubName = stored.name;
-  const [messages, setMessages] = useState<Message[]>(() => buildMessages(stored.name, stored.league));
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const base     = buildMessages(stored.name, stored.league);
+    const statuses = loadStatuses();
+    return base.map(m => statuses[m.id] ? { ...m, status: statuses[m.id] } : m);
+  });
   const [filter, setFilter]     = useState<InboxFilter>('new');
 
   const handleAction = (id: string, action: 'approved' | 'rejected' | 'read') => {
-    setMessages(msgs => msgs.map(m => (m.id === id ? { ...m, status: action } : m)));
+    setMessages(msgs => {
+      const next = msgs.map(m => (m.id === id ? { ...m, status: action } : m));
+      saveStatuses(next);
+      return next;
+    });
   };
 
   const pending    = messages.filter(m => m.status === 'pending').length;

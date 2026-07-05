@@ -120,10 +120,11 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
       if (hiredStaff.has(s.id)) return false;
       if (roleFilter !== 'ALL' && s.role !== roleFilter) return false;
       if (s.rating < ratingMin || s.rating > ratingMax) return false;
+      if (s.age < ageMin || s.age > ageMax) return false;
       if (q && !s.name.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [search, roleFilter, ratingMin, ratingMax, hiredStaff]);
+  }, [search, roleFilter, ratingMin, ratingMax, ageMin, ageMax, hiredStaff]);
 
   const shownPlayers = visiblePlayers.slice(0, playerPage * PAGE_SIZE);
   const shownStaff   = visibleStaff.slice(0, staffPage * PAGE_SIZE);
@@ -234,36 +235,36 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
         <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:10}}>
           <span style={{fontSize:10,letterSpacing:'0.5px',color:C.vdim,flexShrink:0}}>РЕЙ</span>
           <div style={{display:'flex',alignItems:'center',gap:0,background:C.card,borderRadius:10,overflow:'hidden'}}>
-            <button onClick={() => { setRatingMin(Math.max(30, ratingMin - 5)); setPlayerPage(1); }}
-              style={{fontSize:12,color:C.muted,background:'transparent',padding:'4px 7px',cursor:'pointer',border:'none'}}>▼</button>
-            <span style={{fontSize:11,color:C.white,padding:'4px 3px',minWidth:22,textAlign:'center'}}>{ratingMin}</span>
-            <button onClick={() => { setRatingMin(Math.min(ratingMax - 5, ratingMin + 5)); setPlayerPage(1); }}
-              style={{fontSize:12,color:C.muted,background:'transparent',padding:'4px 7px',cursor:'pointer',border:'none'}}>▲</button>
+            <button onClick={() => { setRatingMin(Math.max(30, ratingMin - 1)); tab==='players'?setPlayerPage(1):setStaffPage(1); }}
+              style={{fontSize:12,color:C.muted,background:'transparent',padding:'6px 9px',cursor:'pointer',border:'none',touchAction:'manipulation'}}>▼</button>
+            <span style={{fontSize:11,color:C.white,padding:'4px 3px',minWidth:24,textAlign:'center'}}>{ratingMin}</span>
+            <button onClick={() => { setRatingMin(Math.min(ratingMax - 1, ratingMin + 1)); tab==='players'?setPlayerPage(1):setStaffPage(1); }}
+              style={{fontSize:12,color:C.muted,background:'transparent',padding:'6px 9px',cursor:'pointer',border:'none',touchAction:'manipulation'}}>▲</button>
           </div>
           <span style={{fontSize:11,color:C.vdim}}>—</span>
           <div style={{display:'flex',alignItems:'center',gap:0,background:C.card,borderRadius:10,overflow:'hidden'}}>
-            <button onClick={() => { setRatingMax(Math.max(ratingMin + 5, ratingMax - 5)); setPlayerPage(1); }}
-              style={{fontSize:12,color:C.muted,background:'transparent',padding:'4px 7px',cursor:'pointer',border:'none'}}>▼</button>
-            <span style={{fontSize:11,color:C.white,padding:'4px 3px',minWidth:22,textAlign:'center'}}>{ratingMax}</span>
-            <button onClick={() => { setRatingMax(Math.min(99, ratingMax + 5)); setPlayerPage(1); }}
-              style={{fontSize:12,color:C.muted,background:'transparent',padding:'4px 7px',cursor:'pointer',border:'none'}}>▲</button>
+            <button onClick={() => { setRatingMax(Math.max(ratingMin + 1, ratingMax - 1)); tab==='players'?setPlayerPage(1):setStaffPage(1); }}
+              style={{fontSize:12,color:C.muted,background:'transparent',padding:'6px 9px',cursor:'pointer',border:'none',touchAction:'manipulation'}}>▼</button>
+            <span style={{fontSize:11,color:C.white,padding:'4px 3px',minWidth:24,textAlign:'center'}}>{ratingMax}</span>
+            <button onClick={() => { setRatingMax(Math.min(99, ratingMax + 1)); tab==='players'?setPlayerPage(1):setStaffPage(1); }}
+              style={{fontSize:12,color:C.muted,background:'transparent',padding:'6px 9px',cursor:'pointer',border:'none',touchAction:'manipulation'}}>▲</button>
           </div>
           {/* Age */}
           <span style={{fontSize:10,letterSpacing:'0.5px',color:C.vdim,flexShrink:0,marginLeft:4}}>ВОЗ</span>
           <div style={{display:'flex',alignItems:'center',gap:0,background:C.card,borderRadius:10,overflow:'hidden'}}>
-            <button onClick={() => { setAgeMin(Math.max(16, ageMin - 1)); setPlayerPage(1); }}
-              style={{fontSize:12,color:C.muted,background:'transparent',padding:'4px 7px',cursor:'pointer',border:'none'}}>▼</button>
-            <span style={{fontSize:11,color:C.white,padding:'4px 2px',minWidth:22,textAlign:'center'}}>{ageMin}</span>
-            <button onClick={() => { setAgeMin(Math.min(ageMax - 1, ageMin + 1)); setPlayerPage(1); }}
-              style={{fontSize:12,color:C.muted,background:'transparent',padding:'4px 7px',cursor:'pointer',border:'none'}}>▲</button>
+            <button onClick={() => { setAgeMin(Math.max(16, ageMin - 1)); tab==='players'?setPlayerPage(1):setStaffPage(1); }}
+              style={{fontSize:12,color:C.muted,background:'transparent',padding:'6px 9px',cursor:'pointer',border:'none',touchAction:'manipulation'}}>▼</button>
+            <span style={{fontSize:11,color:C.white,padding:'4px 2px',minWidth:24,textAlign:'center'}}>{ageMin}</span>
+            <button onClick={() => { setAgeMin(Math.min(ageMax - 1, ageMin + 1)); tab==='players'?setPlayerPage(1):setStaffPage(1); }}
+              style={{fontSize:12,color:C.muted,background:'transparent',padding:'6px 9px',cursor:'pointer',border:'none',touchAction:'manipulation'}}>▲</button>
           </div>
           <span style={{fontSize:11,color:C.vdim}}>—</span>
           <div style={{display:'flex',alignItems:'center',gap:0,background:C.card,borderRadius:10,overflow:'hidden'}}>
-            <button onClick={() => { setAgeMax(Math.max(ageMin + 1, ageMax - 1)); setPlayerPage(1); }}
-              style={{fontSize:12,color:C.muted,background:'transparent',padding:'4px 7px',cursor:'pointer',border:'none'}}>▼</button>
-            <span style={{fontSize:11,color:C.white,padding:'4px 2px',minWidth:22,textAlign:'center'}}>{ageMax}</span>
-            <button onClick={() => { setAgeMax(Math.min(45, ageMax + 1)); setPlayerPage(1); }}
-              style={{fontSize:12,color:C.muted,background:'transparent',padding:'4px 7px',cursor:'pointer',border:'none'}}>▲</button>
+            <button onClick={() => { setAgeMax(Math.max(ageMin + 1, ageMax - 1)); tab==='players'?setPlayerPage(1):setStaffPage(1); }}
+              style={{fontSize:12,color:C.muted,background:'transparent',padding:'6px 9px',cursor:'pointer',border:'none',touchAction:'manipulation'}}>▼</button>
+            <span style={{fontSize:11,color:C.white,padding:'4px 2px',minWidth:24,textAlign:'center'}}>{ageMax}</span>
+            <button onClick={() => { setAgeMax(Math.min(45, ageMax + 1)); tab==='players'?setPlayerPage(1):setStaffPage(1); }}
+              style={{fontSize:12,color:C.muted,background:'transparent',padding:'6px 9px',cursor:'pointer',border:'none',touchAction:'manipulation'}}>▲</button>
           </div>
         </div>
 

@@ -30,7 +30,8 @@ interface Department {
   members: StaffMember[];
 }
 
-const DEPARTMENTS: Department[] = [
+// Base ratings for level-1 league clubs
+const BASE_DEPARTMENTS: Department[] = [
   {
     id: 'sport',
     label: 'СПОРТИВНЫЙ',
@@ -87,7 +88,29 @@ const DEPARTMENTS: Department[] = [
   },
 ];
 
-const ALL_STAFF = DEPARTMENTS.flatMap(d => d.members);
+// Rating and salary multiplier per league level (1=top, 4=bottom)
+const LEVEL_MULTIPLIER: Record<number, number> = { 1: 1.0, 2: 0.82, 3: 0.66, 4: 0.52 };
+
+function getDepartmentsForLevel(level: number): Department[] {
+  const mult = LEVEL_MULTIPLIER[level] ?? 1.0;
+  if (mult === 1.0) return BASE_DEPARTMENTS;
+  return BASE_DEPARTMENTS.map(dept => ({
+    ...dept,
+    members: dept.members.map(m => ({
+      ...m,
+      rating: Math.max(30, Math.round(m.rating * mult)),
+      salary: Math.round(m.salary * mult / 500) * 500,
+    })),
+  }));
+}
+
+function getLeagueLevel(): number {
+  try {
+    const raw = localStorage.getItem('fcorp_league_level');
+    const lvl = raw ? parseInt(raw, 10) : 1;
+    return isNaN(lvl) ? 1 : Math.max(1, Math.min(4, lvl));
+  } catch { return 1; }
+}
 
 interface Props {
   onHireStaff: () => void;
@@ -98,6 +121,8 @@ function fmtSalary(n: number) {
 }
 
 export default function PersonnelTab({ onHireStaff }: Props) {
+  const DEPARTMENTS = getDepartmentsForLevel(getLeagueLevel());
+  const ALL_STAFF   = DEPARTMENTS.flatMap(d => d.members);
   const totalSalary = ALL_STAFF.reduce((s, m) => s + m.salary, 0);
   const avgRating   = Math.round(ALL_STAFF.reduce((s, m) => s + m.rating, 0) / ALL_STAFF.length);
   const avgMorale   = Math.round(ALL_STAFF.reduce((s, m) => s + m.morale, 0) / ALL_STAFF.length);
