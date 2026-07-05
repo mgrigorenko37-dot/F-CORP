@@ -342,39 +342,51 @@ const FORMATIONS: Record<FormationId, Slot[]> = {
   ],
 };
 
-// ─── Style direction ──────────────────────────────────────────────────────────
+// ─── Coach philosophy → formation mapping ─────────────────────────────────────
 
-type StyleId = 'attacking' | 'balanced' | 'defensive' | 'possession';
+const PHILOSOPHY_FORMATION: Record<string, FormationId> = {
+  attacking:  '4-3-3',
+  defensive:  '5-4-1',
+  balanced:   '4-4-2',
+  possession: '4-2-3-1',
+  physical:   '3-5-2',
+  technical:  '4-1-2-1-2',
+};
 
-const STYLES: { id: StyleId; label: string; icon: string; desc: string }[] = [
-  { id: 'attacking',  label: 'Атака',     icon: '⚡', desc: 'Давление и быстрые атаки' },
-  { id: 'balanced',   label: 'Баланс',    icon: '⚖️', desc: 'Гибкая игра по ситуации' },
-  { id: 'defensive',  label: 'Оборона',   icon: '🛡️', desc: 'Надёжность сзади' },
-  { id: 'possession', label: 'Владение',  icon: '🔄', desc: 'Контроль мяча' },
-];
+const PHILOSOPHY_META: Record<string, { label: string; icon: string; color: string; desc: string }> = {
+  attacking:  { label: 'Атака',    icon: '⚡', color: '#ef4444', desc: 'Давление и быстрые атаки, схема 4-3-3' },
+  defensive:  { label: 'Оборона',  icon: '🛡️', color: '#0fd4a8', desc: 'Надёжность сзади, контратаки, схема 5-4-1' },
+  balanced:   { label: 'Баланс',   icon: '⚖️', color: '#f0b429', desc: 'Гибкая игра по ситуации, схема 4-4-2' },
+  possession: { label: 'Владение', icon: '🔄', color: '#3ba1e0', desc: 'Контроль мяча, позиционная игра, схема 4-2-3-1' },
+  physical:   { label: 'Физика',   icon: '💪', color: '#f2994a', desc: 'Жёсткий прессинг, борьба, схема 3-5-2' },
+  technical:  { label: 'Техника',  icon: '🎯', color: '#a78bfa', desc: 'Точный пас, тактическая дисциплина, схема 4-1-2-1-2' },
+};
+
+const PERSONALITY_LABEL: Record<string, string> = {
+  motivator:       'Мотиватор',
+  disciplinarian:  'Дисциплинатор',
+  tactician:       'Тактик',
+  developer:       'Разв. тренер',
+};
+
+const EXPERIENCE_LABEL: Record<string, string> = {
+  amateur:      'Любитель',
+  semi_pro:     'Полупрофи',
+  professional: 'Профессионал',
+  elite:        'Элита',
+};
 
 // ─── localStorage helpers ─────────────────────────────────────────────────────
 
-function getStoredFormation(): FormationId {
-  const v = localStorage.getItem('fcorp_formation') as FormationId | null;
-  return v && v in FORMATIONS ? v : '4-4-2';
+function getStoredDirective(): string {
+  return localStorage.getItem('fcorp_president_directive') ?? 'balanced';
 }
 
-function saveFormation(f: FormationId) {
-  localStorage.setItem('fcorp_formation', f);
-}
-
-function getStoredStyle(): StyleId {
-  const v = localStorage.getItem('fcorp_style') as StyleId | null;
-  return v && STYLES.some(s => s.id === v) ? v : 'balanced';
-}
-
-function saveStyle(s: StyleId) {
-  localStorage.setItem('fcorp_style', s);
-  // Propagate to coach philosophy so training AI respects it
+function saveDirective(d: string) {
+  localStorage.setItem('fcorp_president_directive', d);
   updateGameState(gs => ({
     ...gs,
-    coach: { ...gs.coach, philosophy: s as import('../lib/gameState').HeadCoach['philosophy'] },
+    coach: { ...gs.coach, philosophy: d as import('../lib/gameState').HeadCoach['philosophy'] },
   }));
 }
 
@@ -771,265 +783,123 @@ function StrBar({ label, value, color }: { label: string; value: number; color: 
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function TacticsView() {
-  const [formation, setFormation]         = useState<FormationId>(getStoredFormation);
-  const [style, setStyle]                 = useState<StyleId>(getStoredStyle);
-  const [selectedIdx, setSelectedIdx]     = useState<number | null>(null);
-  const [coachName, setCoachName]         = useState('Тренер');
-  const [clubColor, setClubColor]         = useState('#ef4444');
-  const [showFormations, setShowFormations] = useState(false);
-  const [showStyles, setShowStyles]         = useState(false);
+  const [selectedIdx, setSelectedIdx]             = useState<number | null>(null);
+  const [coachName, setCoachName]                 = useState('Тренер');
+  const [coachPhilosophy, setCoachPhilosophy]     = useState<string>('balanced');
+  const [coachRating, setCoachRating]             = useState(45);
+  const [coachPersonality, setCoachPersonality]   = useState('motivator');
+  const [coachExperience, setCoachExperience]     = useState('semi_pro');
+  const [directive, setDirective]                 = useState(getStoredDirective);
+  const [clubColor, setClubColor]                 = useState('#ef4444');
 
   const level   = getLeagueLevel();
   const country = getStoredCountry();
 
   useEffect(() => {
     const gs = loadGameState();
-    setCoachName(gs.coach?.name ?? 'Тренер');
-    const colors = getStoredClubColors();
-    setClubColor(colors.primary);
+    const c  = gs.coach;
+    setCoachName(c?.name ?? 'Тренер');
+    setCoachPhilosophy(c?.philosophy ?? 'balanced');
+    setCoachRating(c?.rating ?? 45);
+    setCoachPersonality(c?.personality ?? 'motivator');
+    setCoachExperience(c?.experience ?? 'semi_pro');
+    setDirective(getStoredDirective());
+    setClubColor(getStoredClubColors().primary);
   }, []);
 
-  const squad      = useMemo(() => buildSquad(country, level), [country, level]);
-  const starters   = useMemo(() => assignPlayersToFormation(squad, formation), [squad, formation]);
-  const strength   = useMemo(() => computeStrength(starters, formation), [starters, formation]);
-  const slots      = FORMATIONS[formation];
+  const formation: FormationId = (PHILOSOPHY_FORMATION[coachPhilosophy] ?? '4-4-2') as FormationId;
+  const squad    = useMemo(() => buildSquad(country, level), [country, level]);
+  const starters = useMemo(() => assignPlayersToFormation(squad, formation), [squad, formation]);
+  const strength = useMemo(() => computeStrength(starters, formation), [starters, formation]);
+  const slots    = FORMATIONS[formation];
 
   const pitchW = 316;
   const pitchH = 456;
 
-  function handleFormationChange(f: FormationId) {
-    setFormation(f);
-    saveFormation(f);
+  function handleDirectiveChange(d: string) {
+    setDirective(d);
+    setCoachPhilosophy(d);
+    saveDirective(d);
     setSelectedIdx(null);
   }
 
-  function handleStyleChange(s: StyleId) {
-    setStyle(s);
-    saveStyle(s);
-  }
-
   const selectedPlayer = selectedIdx !== null ? starters[selectedIdx] : null;
-  const selectedSlot   = selectedIdx !== null ? slots[selectedIdx] : null;
+  const selectedSlot   = selectedIdx !== null ? slots[selectedIdx]    : null;
+  const phMeta         = PHILOSOPHY_META[coachPhilosophy] ?? PHILOSOPHY_META['balanced'];
 
   return (
     <div style={{ paddingBottom: 20 }}>
 
-      {/* ── Owner header ── */}
+      {/* ── Coach tactical briefing (READ-ONLY for president) ── */}
       <div style={{
-        background: `${C.teal}0a`,
-        border: `0.5px solid ${C.teal}25`,
-        borderRadius: 12,
-        padding: '10px 14px',
-        marginBottom: 14,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
+        background: C.card, border: `0.5px solid ${phMeta.color}35`,
+        borderRadius: 14, padding: '12px 14px', marginBottom: 12,
       }}>
+        <div style={{ fontSize: 9, color: C.dim, letterSpacing: '0.5px', marginBottom: 10 }}>
+          ТАКТИЧЕСКИЙ БРИФИНГ — ГЛАВНЫЙ ТРЕНЕР
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            width: 46, height: 46, borderRadius: 12,
+            background: `${phMeta.color}18`, border: `1.5px solid ${phMeta.color}55`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0, fontSize: 20,
+          }}>
+            {phMeta.icon}
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.white }}>{coachName}</div>
+            <div style={{ fontSize: 10, color: C.dim, marginTop: 2 }}>
+              {PERSONALITY_LABEL[coachPersonality] ?? coachPersonality}
+              {' · '}
+              {EXPERIENCE_LABEL[coachExperience] ?? coachExperience}
+            </div>
+          </div>
+          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+            <div style={{
+              fontSize: 22, fontWeight: 800,
+              color: coachRating >= 70 ? C.teal : coachRating >= 50 ? C.yellow : C.muted,
+            }}>
+              {coachRating}
+            </div>
+            <div style={{ fontSize: 9, color: C.vdim }}>рейтинг</div>
+          </div>
+        </div>
+        {/* Formation info row */}
         <div style={{
-          width: 34, height: 34, borderRadius: 10,
-          background: `${C.teal}18`,
-          border: `1px solid ${C.teal}40`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0, fontSize: 16,
+          marginTop: 10, background: `${phMeta.color}0d`,
+          border: `0.5px solid ${phMeta.color}25`, borderRadius: 8, padding: '7px 12px',
+          display: 'flex', alignItems: 'center', gap: 10,
         }}>
-          🏛️
-        </div>
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: C.teal, letterSpacing: '0.4px' }}>
-            ДИРЕКТИВА ВЛАДЕЛЬЦА
-          </div>
-          <div style={{ fontSize: 10, color: C.dim, marginTop: 1 }}>
-            Тренер <span style={{ color: C.muted }}>{coachName}</span> работает по вашей схеме
-          </div>
-        </div>
-      </div>
-
-      {/* ── Formation selector (collapsible) ── */}
-      <div style={{ marginBottom: 10 }}>
-        {/* Header row — always visible */}
-        <button
-          onClick={() => setShowFormations(v => !v)}
-          style={{
-            width: '100%', display: 'flex', alignItems: 'center',
-            justifyContent: 'space-between', background: C.card,
-            border: `0.5px solid ${C.border2}`, borderRadius: showFormations ? '10px 10px 0 0' : 10,
-            padding: '10px 14px', cursor: 'pointer',
-          }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 10, color: C.dim, letterSpacing: '0.5px' }}>СХЕМА</span>
-            <span style={{
-              fontSize: 13, fontWeight: 800, color: C.teal,
-              background: `${C.teal}18`, border: `1px solid ${C.teal}50`,
-              borderRadius: 8, padding: '2px 10px',
-            }}>{formation}</span>
-            <span style={{ fontSize: 10, color: C.muted }}>{FORMATION_META[formation].desc}</span>
-          </div>
-          <span style={{ fontSize: 12, color: C.dim, transition: 'transform 0.2s',
-            display: 'inline-block', transform: showFormations ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-            ▼
+          <span style={{ fontSize: 9, color: C.vdim }}>СХЕМА</span>
+          <span style={{ fontSize: 14, fontWeight: 800, color: phMeta.color }}>{formation}</span>
+          <span style={{ fontSize: 9, color: C.muted }}>{FORMATION_META[formation].desc}</span>
+          <span style={{ marginLeft: 'auto', fontSize: 9, color: phMeta.color }}>
+            {phMeta.icon} {phMeta.label}
           </span>
-        </button>
-
-        {/* Collapsible grid */}
-        <AnimatePresence>
-          {showFormations && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.22, ease: 'easeInOut' }}
-              style={{ overflow: 'hidden' }}>
-              <div style={{
-                background: C.card,
-                border: `0.5px solid ${C.border2}`, borderTop: 'none',
-                borderRadius: '0 0 10px 10px',
-                padding: '10px',
-              }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
-                  {(Object.keys(FORMATIONS) as FormationId[]).map(f => {
-                    const active = f === formation;
-                    return (
-                      <button key={f}
-                        onClick={() => { handleFormationChange(f); setShowFormations(false); }}
-                        style={{
-                          padding: '8px 4px', borderRadius: 9,
-                          border: active ? `1px solid ${C.teal}90` : `0.5px solid ${C.border2}`,
-                          background: active ? `${C.teal}18` : '#13151e',
-                          cursor: 'pointer',
-                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-                        }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: active ? C.teal : C.white }}>
-                          {f}
-                        </span>
-                        <span style={{ fontSize: 7.5, color: active ? C.teal : C.vdim, letterSpacing: '0.1px' }}>
-                          {FORMATION_META[f].desc}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <div style={{ fontSize: 10, color: C.dim, marginTop: 8, textAlign: 'center' }}>
-                  {FORMATION_META[formation].style}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* ── Style selector (collapsible) ── */}
-      <div style={{ marginBottom: 14 }}>
-        {/* Header row — always visible */}
-        <button
-          onClick={() => setShowStyles(v => !v)}
-          style={{
-            width: '100%', display: 'flex', alignItems: 'center',
-            justifyContent: 'space-between', background: C.card,
-            border: `0.5px solid ${C.border2}`, borderRadius: showStyles ? '10px 10px 0 0' : 10,
-            padding: '10px 14px', cursor: 'pointer',
-          }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 10, color: C.dim, letterSpacing: '0.5px' }}>ВЕКТОР</span>
-            {(() => {
-              const s = STYLES.find(s => s.id === style)!;
-              return (
-                <span style={{
-                  fontSize: 11, fontWeight: 700, color: C.teal,
-                  background: `${C.teal}18`, border: `1px solid ${C.teal}50`,
-                  borderRadius: 8, padding: '2px 10px', display: 'flex', alignItems: 'center', gap: 4,
-                }}>
-                  {s.icon} {s.label}
-                </span>
-              );
-            })()}
-            <span style={{ fontSize: 10, color: C.muted }}>
-              {STYLES.find(s => s.id === style)?.desc}
-            </span>
-          </div>
-          <span style={{ fontSize: 12, color: C.dim, transition: 'transform 0.2s',
-            display: 'inline-block', transform: showStyles ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-            ▼
-          </span>
-        </button>
-
-        <AnimatePresence>
-          {showStyles && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.22, ease: 'easeInOut' }}
-              style={{ overflow: 'hidden' }}>
-              <div style={{
-                background: C.card,
-                border: `0.5px solid ${C.border2}`, borderTop: 'none',
-                borderRadius: '0 0 10px 10px',
-                padding: '10px',
-              }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
-                  {STYLES.map(s => (
-                    <button key={s.id}
-                      onClick={() => { handleStyleChange(s.id); setShowStyles(false); }}
-                      style={{
-                        padding: '8px 4px', borderRadius: 9,
-                        border: s.id === style ? `1px solid ${C.teal}80` : `0.5px solid ${C.border2}`,
-                        background: s.id === style ? `${C.teal}15` : '#13151e',
-                        cursor: 'pointer',
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                      }}>
-                      <span style={{ fontSize: 16 }}>{s.icon}</span>
-                      <span style={{ fontSize: 9, fontWeight: 700, color: s.id === style ? C.teal : C.dim }}>
-                        {s.label.toUpperCase()}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        </div>
       </div>
 
       {/* ── Pitch ── */}
       <div style={{
-        position: 'relative',
-        width: pitchW,
-        height: pitchH,
-        margin: '0 auto',
+        position: 'relative', width: pitchW, height: pitchH, margin: '0 auto',
         background: 'linear-gradient(180deg, #0d2b14 0%, #112c18 50%, #0d2b14 100%)',
-        borderRadius: 12,
-        overflow: 'hidden',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+        borderRadius: 12, overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
       }}>
         <PitchSVG width={pitchW} height={pitchH} />
-
-        {/* "АТАКА" label top */}
         <div style={{
           position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)',
           fontSize: 8, color: 'rgba(255,255,255,0.25)', letterSpacing: '2px', fontWeight: 600,
-        }}>
-          АТАКА
-        </div>
-        {/* "ВОРОТА" label bottom */}
+        }}>АТАКА</div>
         <div style={{
           position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)',
           fontSize: 8, color: 'rgba(255,255,255,0.25)', letterSpacing: '2px', fontWeight: 600,
-        }}>
-          ВОРОТА
-        </div>
-
-        {/* Formation label */}
+        }}>ВОРОТА</div>
         <div style={{
-          position: 'absolute',
-          top: '50%', left: 8,
-          transform: 'translateY(-50%) rotate(-90deg)',
-          transformOrigin: 'center',
+          position: 'absolute', top: '50%', left: 8,
+          transform: 'translateY(-50%) rotate(-90deg)', transformOrigin: 'center',
           fontSize: 9, color: 'rgba(255,255,255,0.18)', fontWeight: 700, letterSpacing: '1px',
-        }}>
-          {formation}
-        </div>
-
-        {/* Player nodes */}
+        }}>{formation}</div>
         {slots.map((slot, i) => (
           <PlayerNode
             key={`${formation}-${i}`}
@@ -1055,7 +925,6 @@ export default function TacticsView() {
           />
         )}
       </AnimatePresence>
-
       {!selectedPlayer && (
         <div style={{ textAlign: 'center', marginTop: 8 }}>
           <span style={{ fontSize: 10, color: C.vdim }}>Нажмите на игрока для деталей</span>
@@ -1064,34 +933,28 @@ export default function TacticsView() {
 
       {/* ── Team strength bars ── */}
       <div style={{
-        background: C.card,
-        border: `0.5px solid ${C.border2}`,
-        borderRadius: 14,
-        padding: '14px 16px',
-        marginTop: 14,
+        background: C.card, border: `0.5px solid ${C.border2}`,
+        borderRadius: 14, padding: '14px 16px', marginTop: 14,
       }}>
         <div style={{ fontSize: 10, color: C.dim, letterSpacing: '0.5px', marginBottom: 12 }}>
           СИЛА КОМАНДЫ
         </div>
         <div style={{ display: 'flex', gap: 14 }}>
-          <StrBar label="АТАКА"      value={strength.atk} color={C.red}    />
-          <StrBar label="СЕРЕДИНА"   value={strength.mid} color={C.yellow} />
-          <StrBar label="ОБОРОНА"    value={strength.def} color={C.teal}   />
+          <StrBar label="АТАКА"    value={strength.atk} color={C.red}    />
+          <StrBar label="СЕРЕДИНА" value={strength.mid} color={C.yellow} />
+          <StrBar label="ОБОРОНА"  value={strength.def} color={C.teal}   />
         </div>
       </div>
 
-      {/* ── Legend ── */}
-      <div style={{
-        display: 'flex', gap: 14, flexWrap: 'wrap',
-        marginTop: 12, padding: '0 2px',
-      }}>
+      {/* ── Position legend ── */}
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 12, padding: '0 2px' }}>
         {[
-          { color: C.blue,   label: 'Вратарь' },
-          { color: C.teal,   label: 'Защита' },
-          { color: C.purple, label: 'Опорник' },
-          { color: C.yellow, label: 'Полузащита' },
-          { color: C.orange, label: 'Вингер' },
-          { color: C.red,    label: 'Нападение' },
+          { color: C.blue,   label: 'Вратарь'    },
+          { color: C.teal,   label: 'Защита'      },
+          { color: C.purple, label: 'Опорник'     },
+          { color: C.yellow, label: 'Полузащита'  },
+          { color: C.orange, label: 'Вингер'      },
+          { color: C.red,    label: 'Нападение'   },
         ].map(({ color, label }) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
@@ -1103,16 +966,54 @@ export default function TacticsView() {
       {/* ── Condition legend ── */}
       <div style={{ display: 'flex', gap: 14, marginTop: 8, padding: '0 2px' }}>
         {[
-          { color: C.green,  label: 'Свежий' },
-          { color: C.yellow, label: 'Устал' },
-          { color: C.orange, label: 'Перегружен' },
-          { color: C.red,    label: 'Травма' },
+          { color: C.green,  label: 'Свежий'     },
+          { color: C.yellow, label: 'Устал'       },
+          { color: C.orange, label: 'Перегружен'  },
+          { color: C.red,    label: 'Травма'      },
         ].map(({ color, label }) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <div style={{ width: 7, height: 7, borderRadius: '50%', background: color, flexShrink: 0 }} />
             <span style={{ fontSize: 9, color: C.vdim }}>{label}</span>
           </div>
         ))}
+      </div>
+
+      {/* ── Presidential Directive ── */}
+      <div style={{
+        background: `${C.teal}06`, border: `0.5px solid ${C.teal}22`,
+        borderRadius: 14, padding: '12px 14px', marginTop: 14,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+          <span style={{ fontSize: 14 }}>🏛️</span>
+          <span style={{ fontSize: 9, color: C.teal, letterSpacing: '0.5px', fontWeight: 700 }}>
+            ДИРЕКТИВА ПРЕЗИДЕНТА
+          </span>
+        </div>
+        <div style={{ fontSize: 10, color: C.dim, marginBottom: 10 }}>
+          Задайте стратегический вектор — тренер адаптирует схему под вашу директиву
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+          {Object.entries(PHILOSOPHY_META).map(([key, meta]) => {
+            const isActive = directive === key;
+            return (
+              <button key={key} onClick={() => handleDirectiveChange(key)} style={{
+                padding: '8px 4px', borderRadius: 9,
+                border: isActive ? `1px solid ${meta.color}80` : `0.5px solid ${C.border2}`,
+                background: isActive ? `${meta.color}15` : C.card,
+                cursor: 'pointer',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+              }}>
+                <span style={{ fontSize: 15 }}>{meta.icon}</span>
+                <span style={{ fontSize: 8.5, fontWeight: 700, color: isActive ? meta.color : C.dim }}>
+                  {meta.label.toUpperCase()}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <div style={{ fontSize: 10, color: C.muted, marginTop: 8, textAlign: 'center' }}>
+          {PHILOSOPHY_META[directive]?.desc}
+        </div>
       </div>
 
     </div>
