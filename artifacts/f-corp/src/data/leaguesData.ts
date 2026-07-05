@@ -30,7 +30,7 @@ export const COUNTRY_LEAGUES: Record<string, CountryData> = {
       { level: 2, name: 'Первая лига', totalClubs: 18, promoted: 2, relegated: 3,
         rivals: ['Борей', 'Речник', 'Тайга FC', 'Стрела', 'Бурелом', 'Уральский CF', 'Левобережье'] },
       { level: 3, name: 'Вторая лига А', totalClubs: 16, promoted: 2, relegated: 3,
-        rivals: ['Карго', 'Зимник', 'Снежный Барс', 'Прибрежный', 'Сибирьград', 'Ветер Б', 'Горняк-2'] },
+        rivals: ['Карго', 'Зимник', 'Снежный Барс', 'Прибрежный', 'Сибирьград', 'Ветер Р', 'Туманник'] },
       { level: 4, name: 'Вторая лига Б', totalClubs: 32, promoted: 2, relegated: 0,
         rivals: ['Восход Степной', 'Металлург Дол', 'Нефтяник ФК', 'Заводская Слава', 'Электрон', 'Чайный клуб', 'Агро-Юг'] },
     ],
@@ -58,7 +58,7 @@ export const COUNTRY_LEAGUES: Record<string, CountryData> = {
       { level: 2, name: 'La Liga 2', totalClubs: 22, promoted: 3, relegated: 4,
         rivals: ['CF Espanya', 'Racing Montero', 'CD Elcarme', 'SD Albacoro', 'Real Ovejo', 'UD Teneral', 'Llevant'] },
       { level: 3, name: 'Primera RFEF', totalClubs: 18, promoted: 2, relegated: 4,
-        rivals: ['SD Sestamar', 'CD Ceutilla', 'CF Pontebella', 'SD Zamorin', 'Anterquera', 'Linaro Deportivo', 'Vilacosta B'] },
+        rivals: ['SD Sestamar', 'CD Ceutilla', 'CF Pontebella', 'SD Zamorin', 'Anterquera', 'Linaro Deportivo', 'CD Serranillo'] },
       { level: 4, name: 'Segunda RFEF', totalClubs: 90, promoted: 2, relegated: 0,
         rivals: ['Deportiva Peña', 'CF Monforín', 'CD Xerondo', 'Getafe Sur', 'CD Alcobano', 'UD Lograda', 'Real Murciel B'] },
     ],
@@ -86,7 +86,7 @@ export const COUNTRY_LEAGUES: Record<string, CountryData> = {
       { level: 2, name: 'Serie B', totalClubs: 20, promoted: 3, relegated: 4,
         rivals: ['Parmola', 'Palerino', 'Catanzaro Unito', 'Crema FC', 'Barino', 'Samponia', 'Genova FC'] },
       { level: 3, name: 'Serie C — Gruppo A', totalClubs: 20, promoted: 2, relegated: 3,
-        rivals: ['Padovese', 'Trentola', 'Lecchese', 'Feralpisalo Nord', 'Triestola', 'Pro Vercellina', 'Atalanta U23'] },
+        rivals: ['Padovese', 'Trentola', 'Lecchese', 'Feralpisalo Nord', 'Triestola', 'Pro Vercellina', 'Bergamola Juniores'] },
       { level: 4, name: 'Serie D — Girone A', totalClubs: 18, promoted: 2, relegated: 0,
         rivals: ['ASD Verbania FC', 'Varesola', 'Olginese', 'Settimino', 'Dertolona', 'Fossanola', 'Chierino'] },
     ],
@@ -126,7 +126,7 @@ export const COUNTRY_LEAGUES: Record<string, CountryData> = {
       { level: 1, name: 'Eredivisie', totalClubs: 18, promoted: 0, relegated: 3,
         rivals: ['FC Ajaxum', 'PSV Noord', 'Feyenoord Zuid', 'AZ Alkmaris', 'FC Utrechten', 'FC Twental', 'VV Vitessen'] },
       { level: 2, name: 'Eerste Divisie', totalClubs: 20, promoted: 3, relegated: 3,
-        rivals: ['De Graafstad', 'Roda Noord', 'MVV Maasstad', 'Almere FC', 'NAC Brendam', 'FC Eindhovense', 'Jong FC'] },
+        rivals: ['De Graafstad', 'Roda Noord', 'MVV Maasstad', 'Almere FC', 'NAC Brendam', 'FC Eindhovense', 'Dordrechtik FC'] },
       { level: 3, name: 'Tweede Divisie', totalClubs: 24, promoted: 4, relegated: 4,
         rivals: ['Excelsior Maasluis', 'Katwolder', 'Spakendorp', 'DOVOlan', 'Koninklijke HC', 'Kozakkol', 'AFC Noord'] },
       { level: 4, name: 'Derde Divisie', totalClubs: 40, promoted: 2, relegated: 0,
@@ -292,13 +292,13 @@ export const COUNTRY_LEAGUES: Record<string, CountryData> = {
     flag: '🇺🇦',
     leagues: [
       { level: 1, name: 'Українська Прем\'єр-ліга', totalClubs: 16, promoted: 0, relegated: 2,
-        rivals: ['Шахтарик', 'Динамо Схід', 'Металіст Захід', 'Ворсклана', 'Олімпіяник', 'Минаєник', 'Рух Захід'] },
+        rivals: ['Карпатик', 'Галичанин', 'Полісянин', 'Ворскляник', 'Буджацик', 'Поділянин', 'Сіроманець'] },
       { level: 2, name: 'Перша ліга', totalClubs: 16, promoted: 2, relegated: 3,
-        rivals: ['Чорноморик', 'Агробізнесик', 'Зоряник Б', 'Вересник', 'Полісяник', 'Прикарпатик', 'Реал Фармик'] },
+        rivals: ['Опришок', 'Волинець', 'Закарпатик', 'Буковинець', 'Гуцульник', 'Дунаєць', 'Берест'] },
       { level: 3, name: 'Друга ліга', totalClubs: 16, promoted: 2, relegated: 3,
-        rivals: ['Буковинак', 'Торпедик Зап', 'Нива Захід', 'Металургик Зап', 'Зорик', 'Оболоник', 'Кристалик'] },
+        rivals: ['Уманець', 'Кременик', 'Черкасик', 'Лубенець', 'Остерець', 'Вінничанин', 'Тетерів'] },
       { level: 4, name: 'Третя ліга', totalClubs: 24, promoted: 2, relegated: 0,
-        rivals: ['Гірничак', 'Авангардик', 'Колосик', 'Поділяник', 'Арсеналик 2', 'Молодик Дніпро', 'Скалик'] },
+        rivals: ['Тернопілець', 'Рівненець', 'Хмельничанин', 'Збаражець', 'Горинець', 'Прутець', 'Інгулець'] },
     ],
   },
 
@@ -566,8 +566,28 @@ export const COUNTRY_LEAGUES: Record<string, CountryData> = {
 
 };
 
+// Flags for countries that have only the generic 4-league system
+export const EXTRA_COUNTRY_FLAGS: Record<string, string> = {
+  'Азербайджан': '🇦🇿', 'Албания': '🇦🇱', 'Алжир': '🇩🇿', 'Ангола': '🇦🇴',
+  'Андорра': '🇦🇩', 'Армения': '🇦🇲', 'Афганистан': '🇦🇫', 'Беларусь': '🇧🇾',
+  'Болгария': '🇧🇬', 'Босния и Герцеговина': '🇧🇦', 'Венгрия': '🇭🇺',
+  'Венесуэла': '🇻🇪', 'Вьетнам': '🇻🇳', 'Гана': '🇬🇭', 'Грузия': '🇬🇪',
+  'Израиль': '🇮🇱', 'Индия': '🇮🇳', 'Индонезия': '🇮🇩', 'Иран': '🇮🇷',
+  'Ирландия': '🇮🇪', 'Исландия': '🇮🇸', 'Казахстан': '🇰🇿', 'Камерун': '🇨🇲',
+  'Канада': '🇨🇦', 'Катар': '🇶🇦', 'Кот-д\'Ивуар': '🇨🇮', 'Латвия': '🇱🇻',
+  'Ливан': '🇱🇧', 'Литва': '🇱🇹', 'Люксембург': '🇱🇺', 'Мальта': '🇲🇹',
+  'Молдавия': '🇲🇩', 'Монголия': '🇲🇳', 'Намибия': '🇳🇦', 'Нигер': '🇳🇪',
+  'Новая Зеландия': '🇳🇿', 'ОАЭ': '🇦🇪', 'Пакистан': '🇵🇰', 'Перу': '🇵🇪',
+  'Парагвай': '🇵🇾', 'Румыния': '🇷🇴', 'Сенегал': '🇸🇳', 'Сингапур': '🇸🇬',
+  'Словакия': '🇸🇰', 'Словения': '🇸🇮', 'Таиланд': '🇹🇭', 'Танзания': '🇹🇿',
+  'Тунис': '🇹🇳', 'Туркмения': '🇹🇲', 'Узбекистан': '🇺🇿', 'Финляндия': '🇫🇮',
+  'Черногория': '🇲🇪', 'Эквадор': '🇪🇨', 'Эстония': '🇪🇪', 'Эфиопия': '🇪🇹',
+  'Ямайка': '🇯🇲',
+};
+
 export function getCountryLeagues(country: string): CountryData {
-  return COUNTRY_LEAGUES[country] ?? { flag: '🏳️', leagues: [] };
+  if (COUNTRY_LEAGUES[country]) return COUNTRY_LEAGUES[country];
+  return { flag: EXTRA_COUNTRY_FLAGS[country] ?? '🏳️', leagues: [] };
 }
 
 export function getLeagueAtLevel(country: string, level: number): LeagueInfo {

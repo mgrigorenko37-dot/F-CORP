@@ -219,6 +219,21 @@ export default function LeagueSelectionScreen({ onNext }: Props) {
                           </div>
                         );
                       })}
+
+                      {/* Inline continue button — visible right after expanding */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleContinue(); }}
+                        style={{
+                          marginTop: 12, width: '100%',
+                          background: C.teal, color: C.tealText,
+                          fontWeight: 800, fontSize: 12, letterSpacing: '0.15em',
+                          padding: '11px 0', border: 'none', borderRadius: 8,
+                          cursor: 'pointer', textTransform: 'uppercase',
+                          touchAction: 'manipulation',
+                        }}
+                      >
+                        ПРОДОЛЖИТЬ →
+                      </button>
                     </div>
                   </motion.div>
                 )}

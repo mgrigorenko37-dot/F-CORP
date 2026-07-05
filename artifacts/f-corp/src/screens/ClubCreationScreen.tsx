@@ -26,6 +26,8 @@ export default function ClubCreationScreen({ onNext }: Props) {
 
   const handleFound = () => {
     if (isValid) {
+      // Clear old inbox statuses so the new club gets fresh messages
+      localStorage.removeItem('fcorp_inbox_statuses');
       saveClub({ name: clubName.trim(), stadium: stadiumName.trim(), primaryColor, secondaryColor });
       completeOnboarding();
       onNext();
