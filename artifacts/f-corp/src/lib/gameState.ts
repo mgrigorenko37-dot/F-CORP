@@ -120,6 +120,14 @@ export interface WeeklyTrainingPlan {
 
 // ─── SEASON & MATCH ───────────────────────────────────────────────────────────
 
+export interface MatchEvent {
+  minute:     number;
+  type:       'goal' | 'yellow_card' | 'red_card' | 'injury' | 'own_goal';
+  team:       'home' | 'away';
+  playerId?:  number;
+  playerName: string;
+}
+
 export interface ScheduledMatch {
   id:          string;
   date:        string;           // ISO date string (YYYY-MM-DD)
@@ -131,7 +139,7 @@ export interface ScheduledMatch {
   away:        string;
   isHome:      boolean;
   played:      boolean;
-  result?:     { homeGoals: number; awayGoals: number };
+  result?:     { homeGoals: number; awayGoals: number; events: MatchEvent[] };
 }
 
 export interface SeasonState {
@@ -163,7 +171,7 @@ export interface GameState {
 // ─── STORAGE HELPERS ──────────────────────────────────────────────────────────
 
 const KEY = 'fcorp_game_state';
-const VERSION = 2;
+const VERSION = 3;
 
 const DEFAULT_MARKET_BUDGET = 2_400_000;
 const DEFAULT_WALLET         = 5_000_000;
@@ -192,14 +200,25 @@ function buildDefaultGameState(): GameState {
   };
 }
 
+/** Ensure every played match result has an `events` array (migration safety). */
+function normaliseSchedule(schedule: ScheduledMatch[]): ScheduledMatch[] {
+  return schedule.map(m => {
+    if (m.result && !Array.isArray((m.result as { events?: unknown }).events)) {
+      return { ...m, result: { ...m.result, events: [] } };
+    }
+    return m;
+  });
+}
+
 export function loadGameState(): GameState {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return buildDefaultGameState();
     const parsed = JSON.parse(raw) as Partial<GameState> & { version?: number };
     if (parsed.version !== VERSION) {
-      // Soft migration: keep what we can
+      // Soft migration: keep what we can, normalise schedule shape
       const def = buildDefaultGameState();
+      const season = (parsed as GameState).season ?? def.season;
       return {
         ...def,
         coach:              parsed.coach              ?? def.coach,
@@ -210,11 +229,17 @@ export function loadGameState(): GameState {
         walletBalance:      (parsed as GameState).walletBalance ?? def.walletBalance,
         purchasedPlayerIds: parsed.purchasedPlayerIds ?? def.purchasedPlayerIds,
         hiredStaffIds:      parsed.hiredStaffIds      ?? def.hiredStaffIds,
-        reservePlayerIds:   (parsed as GameState).reservePlayerIds   ?? def.reservePlayerIds,
-        version: VERSION,
+        reservePlayerIds:   (parsed as GameState).reservePlayerIds ?? def.reservePlayerIds,
+        season:             { ...season, schedule: normaliseSchedule(season.schedule ?? []) },
+        version:            VERSION,
       };
     }
-    return parsed as GameState;
+    // Same version: still normalise in case of partial writes
+    const state = parsed as GameState;
+    if (state.season?.schedule?.length) {
+      return { ...state, season: { ...state.season, schedule: normaliseSchedule(state.season.schedule) } };
+    }
+    return state;
   } catch {
     return buildDefaultGameState();
   }

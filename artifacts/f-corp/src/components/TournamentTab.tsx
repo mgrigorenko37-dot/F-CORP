@@ -5,13 +5,16 @@
  * Uses real competition names from competitions.ts.
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, ArrowUp, ArrowDown, Minus, Calendar, Map } from 'lucide-react';
+import { Trophy, ArrowUp, ArrowDown, Minus, Calendar, Map as MapIcon } from 'lucide-react';
 
 import { getLeagueAtLevel } from '../data/leaguesData';
 import { getDomesticCups, getContinentalComps, getConfederation, getQualificationMap } from '../data/competitions';
 import { getLeagueLevel } from '../lib/storage';
+import { loadGameState, updateGameState, type GameState, type ScheduledMatch } from '../lib/gameState';
+import { simulateMatch } from '../lib/matchEngine';
+import { ALL_MARKET_PLAYERS } from '../data/playersMarket';
 
 const C = {
   card: '#1a1c25', card2: '#1f222d', border: '#1c1f28', border2: '#2a2d38',
@@ -90,6 +93,73 @@ function buildTable(myClub: string, rivals: string[], myPos: number, leagueRound
       trend: TREND_CYCLE[i % TREND_CYCLE.length],
     };
   });
+}
+
+// ── Table builder using real results for MY_CLUB ─────────────────────────────
+
+function buildTableWithRealResults(
+  myClub: string,
+  rivals: string[],
+  schedule: ScheduledMatch[],
+  leagueRound: number,
+  totalClubs: number
+): Team[] {
+  const rivalSlice  = rivals.slice(0, totalClubs - 1);
+  const totalRounds = (totalClubs - 1) * 2;
+  const pctScale    = leagueRound > 0 ? leagueRound / totalRounds : 0;
+  const TREND_CYCLE: Array<'up' | 'same' | 'down'> = ['up', 'same', 'down', 'up', 'same', 'up', 'down', 'same'];
+
+  // Compute MY_CLUB stats from real played league matches
+  let myW = 0, myD = 0, myL = 0, myGF = 0, myGA = 0;
+  for (const m of schedule) {
+    if (m.competition !== 'league' || !m.played || !m.result) continue;
+    const myGoals  = m.isHome ? m.result.homeGoals : m.result.awayGoals;
+    const oppGoals = m.isHome ? m.result.awayGoals : m.result.homeGoals;
+    myGF += myGoals; myGA += oppGoals;
+    if (myGoals > oppGoals) myW++;
+    else if (myGoals === oppGoals) myD++;
+    else myL++;
+  }
+  const myPoints = myW * 3 + myD;
+  const myPlayed = myW + myD + myL;
+
+  // Build rival rows with mock formula
+  const teams: Team[] = rivalSlice.map((name, i) => {
+    if (leagueRound === 0) {
+      return { pos: i + 1, name, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, points: 0, isMe: false, trend: 'same' as const };
+    }
+    const rankFactor = 1 - i / rivalSlice.length;
+    const baseMax    = Math.round(totalRounds * (0.45 + rankFactor * 0.45));
+    const jitter     = Math.sin(i * 7.31 + 1.1) > 0 ? 1 : -1;
+    const pts        = Math.max(0, Math.round(baseMax * pctScale + jitter));
+    const won        = Math.floor(pts / 3);
+    const drawn      = pts % 3;
+    const lost       = Math.max(0, leagueRound - won - drawn);
+    return {
+      pos: i + 1, name,
+      played: leagueRound, won, drawn, lost,
+      gf: Math.max(0, won * 2 + drawn + 3),
+      ga: Math.max(0, lost * 2 + drawn + 2),
+      points: pts, isMe: false,
+      trend: TREND_CYCLE[i % TREND_CYCLE.length],
+    };
+  });
+
+  // Add MY_CLUB row with real data
+  teams.push({
+    pos: 0, name: myClub,
+    played: myPlayed, won: myW, drawn: myD, lost: myL,
+    gf: myGF, ga: myGA, points: myPoints, isMe: true,
+    trend: myW > myL ? 'up' : myW < myL ? 'down' : 'same',
+  });
+
+  // Sort by points → goal difference
+  teams.sort((a, b) => {
+    const dp = b.points - a.points;
+    return dp !== 0 ? dp : (b.gf - b.ga) - (a.gf - a.ga);
+  });
+
+  return teams.map((t, i) => ({ ...t, pos: i + 1 }));
 }
 
 // ── Mock schedule builder ─────────────────────────────────────────────────────
@@ -251,48 +321,128 @@ type TabView = 'table' | 'calendar' | 'competitions' | 'path';
 const TABS: { id: TabView; label: string; Icon: React.ElementType }[] = [
   { id: 'table',        label: 'ТАБЛИЦА',    Icon: Trophy   },
   { id: 'calendar',     label: 'КАЛЕНДАРЬ',  Icon: Calendar },
-  { id: 'competitions', label: 'КУБКИ',      Icon: Map      },
+  { id: 'competitions', label: 'КУБКИ',      Icon: MapIcon  },
   { id: 'path',         label: 'ПУТЬ',       Icon: ArrowUp  },
 ];
 
 const LEVEL_COLOR = ['', C.yellow, C.teal, C.purple, C.dim];
 const LEVEL_NAME  = ['', 'Высшая лига', '2-я лига', '3-я лига', '4-я лига'];
 
+// ── Competition style helper ───────────────────────────────────────────────────
+
+function getCompetitionStyle(competition: string): { color: string; icon: string } {
+  switch (competition) {
+    case 'ucl':          return { color: '#1a56db', icon: '🏆' };
+    case 'uel':          return { color: '#f97316', icon: '🟠' };
+    case 'uecl':         return { color: '#22c55e', icon: '🟢' };
+    case 'national_cup': return { color: C.yellow,  icon: '🏅' };
+    case 'league_cup':   return { color: C.orange,  icon: '🥈' };
+    case 'super_cup':    return { color: C.purple,  icon: '⭐' };
+    default:             return { color: C.teal,    icon: '⚽' };
+  }
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function TournamentTab() {
-  const [view, setView]     = useState<TabView>('table');
-  const [myClub, setMyClub] = useState('F-CORP');
-  const [country, setCountry] = useState('Англия');
-  const [level, setLevel]   = useState(4);
+  const [view, setView]             = useState<TabView>('table');
+  const [myClub, setMyClub]         = useState('F-CORP');
+  const [country, setCountry]       = useState('Англия');
+  const [level, setLevel]           = useState(4);
+  const [gameState, setGameState]   = useState<GameState | null>(null);
+  const [simulating, setSimulating] = useState(false);
+  const simulatingRef               = useRef(false); // ref guard prevents double-execution
 
   useEffect(() => {
     setMyClub(getStoredClubName());
     setCountry(getStoredCountry());
     setLevel(getLeagueLevel());
+    setGameState(loadGameState());
   }, []);
 
-  const league = getLeagueAtLevel(country, level);
+  const league     = getLeagueAtLevel(country, level);
   const levelColor = LEVEL_COLOR[level] ?? C.dim;
 
-  const leagueRound = 0;
-  const myPos       = 1;
+  // Real schedule from game state
+  const schedule    = gameState?.season.schedule ?? [];
+  const hasSchedule = schedule.length > 0;
+
+  // League round = number of played league matches
+  const leagueRound = hasSchedule
+    ? schedule.filter(m => m.competition === 'league' && m.played).length
+    : 0;
+
   const totalRounds = (league.totalClubs - 1) * 2;
+
   const table = useMemo(
-    () => buildTable(myClub, league.rivals, myPos, leagueRound, league.totalClubs),
-    [myClub, league.rivals, myPos, leagueRound, league.totalClubs],
+    () => buildTableWithRealResults(myClub, league.rivals, schedule, leagueRound, league.totalClubs),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [myClub, league.rivals, schedule, leagueRound, league.totalClubs],
   );
-  const myRow = table.find(t => t.isMe) ?? table[myPos - 1] ?? table[0];
+  const myRow = table.find(t => t.isMe) ?? table[0];
+  const myPos = myRow?.pos ?? 1;
 
-  // Active competitions (demo)
-  const activeComps = level === 1
-    ? ['league', 'national_cup', 'league_cup', 'uel']
-    : level === 2
-      ? ['league', 'national_cup', 'league_cup']
-      : ['league', 'national_cup'];
+  // Active competitions: from game state or sensible defaults
+  const activeComps = gameState?.season.activeCompetitions ?? (
+    level === 1
+      ? ['league', 'national_cup', 'league_cup', 'uel']
+      : level === 2
+        ? ['league', 'national_cup', 'league_cup']
+        : ['league', 'national_cup']
+  );
 
-  const upcoming  = buildUpcomingMatches(myClub, league.rivals, country, level, activeComps);
+  // Real schedule slices
+  const upcomingMatches = schedule.filter(m => !m.played).slice(0, 7);
+  const recentResults   = schedule.filter(m => m.played && m.result).slice(-5).reverse();
+  const nextMatch       = schedule.find(m => !m.played) ?? null;
+
+  // Mock upcoming for when no real schedule is generated yet
+  const upcoming   = buildUpcomingMatches(myClub, league.rivals, country, level, activeComps);
   const compBadges = buildCompBadges(country, level, activeComps);
+
+  // ── Simulate next match ──
+  const handleSimulateMatch = useCallback(() => {
+    if (!nextMatch || !gameState || simulatingRef.current) return;
+    simulatingRef.current = true;
+    setSimulating(true);
+
+    // Build squad name map: purchased players from market, fallback generic
+    const squadNames = new Map<number, string>();
+    for (const id of gameState.purchasedPlayerIds) {
+      const p = ALL_MARKET_PLAYERS.find(mp => mp.id === id);
+      if (p) squadNames.set(id, p.name);
+    }
+    for (const ps of gameState.playerStates) {
+      if (!squadNames.has(ps.id)) squadNames.set(ps.id, `Игрок #${ps.id}`);
+    }
+
+    const output = simulateMatch({
+      match:        nextMatch,
+      playerStates: gameState.playerStates,
+      squadNames,
+      coach:        gameState.coach,
+      leagueLevel:  level,
+      clubName:     myClub,
+    });
+
+    const newState = updateGameState(s => ({
+      ...s,
+      playerStates: output.updatedPlayerStates,
+      season: {
+        ...s.season,
+        schedule: s.season.schedule.map(m =>
+          m.id === nextMatch.id ? { ...m, played: true, result: output.result } : m
+        ),
+        leagueRound: nextMatch.competition === 'league'
+          ? s.season.leagueRound + 1
+          : s.season.leagueRound,
+      },
+    }));
+
+    setGameState(newState);
+    simulatingRef.current = false;
+    setSimulating(false);
+  }, [nextMatch, gameState, level, myClub]);
   const cups      = getDomesticCups(country);
   const conf      = getConfederation(country);
   const allLeagues = [4, 3, 2, 1].map(l => getLeagueAtLevel(country, l));
@@ -467,63 +617,134 @@ export default function TournamentTab() {
       {/* ── CALENDAR ── */}
       {view === 'calendar' && (
         <div style={{ padding: '0 18px', display: 'flex', flexDirection: 'column', gap: 7 }}>
-          <div style={{ fontSize: 11, color: C.vdim, letterSpacing: '0.5px', marginBottom: 4 }}>
+
+          {/* Simulate next match button */}
+          {nextMatch && (
+            <button
+              onClick={handleSimulateMatch}
+              disabled={simulating}
+              style={{
+                width: '100%', padding: '13px 16px', borderRadius: 12, border: 'none',
+                background: simulating ? C.border2 : C.teal,
+                cursor: simulating ? 'default' : 'pointer',
+                color: simulating ? C.dim : C.tealText,
+                fontWeight: 700, fontSize: 13,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                marginBottom: 6,
+              }}>
+              {simulating ? '⏳ Симулируется...' : `▶  Сыграть: ${nextMatch.competitionName}`}
+            </button>
+          )}
+
+          {/* Recent results */}
+          {recentResults.length > 0 && (
+            <>
+              <div style={{ fontSize: 11, color: C.vdim, letterSpacing: '0.5px', marginBottom: 2 }}>
+                ПОСЛЕДНИЕ РЕЗУЛЬТАТЫ
+              </div>
+              {recentResults.map(m => {
+                const cs      = getCompetitionStyle(m.competition);
+                const myGoals  = m.isHome ? m.result!.homeGoals : m.result!.awayGoals;
+                const oppGoals = m.isHome ? m.result!.awayGoals : m.result!.homeGoals;
+                const opponent = (m.isHome ? m.away : m.home).replace('MY_CLUB', myClub);
+                const won      = myGoals > oppGoals;
+                const drew     = myGoals === oppGoals;
+                const rc       = won ? C.teal : drew ? C.yellow : C.salmon;
+                return (
+                  <div key={m.id} style={{ background: C.card, borderRadius: 12, padding: '11px 14px', borderLeft: `3px solid ${rc}` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ fontSize: 12 }}>{cs.icon}</span>
+                        <span style={{ fontSize: 10, color: cs.color, fontWeight: 700 }}>{m.competitionName}</span>
+                        <span style={{ fontSize: 9, color: C.vdim, background: C.border2, padding: '1px 6px', borderRadius: 6 }}>
+                          {typeof m.round === 'string' ? m.round : `Тур ${m.round}`}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: 10, color: C.vdim }}>{formatDate(m.date)}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: m.isHome ? 700 : 400, color: m.isHome ? '#fff' : C.muted, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {m.isHome ? myClub : opponent}
+                      </span>
+                      <span style={{ fontSize: 15, fontWeight: 800, flexShrink: 0, color: rc, background: `${rc}18`, padding: '3px 10px', borderRadius: 8, minWidth: 52, textAlign: 'center' }}>
+                        {m.isHome ? myGoals : oppGoals} : {m.isHome ? oppGoals : myGoals}
+                      </span>
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: !m.isHome ? 700 : 400, color: !m.isHome ? '#fff' : C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {m.isHome ? opponent : myClub}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          )}
+
+          {/* Upcoming label */}
+          <div style={{ fontSize: 11, color: C.vdim, letterSpacing: '0.5px', marginBottom: 4, marginTop: recentResults.length > 0 ? 4 : 0 }}>
             БЛИЖАЙШИЕ МАТЧИ · ВСЕ ТУРНИРЫ
           </div>
-          {upcoming.map((m, i) => (
+
+          {/* Real upcoming matches */}
+          {upcomingMatches.map((m, i) => {
+            const cs  = getCompetitionStyle(m.competition);
+            const home = m.home === 'MY_CLUB' ? myClub : m.home;
+            const away = m.away === 'MY_CLUB' ? myClub : m.away;
+            return (
+              <motion.div key={m.id}
+                initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
+                style={{ background: C.card, borderRadius: 12, padding: '12px 14px', borderLeft: `3px solid ${cs.color}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ fontSize: 12 }}>{cs.icon}</span>
+                    <span style={{ fontSize: 10, color: cs.color, fontWeight: 700 }}>{m.competitionName}</span>
+                    <span style={{ fontSize: 9, color: C.vdim, background: C.border2, padding: '1px 6px', borderRadius: 6 }}>
+                      {typeof m.round === 'string' ? m.round : `Тур ${m.round}`}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: 10, color: C.vdim }}>
+                    {dayOfWeekRu(m.date).toUpperCase()}, {formatDate(m.date)}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ flex: 1, fontSize: 13, fontWeight: m.isHome ? 700 : 400, color: m.isHome ? '#fff' : C.muted, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {home}
+                  </span>
+                  <span style={{ fontSize: 10, color: C.vdim, fontWeight: 600, flexShrink: 0, background: C.border2, padding: '3px 8px', borderRadius: 6 }}>vs</span>
+                  <span style={{ flex: 1, fontSize: 13, fontWeight: !m.isHome ? 700 : 400, color: !m.isHome ? '#fff' : C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {away}
+                  </span>
+                </div>
+                <div style={{ marginTop: 6 }}>
+                  <span style={{ fontSize: 9, fontWeight: 700, color: m.isHome ? C.teal : C.vdim, background: m.isHome ? 'rgba(15,212,168,0.12)' : C.border2, padding: '2px 7px', borderRadius: 8 }}>
+                    {m.isHome ? '🏠 ДОМА' : '✈️ В ГОСТЯХ'}
+                  </span>
+                </div>
+              </motion.div>
+            );
+          })}
+
+          {/* Fallback mock when no schedule generated yet */}
+          {!hasSchedule && upcoming.map((m, i) => (
             <motion.div key={i}
               initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
-              style={{
-                background: C.card, borderRadius: 12, padding: '12px 14px',
-                borderLeft: `3px solid ${m.competitionColor}`,
-              }}>
-              {/* Competition + date */}
+              style={{ background: C.card, borderRadius: 12, padding: '12px 14px', borderLeft: `3px solid ${m.competitionColor}` }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                   <span style={{ fontSize: 12 }}>{m.competitionIcon}</span>
-                  <span style={{ fontSize: 10, color: m.competitionColor, fontWeight: 700 }}>
-                    {m.competition}
-                  </span>
+                  <span style={{ fontSize: 10, color: m.competitionColor, fontWeight: 700 }}>{m.competition}</span>
                   <span style={{ fontSize: 9, color: C.vdim, background: C.border2, padding: '1px 6px', borderRadius: 6 }}>
                     {typeof m.round === 'string' ? m.round : `Тур ${m.round}`}
                   </span>
                 </div>
-                <span style={{ fontSize: 10, color: C.vdim }}>
-                  {m.dow.toUpperCase()}, {formatDate(m.date)}
-                </span>
+                <span style={{ fontSize: 10, color: C.vdim }}>{m.dow.toUpperCase()}, {formatDate(m.date)}</span>
               </div>
-
-              {/* Teams */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{
-                  flex: 1, fontSize: 13, fontWeight: m.isHome ? 700 : 400,
-                  color: m.isHome ? '#fff' : C.muted, textAlign: 'right',
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>
-                  {m.home}
-                </span>
-                <span style={{
-                  fontSize: 10, color: C.vdim, fontWeight: 600, flexShrink: 0,
-                  background: C.border2, padding: '3px 8px', borderRadius: 6,
-                }}>
-                  vs
-                </span>
-                <span style={{
-                  flex: 1, fontSize: 13, fontWeight: !m.isHome ? 700 : 400,
-                  color: !m.isHome ? '#fff' : C.muted,
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>
-                  {m.away}
-                </span>
+                <span style={{ flex: 1, fontSize: 13, fontWeight: m.isHome ? 700 : 400, color: m.isHome ? '#fff' : C.muted, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.home}</span>
+                <span style={{ fontSize: 10, color: C.vdim, fontWeight: 600, flexShrink: 0, background: C.border2, padding: '3px 8px', borderRadius: 6 }}>vs</span>
+                <span style={{ flex: 1, fontSize: 13, fontWeight: !m.isHome ? 700 : 400, color: !m.isHome ? '#fff' : C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.away}</span>
               </div>
-
               <div style={{ marginTop: 6 }}>
-                <span style={{
-                  fontSize: 9, fontWeight: 700,
-                  color: m.isHome ? C.teal : C.vdim,
-                  background: m.isHome ? 'rgba(15,212,168,0.12)' : C.border2,
-                  padding: '2px 7px', borderRadius: 8,
-                }}>
+                <span style={{ fontSize: 9, fontWeight: 700, color: m.isHome ? C.teal : C.vdim, background: m.isHome ? 'rgba(15,212,168,0.12)' : C.border2, padding: '2px 7px', borderRadius: 8 }}>
                   {m.isHome ? '🏠 ДОМА' : '✈️ В ГОСТЯХ'}
                 </span>
               </div>

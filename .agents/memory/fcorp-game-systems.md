@@ -1,6 +1,6 @@
 ---
 name: F-CORP game systems architecture
-description: Key decisions for the football manager game engine — training, competitions, schedule
+description: Key decisions for the football manager game engine — training, competitions, schedule, match engine
 ---
 
 ## Training System
@@ -25,12 +25,29 @@ description: Key decisions for the football manager game engine — training, co
 - Cups: dynamically generated actual Wednesdays via `generateCupWednesdays()` — NOT hardcoded day=10 dates
 - Same-day conflict: `usedDates` Set prevents collisions; cup dates skipped if already taken by European matches
 
+## Match Engine (src/lib/matchEngine.ts) — built, in production
+- `simulateMatch(input)` → `{ result, updatedPlayerStates, performances }`
+- **Opponent strength**: deterministic from match ID hash + competition base (UCL=76, UEL=68, league varies by level)
+- **Team strength**: best 11 available (non-injured), weighted by fatigue/fitness/form/morale/sharpness modifiers
+- **Goal probability**: `0.12 + (attack − defense) / 300`, clamped 0.04–0.55
+- Home advantage: +6 attack, +3 defense
+- **Injury healing MUST NOT happen in simulateMatch** — healing belongs to the weekly tick system only. Injured players return `p` unchanged.
+- **simulateMatch is called synchronously** — use `simulatingRef` (useRef) in TournamentTab to prevent double-execution; `setSimulating` alone is insufficient.
+- Events stored in `ScheduledMatch.result.events: MatchEvent[]`
+
 ## Game State
-- `src/lib/gameState.ts` — extends existing localStorage, VERSION=1
+- `src/lib/gameState.ts` — VERSION=3 (bumped when `MatchEvent` added to result type)
+- `normaliseSchedule()` runs on every load to ensure `result.events` is always an array — guards against partial writes and version migrations
 - Coach stored as `HeadCoach` under `fcorp_game_state` → `coach`
 - Player states: fatigue/fitness/form/sharpness/morale per player
 - Weekly plan cached by week number, regenerated if stale
 
-**Why:** Decisions on Day 1 of implementation should be consistent. Future work on match engine, injury system, growth engine should use the types and storage patterns in gameState.ts.
+## TournamentTab real-data integration
+- `buildTableWithRealResults()`: MY_CLUB rows use real played-match stats; rival rows use mock formula (rivals never play each other in schedule)
+- `leagueRound` = count of played league matches in schedule
+- Falls back to mock `buildUpcomingMatches()` when `schedule.length === 0`
+- `Map as MapIcon` import alias required — `Map` from lucide-react shadows the global Map constructor
 
-**How to apply:** When adding new game systems, read gameState.ts first and extend the `GameState` interface rather than creating new localStorage keys.
+**Why:** Decisions on Day 1 of implementation should be consistent. Future work (tick system, inbox events, transfer AI) should extend GameState and use simulateMatch as the authoritative result source.
+
+**How to apply:** When adding new game systems, read gameState.ts first and extend the `GameState` interface rather than creating new localStorage keys. Tick system should call simulateMatch for each match day fixture, then handle injury healing separately.
