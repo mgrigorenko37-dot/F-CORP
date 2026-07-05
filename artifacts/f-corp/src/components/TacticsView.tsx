@@ -54,8 +54,9 @@ function posGroupColor(pos: string): string {
 // ─── Formation definitions ────────────────────────────────────────────────────
 
 type FormationId =
-  | '4-4-2' | '4-3-3' | '4-2-3-1' | '3-5-2' | '5-3-2'
-  | '4-1-4-1' | '4-4-1-1' | '4-5-1' | '3-4-3' | '3-4-2-1' | '4-3-2-1' | '5-4-1';
+  | '4-4-2'   | '4-3-3'   | '4-2-3-1' | '3-5-2'   | '5-3-2'
+  | '4-1-4-1' | '4-4-1-1' | '4-5-1'   | '3-4-3'   | '3-4-2-1' | '4-3-2-1' | '5-4-1'
+  | '4-2-4'   | '4-1-2-1-2' | '3-4-1-2' | '5-2-3' | '3-1-4-2' | '4-6-0';
 
 interface Slot {
   pos:   string;   // preferred position
@@ -66,18 +67,24 @@ interface Slot {
 
 // Formation metadata: description shown to the owner
 const FORMATION_META: Record<FormationId, { desc: string; style: string }> = {
-  '4-4-2':   { desc: 'Классика',          style: 'Баланс атаки и обороны' },
-  '4-3-3':   { desc: 'Атака',             style: 'Три нападающих, давление' },
-  '4-2-3-1': { desc: 'Современная',       style: 'Двойной опорник, единственный форвард' },
-  '3-5-2':   { desc: 'Контроль',          style: 'Три защитника, насыщенная середина' },
-  '5-3-2':   { desc: 'Оборонительная',    style: 'Пять защитников, прочный тыл' },
-  '4-1-4-1': { desc: 'Компактность',      style: 'Один опорник, плотный блок' },
-  '4-4-1-1': { desc: 'С десяткой',        style: 'Атакующий хав за единственным форвардом' },
-  '4-5-1':   { desc: 'Контратака',        style: 'Пять в средней линии, один форвард' },
-  '3-4-3':   { desc: 'Тотальная атака',   style: 'Три защитника, три форварда' },
-  '3-4-2-1': { desc: 'Ёлочка (3-атт)',    style: 'Три сзади, два атакующих хава' },
-  '4-3-2-1': { desc: 'Ёлочка',            style: 'Пирамида: 4-3-2-1, два АМ' },
-  '5-4-1':   { desc: 'Бетон',             style: 'Ультра-оборонительная, один форвард' },
+  '4-4-2':     { desc: 'Классика',          style: 'Баланс атаки и обороны' },
+  '4-3-3':     { desc: 'Атака',             style: 'Три нападающих, давление' },
+  '4-2-3-1':   { desc: 'Современная',       style: 'Двойной опорник, единственный форвард' },
+  '3-5-2':     { desc: 'Контроль',          style: 'Три защитника, насыщенная середина' },
+  '5-3-2':     { desc: 'Оборонительная',    style: 'Пять защитников, прочный тыл' },
+  '4-1-4-1':   { desc: 'Компактность',      style: 'Один опорник, плотный блок' },
+  '4-4-1-1':   { desc: 'С десяткой',        style: 'Атакующий хав за единственным форвардом' },
+  '4-5-1':     { desc: 'Контратака',        style: 'Пять в средней линии, один форвард' },
+  '3-4-3':     { desc: 'Тотальная атака',   style: 'Три защитника, три форварда' },
+  '3-4-2-1':   { desc: 'Ёлочка (3-атт)',    style: 'Три сзади, два атакующих хава' },
+  '4-3-2-1':   { desc: 'Ёлочка',            style: 'Пирамида 4-3-2-1, два АМ' },
+  '5-4-1':     { desc: 'Бетон',             style: 'Ультра-оборонительная, один форвард' },
+  '4-2-4':     { desc: 'Ультра-атака',      style: 'Четыре форварда, бразильский стиль' },
+  '4-1-2-1-2': { desc: 'Бриллиант',         style: 'Ромб в полузащите, плотный центр' },
+  '3-4-1-2':   { desc: 'Тройка + АМ',       style: 'Три сзади, атакующий хав за двумя форвардами' },
+  '5-2-3':     { desc: 'Атак. пятёрка',     style: 'Пять сзади, три нападающих' },
+  '3-1-4-2':   { desc: 'Свипер',            style: 'Тройка с опорником-разрушителем' },
+  '4-6-0':     { desc: 'Без форвардов',     style: 'Гвардиола-стиль, ложная девятка' },
 };
 
 const FORMATIONS: Record<FormationId, Slot[]> = {
@@ -248,6 +255,90 @@ const FORMATIONS: Record<FormationId, Slot[]> = {
     { pos:'CM',  role:'ЦП',  x:64, y:50 },
     { pos:'RM',  role:'ПП',  x:88, y:50 },
     { pos:'ST',  role:'НАП', x:50, y:22 },
+  ],
+  // ── 4-2-4 (Ультра-атака) ──────────────────────────────────────────────────
+  '4-2-4': [
+    { pos:'GK',  role:'ВРТ', x:50, y:86 },
+    { pos:'LB',  role:'ЛЗ',  x:14, y:71 },
+    { pos:'CB',  role:'ЦЗ',  x:36, y:71 },
+    { pos:'CB',  role:'ЦЗ',  x:64, y:71 },
+    { pos:'RB',  role:'ПЗ',  x:86, y:71 },
+    { pos:'CDM', role:'ОП',  x:36, y:56 },
+    { pos:'CDM', role:'ОП',  x:64, y:56 },
+    { pos:'LW',  role:'ЛВ',  x:11, y:24 },
+    { pos:'ST',  role:'ЛФВ', x:36, y:18 },
+    { pos:'ST',  role:'ПФВ', x:64, y:18 },
+    { pos:'RW',  role:'ПВ',  x:89, y:24 },
+  ],
+  // ── 4-1-2-1-2 (Бриллиант) ─────────────────────────────────────────────────
+  '4-1-2-1-2': [
+    { pos:'GK',  role:'ВРТ', x:50, y:86 },
+    { pos:'LB',  role:'ЛЗ',  x:14, y:70 },
+    { pos:'CB',  role:'ЦЗ',  x:36, y:70 },
+    { pos:'CB',  role:'ЦЗ',  x:64, y:70 },
+    { pos:'RB',  role:'ПЗ',  x:86, y:70 },
+    { pos:'CDM', role:'ОП',  x:50, y:59 },
+    { pos:'CM',  role:'ЦП',  x:22, y:48 },
+    { pos:'CM',  role:'ЦП',  x:78, y:48 },
+    { pos:'CAM', role:'АМ',  x:50, y:37 },
+    { pos:'ST',  role:'НАП', x:36, y:20 },
+    { pos:'ST',  role:'НАП', x:64, y:20 },
+  ],
+  // ── 3-4-1-2 (Тройка + АМ) ─────────────────────────────────────────────────
+  '3-4-1-2': [
+    { pos:'GK',  role:'ВРТ', x:50, y:86 },
+    { pos:'CB',  role:'ЦЗ',  x:25, y:70 },
+    { pos:'CB',  role:'ЦЗ',  x:50, y:70 },
+    { pos:'CB',  role:'ЦЗ',  x:75, y:70 },
+    { pos:'LM',  role:'ЛФЗ', x:9,  y:54 },
+    { pos:'CM',  role:'ЦП',  x:35, y:53 },
+    { pos:'CM',  role:'ЦП',  x:65, y:53 },
+    { pos:'RM',  role:'ПФЗ', x:91, y:54 },
+    { pos:'CAM', role:'АМ',  x:50, y:38 },
+    { pos:'ST',  role:'НАП', x:36, y:22 },
+    { pos:'ST',  role:'НАП', x:64, y:22 },
+  ],
+  // ── 5-2-3 (Атак. пятёрка) ─────────────────────────────────────────────────
+  '5-2-3': [
+    { pos:'GK',  role:'ВРТ', x:50, y:86 },
+    { pos:'LB',  role:'ЛЗ',  x:9,  y:70 },
+    { pos:'CB',  role:'ЦЗ',  x:28, y:70 },
+    { pos:'CB',  role:'ЦЗ',  x:50, y:70 },
+    { pos:'CB',  role:'ЦЗ',  x:72, y:70 },
+    { pos:'RB',  role:'ПЗ',  x:91, y:70 },
+    { pos:'CM',  role:'ЦП',  x:36, y:52 },
+    { pos:'CM',  role:'ЦП',  x:64, y:52 },
+    { pos:'LW',  role:'ЛВ',  x:14, y:24 },
+    { pos:'ST',  role:'НАП', x:50, y:18 },
+    { pos:'RW',  role:'ПВ',  x:86, y:24 },
+  ],
+  // ── 3-1-4-2 (Свипер) ──────────────────────────────────────────────────────
+  '3-1-4-2': [
+    { pos:'GK',  role:'ВРТ', x:50, y:86 },
+    { pos:'CB',  role:'ЦЗ',  x:25, y:72 },
+    { pos:'CB',  role:'ЦЗ',  x:50, y:72 },
+    { pos:'CB',  role:'ЦЗ',  x:75, y:72 },
+    { pos:'CDM', role:'СВП',  x:50, y:62 },
+    { pos:'LM',  role:'ЛП',  x:9,  y:50 },
+    { pos:'CM',  role:'ЦП',  x:32, y:49 },
+    { pos:'CM',  role:'ЦП',  x:68, y:49 },
+    { pos:'RM',  role:'ПП',  x:91, y:50 },
+    { pos:'ST',  role:'НАП', x:36, y:24 },
+    { pos:'ST',  role:'НАП', x:64, y:24 },
+  ],
+  // ── 4-6-0 (Без форвардов) ─────────────────────────────────────────────────
+  '4-6-0': [
+    { pos:'GK',  role:'ВРТ', x:50, y:86 },
+    { pos:'LB',  role:'ЛЗ',  x:14, y:70 },
+    { pos:'CB',  role:'ЦЗ',  x:36, y:70 },
+    { pos:'CB',  role:'ЦЗ',  x:64, y:70 },
+    { pos:'RB',  role:'ПЗ',  x:86, y:70 },
+    { pos:'LM',  role:'ЛП',  x:9,  y:53 },
+    { pos:'CDM', role:'ОП',  x:31, y:52 },
+    { pos:'CM',  role:'ЦП',  x:50, y:50 },
+    { pos:'CDM', role:'ОП',  x:69, y:52 },
+    { pos:'RM',  role:'ПП',  x:91, y:53 },
+    { pos:'CAM', role:'АМ',  x:50, y:34 },
   ],
 };
 
@@ -685,6 +776,8 @@ export default function TacticsView() {
   const [selectedIdx, setSelectedIdx]     = useState<number | null>(null);
   const [coachName, setCoachName]         = useState('Тренер');
   const [clubColor, setClubColor]         = useState('#ef4444');
+  const [showFormations, setShowFormations] = useState(false);
+  const [showStyles, setShowStyles]         = useState(false);
 
   const level   = getLeagueLevel();
   const country = getStoredCountry();
@@ -751,66 +844,150 @@ export default function TacticsView() {
         </div>
       </div>
 
-      {/* ── Formation selector ── */}
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
-          <span style={{ fontSize: 10, color: C.dim, letterSpacing: '0.5px' }}>СХЕМА ИГРЫ</span>
-          <span style={{ fontSize: 10, color: C.teal }}>{FORMATION_META[formation].desc}</span>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
-          {(Object.keys(FORMATIONS) as FormationId[]).map(f => {
-            const active = f === formation;
-            return (
-              <button key={f} onClick={() => handleFormationChange(f)}
-                style={{
-                  padding: '8px 6px',
-                  borderRadius: 10,
-                  border: active ? `1px solid ${C.teal}90` : `0.5px solid ${C.border2}`,
-                  background: active ? `${C.teal}18` : C.card,
-                  cursor: 'pointer',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-                }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: active ? C.teal : C.white }}>
-                  {f}
-                </span>
-                <span style={{ fontSize: 8, color: active ? C.teal : C.vdim, letterSpacing: '0.2px' }}>
-                  {FORMATION_META[f].desc}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        <div style={{ fontSize: 10, color: C.dim, marginTop: 7, textAlign: 'center' }}>
-          {FORMATION_META[formation].style}
-        </div>
+      {/* ── Formation selector (collapsible) ── */}
+      <div style={{ marginBottom: 10 }}>
+        {/* Header row — always visible */}
+        <button
+          onClick={() => setShowFormations(v => !v)}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center',
+            justifyContent: 'space-between', background: C.card,
+            border: `0.5px solid ${C.border2}`, borderRadius: showFormations ? '10px 10px 0 0' : 10,
+            padding: '10px 14px', cursor: 'pointer',
+          }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 10, color: C.dim, letterSpacing: '0.5px' }}>СХЕМА</span>
+            <span style={{
+              fontSize: 13, fontWeight: 800, color: C.teal,
+              background: `${C.teal}18`, border: `1px solid ${C.teal}50`,
+              borderRadius: 8, padding: '2px 10px',
+            }}>{formation}</span>
+            <span style={{ fontSize: 10, color: C.muted }}>{FORMATION_META[formation].desc}</span>
+          </div>
+          <span style={{ fontSize: 12, color: C.dim, transition: 'transform 0.2s',
+            display: 'inline-block', transform: showFormations ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+            ▼
+          </span>
+        </button>
+
+        {/* Collapsible grid */}
+        <AnimatePresence>
+          {showFormations && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.22, ease: 'easeInOut' }}
+              style={{ overflow: 'hidden' }}>
+              <div style={{
+                background: C.card,
+                border: `0.5px solid ${C.border2}`, borderTop: 'none',
+                borderRadius: '0 0 10px 10px',
+                padding: '10px',
+              }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+                  {(Object.keys(FORMATIONS) as FormationId[]).map(f => {
+                    const active = f === formation;
+                    return (
+                      <button key={f}
+                        onClick={() => { handleFormationChange(f); setShowFormations(false); }}
+                        style={{
+                          padding: '8px 4px', borderRadius: 9,
+                          border: active ? `1px solid ${C.teal}90` : `0.5px solid ${C.border2}`,
+                          background: active ? `${C.teal}18` : '#13151e',
+                          cursor: 'pointer',
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                        }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: active ? C.teal : C.white }}>
+                          {f}
+                        </span>
+                        <span style={{ fontSize: 7.5, color: active ? C.teal : C.vdim, letterSpacing: '0.1px' }}>
+                          {FORMATION_META[f].desc}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div style={{ fontSize: 10, color: C.dim, marginTop: 8, textAlign: 'center' }}>
+                  {FORMATION_META[formation].style}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* ── Style selector ── */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 10, color: C.dim, letterSpacing: '0.5px', marginBottom: 8 }}>
-          ВЕКТОР ИГРЫ
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
-          {STYLES.map(s => (
-            <button key={s.id} onClick={() => handleStyleChange(s.id)}
-              style={{
-                padding: '8px 4px',
-                borderRadius: 10,
-                border: s.id === style ? `1px solid ${C.teal}80` : `0.5px solid ${C.border2}`,
-                background: s.id === style ? `${C.teal}15` : C.card,
-                cursor: 'pointer',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+      {/* ── Style selector (collapsible) ── */}
+      <div style={{ marginBottom: 14 }}>
+        {/* Header row — always visible */}
+        <button
+          onClick={() => setShowStyles(v => !v)}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center',
+            justifyContent: 'space-between', background: C.card,
+            border: `0.5px solid ${C.border2}`, borderRadius: showStyles ? '10px 10px 0 0' : 10,
+            padding: '10px 14px', cursor: 'pointer',
+          }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 10, color: C.dim, letterSpacing: '0.5px' }}>ВЕКТОР</span>
+            {(() => {
+              const s = STYLES.find(s => s.id === style)!;
+              return (
+                <span style={{
+                  fontSize: 11, fontWeight: 700, color: C.teal,
+                  background: `${C.teal}18`, border: `1px solid ${C.teal}50`,
+                  borderRadius: 8, padding: '2px 10px', display: 'flex', alignItems: 'center', gap: 4,
+                }}>
+                  {s.icon} {s.label}
+                </span>
+              );
+            })()}
+            <span style={{ fontSize: 10, color: C.muted }}>
+              {STYLES.find(s => s.id === style)?.desc}
+            </span>
+          </div>
+          <span style={{ fontSize: 12, color: C.dim, transition: 'transform 0.2s',
+            display: 'inline-block', transform: showStyles ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+            ▼
+          </span>
+        </button>
+
+        <AnimatePresence>
+          {showStyles && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.22, ease: 'easeInOut' }}
+              style={{ overflow: 'hidden' }}>
+              <div style={{
+                background: C.card,
+                border: `0.5px solid ${C.border2}`, borderTop: 'none',
+                borderRadius: '0 0 10px 10px',
+                padding: '10px',
               }}>
-              <span style={{ fontSize: 16 }}>{s.icon}</span>
-              <span style={{ fontSize: 9, fontWeight: 700, color: s.id === style ? C.teal : C.dim }}>
-                {s.label.toUpperCase()}
-              </span>
-            </button>
-          ))}
-        </div>
-        <div style={{ fontSize: 10, color: C.dim, marginTop: 6, textAlign: 'center' }}>
-          {STYLES.find(s => s.id === style)?.desc}
-        </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+                  {STYLES.map(s => (
+                    <button key={s.id}
+                      onClick={() => { handleStyleChange(s.id); setShowStyles(false); }}
+                      style={{
+                        padding: '8px 4px', borderRadius: 9,
+                        border: s.id === style ? `1px solid ${C.teal}80` : `0.5px solid ${C.border2}`,
+                        background: s.id === style ? `${C.teal}15` : '#13151e',
+                        cursor: 'pointer',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                      }}>
+                      <span style={{ fontSize: 16 }}>{s.icon}</span>
+                      <span style={{ fontSize: 9, fontWeight: 700, color: s.id === style ? C.teal : C.dim }}>
+                        {s.label.toUpperCase()}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* ── Pitch ── */}
