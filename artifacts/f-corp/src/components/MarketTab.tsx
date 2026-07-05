@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Search, ChevronDown } from 'lucide-react';
 import { ALL_MARKET_PLAYERS } from '../data/playersMarket';
 import { ALL_MARKET_STAFF } from '../data/staffMarketData';
+import { loadGameState, buyPlayer, hireStaff } from '../lib/gameState';
 
 const C = {
   card:'#1a1c25', border:'#1c1f28', border2:'#2a2d38',
@@ -50,7 +51,6 @@ const ROLE_FILTERS = [
   'Директор скаутинга','Скаут',
 ];
 
-const BUDGET = 2_400_000;
 const PAGE_SIZE = 20;
 
 function fmtMoney(n: number) {
@@ -72,9 +72,17 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
   const [ratingMax, setRatingMax]   = useState(99);
   const [purchased, setPurchased]   = useState<Set<number>>(new Set());
   const [hiredStaff, setHiredStaff] = useState<Set<number>>(new Set());
-  const [budget, setBudget]         = useState(BUDGET);
+  const [budget, setBudget]         = useState(2_400_000);
   const [playerPage, setPlayerPage] = useState(1);
   const [staffPage, setStaffPage]   = useState(1);
+
+  // Load persisted market state on mount
+  useEffect(() => {
+    const gs = loadGameState();
+    setBudget(gs.marketBudget);
+    setPurchased(new Set(gs.purchasedPlayerIds));
+    setHiredStaff(new Set(gs.hiredStaffIds));
+  }, []);
 
   const visiblePlayers = useMemo(() => {
     const q = search.toLowerCase();
@@ -103,12 +111,14 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
 
   const buy = (id: number, price: number) => {
     if (price > budget) return;
+    buyPlayer(id, price);
     setPurchased(s => new Set(s).add(id));
     setBudget(b => b - price);
     setPlayerPage(1);
   };
 
   const hire = (id: number) => {
+    hireStaff(id);
     setHiredStaff(h => new Set(h).add(id));
     setStaffPage(1);
   };

@@ -147,18 +147,23 @@ export interface SeasonState {
 // ─── FULL GAME STATE ──────────────────────────────────────────────────────────
 
 export interface GameState {
-  version:       number;  // For migrations
-  coach:         HeadCoach;
-  playerStates:  PlayerGameState[];
-  season:        SeasonState;
-  weeklyPlan:    WeeklyTrainingPlan | null;
-  lastWeekTick:  string | null;  // ISO date of last weekly simulation
+  version:            number;  // For migrations
+  coach:              HeadCoach;
+  playerStates:       PlayerGameState[];
+  season:             SeasonState;
+  weeklyPlan:         WeeklyTrainingPlan | null;
+  lastWeekTick:       string | null;  // ISO date of last weekly simulation
+  marketBudget:       number;          // Remaining transfer budget in €
+  purchasedPlayerIds: number[];        // IDs of bought players
+  hiredStaffIds:      number[];        // IDs of hired staff
 }
 
 // ─── STORAGE HELPERS ──────────────────────────────────────────────────────────
 
 const KEY = 'fcorp_game_state';
 const VERSION = 1;
+
+const DEFAULT_MARKET_BUDGET = 2_400_000;
 
 function buildDefaultGameState(): GameState {
   return {
@@ -174,8 +179,11 @@ function buildDefaultGameState(): GameState {
       schedule:           [],
       activeCompetitions: ['league', 'national_cup', 'league_cup'],
     },
-    weeklyPlan:   null,
-    lastWeekTick: null,
+    weeklyPlan:         null,
+    lastWeekTick:       null,
+    marketBudget:       DEFAULT_MARKET_BUDGET,
+    purchasedPlayerIds: [],
+    hiredStaffIds:      [],
   };
 }
 
@@ -210,6 +218,23 @@ export function saveCoach(coach: HeadCoach): void {
 /** Update just the weekly plan */
 export function saveWeeklyPlan(plan: WeeklyTrainingPlan): void {
   updateGameState(s => ({ ...s, weeklyPlan: plan }));
+}
+
+/** Buy a player: deduct price and record the ID */
+export function buyPlayer(id: number, price: number): void {
+  updateGameState(s => ({
+    ...s,
+    marketBudget:       Math.max(0, s.marketBudget - price),
+    purchasedPlayerIds: [...s.purchasedPlayerIds, id],
+  }));
+}
+
+/** Hire a staff member and record the ID */
+export function hireStaff(id: number): void {
+  updateGameState(s => ({
+    ...s,
+    hiredStaffIds: [...s.hiredStaffIds, id],
+  }));
 }
 
 // ─── PLAYER STATE HELPERS ─────────────────────────────────────────────────────

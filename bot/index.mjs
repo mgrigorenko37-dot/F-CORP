@@ -31,18 +31,25 @@ console.log(`[F-CORP Bot] Starting... Mini App URL: ${APP_URL}`);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function call(method, body = {}) {
-  const res = await fetch(`${API}/${method}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json();
-  if (!data.ok) {
-    const err = new Error(`Telegram API error on ${method}: ${data.description ?? JSON.stringify(data)}`);
-    err.errorCode = data.error_code;
-    throw err;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 35_000);
+  try {
+    const res = await fetch(`${API}/${method}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      const err = new Error(`Telegram API error on ${method}: ${data.description ?? JSON.stringify(data)}`);
+      err.errorCode = data.error_code;
+      throw err;
+    }
+    return data;
+  } finally {
+    clearTimeout(timer);
   }
-  return data;
 }
 
 async function handleUpdate(update) {

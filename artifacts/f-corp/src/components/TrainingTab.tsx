@@ -72,6 +72,16 @@ function buildDemoContext(philosophy: CoachPhilosophy, avgFatigue: number): Week
   };
 }
 
+// ── Attribute label map ───────────────────────────────────────────────────────
+// Defined here (above DayCard) so it is available when DayCard renders.
+
+const ATTR_LABELS: Record<string, string> = {
+  pace: 'Скорость', endurance: 'Выносл.', strength: 'Сила',
+  technique: 'Техника', dribbling: 'Дриблинг', passing: 'Пасс',
+  shooting: 'Удар', positioning: 'Позиция', decision: 'Решение',
+  setpieces: 'Стандарты', concentration: 'Концентр.', leadership: 'Лидерство',
+};
+
 // ── Day card ──────────────────────────────────────────────────────────────────
 
 function DayCard({
@@ -260,15 +270,6 @@ function DayCard({
     </motion.div>
   );
 }
-
-// ── Attribute label map ───────────────────────────────────────────────────────
-
-const ATTR_LABELS: Record<string, string> = {
-  pace: 'Скорость', endurance: 'Выносл.', strength: 'Сила',
-  technique: 'Техника', dribbling: 'Дриблинг', passing: 'Пасс',
-  shooting: 'Удар', positioning: 'Позиция', decision: 'Решение',
-  setpieces: 'Стандарты', concentration: 'Концентр.', leadership: 'Лидерство',
-};
 
 // ── Coach card ────────────────────────────────────────────────────────────────
 

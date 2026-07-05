@@ -5,7 +5,7 @@
  * Uses real competition names from competitions.ts.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, ArrowUp, ArrowDown, Minus, Calendar, Map } from 'lucide-react';
 
@@ -270,8 +270,12 @@ export default function TournamentTab() {
   // Demo state: round 14, position 3
   const leagueRound = 14;
   const myPos       = 3;
-  const table       = buildTable(myClub, league.rivals, myPos, leagueRound);
-  const myRow       = table.find(t => t.isMe)!;
+  // useMemo keeps the table stable across re-renders (no random flicker)
+  const table = useMemo(
+    () => buildTable(myClub, league.rivals, myPos, leagueRound),
+    [myClub, league.rivals, myPos, leagueRound],
+  );
+  const myRow = table.find(t => t.isMe) ?? table[myPos - 1] ?? table[0];
 
   // Active competitions (demo)
   const activeComps = level === 1
