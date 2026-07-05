@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getPoolForCountry, generateName } from '../data/namesByCountry';
+import { getLeagueLevel } from '../lib/storage';
 
 const C = {
   card: '#1a1c25', border: '#1c1f28', border2: '#2a2d38',
@@ -114,6 +115,29 @@ function getStoredCountry(): string {
   try { return localStorage.getItem('fcorp_league_country') ?? ''; } catch { return ''; }
 }
 
+// Each league level reduces every player rating by STEP.
+// Level 4 (bottom) = templates are at their lowest; Level 1 (top) = full strength.
+const LEVEL_STEP = 8; // points per division gap from the top
+const LEVEL_FLOOR = 28; // absolute minimum rating shown
+
+function scaleRating(raw: number, level: number): number {
+  const offset = (level - 1) * LEVEL_STEP; // L1→0, L2→8, L3→16, L4→24
+  return Math.max(LEVEL_FLOOR, raw - offset);
+}
+
+const LEVEL_LABEL: Record<number, string> = {
+  1: 'Высшая лига',
+  2: 'Вторая лига',
+  3: 'Третья лига',
+  4: 'Четвёртая лига',
+};
+const LEVEL_COLOR: Record<number, string> = {
+  1: '#f0b429',
+  2: '#0fd4a8',
+  3: '#a78bfa',
+  4: '#6b6f7d',
+};
+
 type SquadView = 'first' | 'youth';
 type YouthTeam = 'U15' | 'U19' | 'U23';
 type PosFilter = 'ALL'|'GK'|'CB'|'LB'|'RB'|'CDM'|'CM'|'CAM'|'LM'|'RM'|'LW'|'RW'|'ST'|'CF';
@@ -129,15 +153,23 @@ export default function SquadTab() {
   const [posFilter, setPosFilter] = useState<PosFilter>('ALL');
 
   const country = getStoredCountry();
+  const level   = getLeagueLevel(); // 1 = top, 4 = bottom (starting point)
   const pool    = useMemo(() => getPoolForCountry(country), [country]);
 
-  const withNames = (tmpl: PlayerTemplate[]) =>
-    tmpl.map(p => ({ ...p, name: generateName(pool, p.id, p.rating) }));
+  // levelFraction: 1.0 = full scaling, 0.5 = half, 0 = no scaling.
+  // First team scales fully with league level; younger academies scale less
+  // (a 14-yo talent is rated similarly regardless of the club's league).
+  const withNames = (tmpl: PlayerTemplate[], levelFraction = 1.0) =>
+    tmpl.map(p => ({
+      ...p,
+      rating: scaleRating(p.rating, 1 + (level - 1) * levelFraction),
+      name: generateName(pool, p.id, p.rating),
+    }));
 
-  const FIRST_SQUAD = useMemo(() => withNames(FIRST_SQUAD_TMPL), [pool]);
-  const U23_SQUAD   = useMemo(() => withNames(U23_SQUAD_TMPL),   [pool]);
-  const U19_SQUAD   = useMemo(() => withNames(U19_SQUAD_TMPL),   [pool]);
-  const U15_SQUAD   = useMemo(() => withNames(U15_SQUAD_TMPL),   [pool]);
+  const FIRST_SQUAD = useMemo(() => withNames(FIRST_SQUAD_TMPL, 1.0),  [pool, level]);
+  const U23_SQUAD   = useMemo(() => withNames(U23_SQUAD_TMPL,   0.5),  [pool, level]);
+  const U19_SQUAD   = useMemo(() => withNames(U19_SQUAD_TMPL,   0.25), [pool, level]);
+  const U15_SQUAD   = useMemo(() => withNames(U15_SQUAD_TMPL,   0.0),  [pool, level]);
 
   const activePlayers =
     view === 'first' ? FIRST_SQUAD
@@ -154,9 +186,18 @@ export default function SquadTab() {
 
       <div style={{padding:'16px 18px 0'}}>
         {/* Title */}
-        <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:4}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
           <span style={{fontSize:22,fontWeight:700,color:'#ffffff',fontFamily:'Inter,sans-serif'}}>Состав</span>
-          <span style={{fontSize:22,fontWeight:700,color:C.teal,fontFamily:'Inter,sans-serif'}}>{activePlayers.length}</span>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <span style={{
+              fontSize:10, fontWeight:700, padding:'3px 10px', borderRadius:12,
+              color: LEVEL_COLOR[level], border:`1px solid ${LEVEL_COLOR[level]}44`,
+              background:`${LEVEL_COLOR[level]}18`,
+            }}>
+              {LEVEL_LABEL[level] ?? `Лига ${level}`}
+            </span>
+            <span style={{fontSize:22,fontWeight:700,color:C.teal,fontFamily:'Inter,sans-serif'}}>{activePlayers.length}</span>
+          </div>
         </div>
         <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:16}}>
           <span style={{fontSize:11,letterSpacing:'0.5px',color:C.dim}}>
