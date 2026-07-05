@@ -236,35 +236,43 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
           <span style={{fontSize:10,letterSpacing:'0.5px',color:C.vdim,flexShrink:0}}>РЕЙ</span>
           <div style={{display:'flex',alignItems:'center',gap:0,background:C.card,borderRadius:10,overflow:'hidden'}}>
             <button onClick={() => { setRatingMin(Math.max(30, ratingMin - 1)); tab==='players'?setPlayerPage(1):setStaffPage(1); }}
-              style={{fontSize:12,color:C.muted,background:'transparent',padding:'6px 9px',cursor:'pointer',border:'none',touchAction:'manipulation'}}>▼</button>
-            <span style={{fontSize:11,color:C.white,padding:'4px 3px',minWidth:24,textAlign:'center'}}>{ratingMin}</span>
+              style={{fontSize:12,color:C.muted,background:'transparent',padding:'6px 8px',cursor:'pointer',border:'none',touchAction:'manipulation'}}>▼</button>
+            <input type="text" inputMode="numeric" value={ratingMin}
+              onChange={e => { const v=parseInt(e.target.value); if(!isNaN(v)){ setRatingMin(Math.max(30,Math.min(ratingMax-1,v))); tab==='players'?setPlayerPage(1):setStaffPage(1); }}}
+              style={{fontSize:11,color:C.white,background:'transparent',border:'none',outline:'none',width:28,textAlign:'center',padding:'4px 0'}} />
             <button onClick={() => { setRatingMin(Math.min(ratingMax - 1, ratingMin + 1)); tab==='players'?setPlayerPage(1):setStaffPage(1); }}
-              style={{fontSize:12,color:C.muted,background:'transparent',padding:'6px 9px',cursor:'pointer',border:'none',touchAction:'manipulation'}}>▲</button>
+              style={{fontSize:12,color:C.muted,background:'transparent',padding:'6px 8px',cursor:'pointer',border:'none',touchAction:'manipulation'}}>▲</button>
           </div>
           <span style={{fontSize:11,color:C.vdim}}>—</span>
           <div style={{display:'flex',alignItems:'center',gap:0,background:C.card,borderRadius:10,overflow:'hidden'}}>
             <button onClick={() => { setRatingMax(Math.max(ratingMin + 1, ratingMax - 1)); tab==='players'?setPlayerPage(1):setStaffPage(1); }}
-              style={{fontSize:12,color:C.muted,background:'transparent',padding:'6px 9px',cursor:'pointer',border:'none',touchAction:'manipulation'}}>▼</button>
-            <span style={{fontSize:11,color:C.white,padding:'4px 3px',minWidth:24,textAlign:'center'}}>{ratingMax}</span>
+              style={{fontSize:12,color:C.muted,background:'transparent',padding:'6px 8px',cursor:'pointer',border:'none',touchAction:'manipulation'}}>▼</button>
+            <input type="text" inputMode="numeric" value={ratingMax}
+              onChange={e => { const v=parseInt(e.target.value); if(!isNaN(v)){ setRatingMax(Math.max(ratingMin+1,Math.min(99,v))); tab==='players'?setPlayerPage(1):setStaffPage(1); }}}
+              style={{fontSize:11,color:C.white,background:'transparent',border:'none',outline:'none',width:28,textAlign:'center',padding:'4px 0'}} />
             <button onClick={() => { setRatingMax(Math.min(99, ratingMax + 1)); tab==='players'?setPlayerPage(1):setStaffPage(1); }}
-              style={{fontSize:12,color:C.muted,background:'transparent',padding:'6px 9px',cursor:'pointer',border:'none',touchAction:'manipulation'}}>▲</button>
+              style={{fontSize:12,color:C.muted,background:'transparent',padding:'6px 8px',cursor:'pointer',border:'none',touchAction:'manipulation'}}>▲</button>
           </div>
           {/* Age */}
           <span style={{fontSize:10,letterSpacing:'0.5px',color:C.vdim,flexShrink:0,marginLeft:4}}>ВОЗ</span>
           <div style={{display:'flex',alignItems:'center',gap:0,background:C.card,borderRadius:10,overflow:'hidden'}}>
             <button onClick={() => { setAgeMin(Math.max(16, ageMin - 1)); tab==='players'?setPlayerPage(1):setStaffPage(1); }}
-              style={{fontSize:12,color:C.muted,background:'transparent',padding:'6px 9px',cursor:'pointer',border:'none',touchAction:'manipulation'}}>▼</button>
-            <span style={{fontSize:11,color:C.white,padding:'4px 2px',minWidth:24,textAlign:'center'}}>{ageMin}</span>
+              style={{fontSize:12,color:C.muted,background:'transparent',padding:'6px 8px',cursor:'pointer',border:'none',touchAction:'manipulation'}}>▼</button>
+            <input type="text" inputMode="numeric" value={ageMin}
+              onChange={e => { const v=parseInt(e.target.value); if(!isNaN(v)){ setAgeMin(Math.max(16,Math.min(ageMax-1,v))); tab==='players'?setPlayerPage(1):setStaffPage(1); }}}
+              style={{fontSize:11,color:C.white,background:'transparent',border:'none',outline:'none',width:26,textAlign:'center',padding:'4px 0'}} />
             <button onClick={() => { setAgeMin(Math.min(ageMax - 1, ageMin + 1)); tab==='players'?setPlayerPage(1):setStaffPage(1); }}
-              style={{fontSize:12,color:C.muted,background:'transparent',padding:'6px 9px',cursor:'pointer',border:'none',touchAction:'manipulation'}}>▲</button>
+              style={{fontSize:12,color:C.muted,background:'transparent',padding:'6px 8px',cursor:'pointer',border:'none',touchAction:'manipulation'}}>▲</button>
           </div>
           <span style={{fontSize:11,color:C.vdim}}>—</span>
           <div style={{display:'flex',alignItems:'center',gap:0,background:C.card,borderRadius:10,overflow:'hidden'}}>
             <button onClick={() => { setAgeMax(Math.max(ageMin + 1, ageMax - 1)); tab==='players'?setPlayerPage(1):setStaffPage(1); }}
-              style={{fontSize:12,color:C.muted,background:'transparent',padding:'6px 9px',cursor:'pointer',border:'none',touchAction:'manipulation'}}>▼</button>
-            <span style={{fontSize:11,color:C.white,padding:'4px 2px',minWidth:24,textAlign:'center'}}>{ageMax}</span>
+              style={{fontSize:12,color:C.muted,background:'transparent',padding:'6px 8px',cursor:'pointer',border:'none',touchAction:'manipulation'}}>▼</button>
+            <input type="text" inputMode="numeric" value={ageMax}
+              onChange={e => { const v=parseInt(e.target.value); if(!isNaN(v)){ setAgeMax(Math.max(ageMin+1,Math.min(45,v))); tab==='players'?setPlayerPage(1):setStaffPage(1); }}}
+              style={{fontSize:11,color:C.white,background:'transparent',border:'none',outline:'none',width:26,textAlign:'center',padding:'4px 0'}} />
             <button onClick={() => { setAgeMax(Math.min(45, ageMax + 1)); tab==='players'?setPlayerPage(1):setStaffPage(1); }}
-              style={{fontSize:12,color:C.muted,background:'transparent',padding:'6px 9px',cursor:'pointer',border:'none',touchAction:'manipulation'}}>▲</button>
+              style={{fontSize:12,color:C.muted,background:'transparent',padding:'6px 8px',cursor:'pointer',border:'none',touchAction:'manipulation'}}>▲</button>
           </div>
         </div>
 
