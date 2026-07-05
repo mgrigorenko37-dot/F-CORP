@@ -1,5 +1,6 @@
-// Fictional name pools grouped by language/region
-// All names are invented — no real people
+// Culturally authentic fictional name pools by language/region
+// First names follow real cultural conventions; last names are invented
+// but follow authentic phonetic/morphological patterns of each culture.
 
 export interface NamePool {
   first: string[];
@@ -7,256 +8,334 @@ export interface NamePool {
 }
 
 const pools: Record<string, NamePool> = {
+
+  // ── Russian ──────────────────────────────────────────────────────────────
   ru: {
     first: [
-      'Алрик','Борко','Вадрен','Горан','Демир','Ерлан','Живко','Зоран','Имрек','Казбек',
-      'Ладик','Мирок','Нурлан','Октем','Пётрик','Радмир','Ставик','Тимрек','Улрик','Федрик',
-      'Харик','Цветан','Чеслав','Шамир','Эмрен','Юрмек','Ярик','Алдрек','Богмир','Воздрик',
-      'Глебко','Данрик','Евдрик','Жаник','Захрик','Игмир','Кирдан','Леврик','Максим','Нилрек',
+      'Алексей','Андрей','Артём','Антон','Денис','Дмитрий','Евгений','Егор',
+      'Иван','Кирилл','Максим','Михаил','Никита','Павел','Роман','Руслан',
+      'Сергей','Тимур','Виктор','Владимир','Вячеслав','Илья','Константин',
+      'Леонид','Матвей','Николай','Олег','Степан','Фёдор','Глеб',
     ],
     last: [
-      'Варников','Гуднев','Дробков','Ерников','Журков','Зарников','Инрков','Кордов','Ларников',
-      'Мирков','Нуриков','Орднев','Пармков','Ратников','Самков','Тарников','Улков','Фармов',
-      'Харков','Цармков','Чарников','Шармов','Эдников','Юрнев','Ярков','Боднев','Варков',
-      'Гармов','Дарников','Здоров','Злобков','Имков','Кармов','Лобников','Мармов','Норков',
+      'Белков','Вершинин','Ганцев','Дружков','Ермолов','Журков','Зорин',
+      'Кисельков','Ломов','Мерзлов','Никонов','Обухов','Пряхин','Рыбков',
+      'Стрелков','Тихонов','Угрюмов','Фомичёв','Харчев','Чернов',
+      'Яковлев','Борзов','Волков','Грибков','Долгов','Ефимов','Завьялов',
+      'Игнатов','Кудрявцев','Лапин','Мальцев','Нечаев','Орлов','Пахомов',
     ],
   },
 
+  // ── Ukrainian ────────────────────────────────────────────────────────────
+  uk: {
+    first: [
+      'Олексій','Андрій','Богдан','Василь','Дмитро','Іван','Максим',
+      'Михайло','Остап','Сергій','Тарас','Ярослав','Роман','Юрій','Павло',
+      'Назар','Вадим','Олег','Руслан','Ігор','Артем','Денис','Євген',
+      'Кирило','Микола','Степан','Федір','Владислав','Антон','Петро',
+    ],
+    last: [
+      'Бойченко','Василенко','Гаврилюк','Даниленко','Єременко','Захарченко',
+      'Іваненко','Карпенко','Литвиненко','Марченко','Нагірняк','Остапенко',
+      'Павленко','Романченко','Степаненко','Тимченко','Федоренко','Харченко',
+      'Яременко','Кравченко','Мельниченко','Поліщук','Ткаченко','Шевченко',
+      'Пилипенко','Олійниченко','Коваленко','Гончаренко','Бондаренко','Лисенко',
+    ],
+  },
+
+  // ── Spanish ──────────────────────────────────────────────────────────────
   es: {
     first: [
-      'Aldiro','Bernavo','Cardenio','Delgio','Emilco','Farnico','Galdino','Hernavo','Isidro','Jalmiro',
-      'Keldiro','Lornavo','Maldiro','Nelvico','Ofaldo','Paldiro','Quelvo','Raldino','Salvico','Taldiro',
-      'Ulvico','Valmiro','Waldo','Xaldiro','Yaldivo','Zaldico','Arnivo','Brendico','Coldiro','Delvico',
-      'Ernaldo','Faldivo','Gelmiro','Helnico','Iraldo','Jaldivo','Kelmico','Laldiro','Melvico','Naldico',
+      'Alejandro','Carlos','Daniel','Eduardo','Felipe','Gabriel','Héctor',
+      'Ignacio','Javier','Leonardo','Manuel','Nicolás','Oscar','Pablo',
+      'Rafael','Santiago','Tomás','Valentín','Andrés','Diego','Emilio',
+      'Francisco','Gustavo','Hernán','Iván','Jorge','Luis','Marcos',
+      'Rodrigo','Sergio',
     ],
     last: [
-      'Vardera','Quindero','Aldarez','Bernaldo','Carreño','Delgiro','Enreco','Falmero','Galviro','Herneco',
-      'Iraldez','Jalvero','Kaldero','Larmeco','Maldarez','Nelvero','Olfeco','Palvero','Quindero','Raldez',
-      'Salvero','Taldarez','Ulmero','Valdeco','Wareco','Xaldez','Yalmero','Zaldeco','Arnavez','Braldez',
-      'Caldero','Dalmarez','Enveco','Faldero','Galmarez','Helndez','Iraldez','Jalvero','Keldarez','Lalmero',
+      'Aguilar','Barrera','Castillo','Delgado','Espinoza','Fuentes',
+      'Guerrero','Herrera','Ibarra','Jiménez','Lara','Mendoza','Navarro',
+      'Ortega','Pedraza','Quintero','Reyes','Salazar','Torres','Vargas',
+      'Acosta','Bermúdez','Cárdenas','Durán','Escobedo','Figueroa',
+      'Gallegos','Hidalgo','Izquierdo','Juárez','Lucero','Molina',
     ],
   },
 
+  // ── Brazilian Portuguese ─────────────────────────────────────────────────
   pt: {
     first: [
-      'Aldino','Bernavo','Celdino','Delvio','Elrino','Farjio','Gelmio','Helrio','Ilvino','Jalmio',
-      'Keldio','Lornio','Maldio','Nelvio','Ofaldo','Palmio','Quelino','Raldio','Selvio','Taldio',
-      'Ulvio','Valmio','Waldio','Xaldio','Yaldio','Zaldio','Arnivo','Brendio','Coldio','Delvio',
-      'Eraldo','Faldio','Gelmio','Helino','Iraldo','Jaldio','Kelmio','Laldio','Melvio','Naldio',
+      'Alexandre','Bruno','Carlos','Diego','Eduardo','Felipe','Gabriel',
+      'Igor','João','Lucas','Matheus','Pedro','Rafael','Ricardo','Rodrigo',
+      'Samuel','Thiago','Vitor','Wanderson','Anderson','Cleber','Danilo',
+      'Fabio','Gilberto','Henrique','Leandro','Marcelo','Neto','Renato',
+      'Sandro',
     ],
     last: [
-      'Vareiro','Quineiro','Aldarão','Berneido','Carvalho','Delveiro','Enreido','Falmeiro','Galveido','Herneido',
-      'Iraldeão','Jalveido','Kaldeido','Larmeido','Maldeiro','Nelveido','Olfeido','Palveido','Quindeido','Raldeão',
-      'Salveido','Taldeido','Ulmeido','Valdeido','Wareido','Xaldeão','Yalmeido','Zaldeido','Arneido','Braldeão',
-      'Caldeido','Dalmeiro','Enveido','Faldeido','Galmeiro','Helneido','Iraldeão','Jalveido','Keldeido','Lalmeido',
+      'Barbosa','Carvalho','Costa','Cruz','Ferreira','Gomes','Lima',
+      'Lopes','Machado','Marques','Martins','Mendes','Moreira','Nascimento',
+      'Oliveira','Pereira','Ribeiro','Santos','Silva','Souza',
+      'Almeida','Araujo','Batista','Cavalcante','Duarte','Fonseca',
+      'Guimarães','Lacerda','Mello','Nunes',
     ],
   },
 
+  // ── German ───────────────────────────────────────────────────────────────
   de: {
     first: [
-      'Aldrik','Bernvik','Celrik','Delvrik','Elrvik','Farnik','Gelrik','Helrik','Ilvrik','Jalmik',
-      'Keldrik','Lornik','Maldrik','Nelvik','Ofrik','Palmik','Quelrik','Raldrik','Selvik','Taldrik',
-      'Ulvik','Valmik','Waldrik','Xaldrik','Yaldrik','Zaldrik','Arvik','Brendik','Coldrik','Delvrik',
-      'Errik','Faldrik','Gelrik','Helnik','Irrik','Jaldrik','Kelmik','Laldrik','Melvrik','Naldrik',
+      'Alexander','Benjamin','Christian','Daniel','Elias','Felix','Gregor',
+      'Hendrik','Jan','Kai','Lars','Markus','Niklas','Oliver','Patrick',
+      'Robert','Sebastian','Thomas','Ulrich','Wolfgang','Andreas','Bernd',
+      'Clemens','Dirk','Erik','Florian','Hans','Jens','Klaus','Lukas',
     ],
     last: [
-      'Varmann','Quindemann','Aldermann','Bernhofer','Carlsvik','Delvmann','Enremann','Falmhofer','Galvmann','Hernhofer',
-      'Iraldmann','Jalvhofer','Kaldemann','Larmhofer','Maldmann','Nelvhofer','Olfsvik','Palvmann','Quindhofer','Raldmann',
-      'Salvhofer','Taldmann','Ulmhofer','Valdmann','Warhofer','Xaldmann','Yalmhofer','Zaldmann','Arnsvik','Braldmann',
-      'Caldhofer','Dalmmann','Envsvik','Faldsvik','Galmmann','Helnsvik','Iraldsvik','Jalvsvik','Keldsvik','Lalmsvik',
+      'Beckmann','Decker','Elfmann','Fischler','Grabmann','Hartmann',
+      'Jäger','Kessler','Langmann','Moser','Neumann','Obermeier','Reiner',
+      'Schreiber','Tanner','Ullmann','Vogler','Waldmann','Zeller','Brenner',
+      'Altmann','Bauer','Brandt','Czajka','Dunkel','Engel','Fischer',
+      'Grünwald','Hofer','Krüger',
     ],
   },
 
+  // ── French ───────────────────────────────────────────────────────────────
   fr: {
     first: [
-      'Aldric','Bernave','Celdric','Delric','Elric','Farnic','Gelric','Helric','Ilvric','Jalmic',
-      'Keldric','Lornic','Maldric','Nelric','Ofric','Palmic','Quelric','Raldric','Selric','Taldric',
-      'Ulric','Valmic','Waldric','Xaldric','Yaldric','Zaldric','Arnic','Brenic','Coldric','Delric',
-      'Erric','Faldric','Gelnic','Helnic','Irric','Jaldric','Kelmic','Laldric','Melvric','Naldric',
+      'Alexandre','Baptiste','Clément','Dylan','Emilien','François',
+      'Guillaume','Hugo','Julien','Kévin','Loïc','Mathieu','Nicolas',
+      'Olivier','Pierre','Quentin','Raphaël','Sébastien','Thomas','Vincent',
+      'Anthony','Benoît','Charles','David','Edouard','Florent','Gabin',
+      'Henri','Joachim','Laurent',
     ],
     last: [
-      'Varbeau','Quindeau','Aldaré','Berneau','Carlève','Delveau','Enreau','Falmeau','Galveau','Herneau',
-      'Iraldé','Jalveau','Kaldeau','Larmeau','Maldeau','Nelveau','Olfeau','Palveau','Quindeau','Raldé',
-      'Salveau','Taldeau','Ulmeau','Valdeau','Wareau','Xaldé','Yalmeau','Zaldeau','Arneau','Braldé',
-      'Caldeau','Dalmeau','Enveau','Faldeau','Galmeau','Helneau','Iraldeau','Jalveau','Keldeau','Lalmeau',
+      'Aubert','Blanchard','Colin','Dupont','Évrard','Faure','Girard',
+      'Hubert','Lefebvre','Martin','Normand','Perrin','Renaud','Simon',
+      'Tissot','Valentin','Weber','Chevalier','Lambert','Bonnet',
+      'André','Beaulieu','Charpentier','Denis','Étienne','Fontaine',
+      'Gauthier','Hamelin','Jacquet','Leclerc',
     ],
   },
 
+  // ── Italian ──────────────────────────────────────────────────────────────
   it: {
     first: [
-      'Aldiro','Bernavo','Celdiro','Delvio','Elrino','Farnio','Gelmio','Helrio','Ilvino','Jalmio',
-      'Keldio','Lornio','Maldio','Nelvio','Ofaldo','Palmio','Quelino','Raldio','Selvio','Taldio',
-      'Ulvio','Valmio','Waldio','Xaldio','Yaldio','Zaldio','Arnivo','Brendio','Coldio','Delvio',
-      'Eraldo','Faldio','Gelmio','Helino','Iraldo','Jaldio','Kelmio','Laldio','Melvio','Naldio',
+      'Alessandro','Andrea','Bruno','Carlo','Daniele','Enrico','Federico',
+      'Giorgio','Luca','Marco','Nicola','Pietro','Riccardo','Simone',
+      'Tommaso','Umberto','Valerio','Giovanni','Francesco','Matteo',
+      'Alberto','Claudio','Davide','Edoardo','Fabio','Gianluca','Jacopo',
+      'Lorenzo','Massimo','Sergio',
     ],
     last: [
-      'Varetti','Quindelli','Aldarino','Bernetti','Carlini','Delvetti','Enrelli','Falmetti','Galvini','Hernetti',
-      'Iraldini','Jalvetti','Kaldelli','Larmetti','Maldini','Nelvetti','Olfelli','Palvetti','Quindini','Raldetti',
-      'Salvetti','Taldini','Ulmetti','Valdini','Waretti','Xaldini','Yalmetti','Zaldini','Arnetti','Braldini',
-      'Caldetti','Dalmini','Envetti','Faldetti','Galmini','Helnetti','Iraldini','Jalvetti','Keldini','Lalmdini',
+      'Bianchi','Colombo','Conti','De Luca','Ferrara','Ferretti','Galli',
+      'Greco','Lombardi','Marini','Martini','Mazza','Negri','Palumbo',
+      'Ricci','Romano','Russo','Santini','Sorrentino','Vitale',
+      'Amato','Barbieri','Caruso','D\'Angelo','Esposito','Fabbri',
+      'Gentile','Innocenti','Leone','Moretti',
     ],
   },
 
+  // ── Dutch ────────────────────────────────────────────────────────────────
   nl: {
     first: [
-      'Aldrik','Bernvik','Celdrik','Delvrik','Elrvik','Farnik','Gelrik','Helrik','Ilvrik','Jalmik',
-      'Keldrik','Lornik','Maldrik','Nelvik','Ofrik','Palmik','Quelrik','Raldrik','Selvik','Taldrik',
-      'Ulvik','Valmik','Waldrik','Xaldrik','Yaldrik','Zaldrik','Arvik','Brendik','Coldrik','Delvrik',
-      'Errik','Faldrik','Gelrik','Helnik','Irrik','Jaldrik','Kelmik','Laldrik','Melvrik','Naldrik',
+      'Alexander','Bas','Christiaan','Daan','Erik','Frank','Gijs','Hans',
+      'Jan','Kevin','Lars','Maarten','Niels','Oscar','Peter','Ruben',
+      'Stefan','Thomas','Vincent','Wesley','Arno','Bram','Dirk','Erwin',
+      'Floris','Gerben','Joost','Koen','Lasse','Michel',
     ],
     last: [
-      'Varden','Quinden','Aldarink','Bernink','Carlsden','Delvink','Enreden','Falmink','Galvden','Hernink',
-      'Iralden','Jalvink','Kaldden','Larmink','Maldink','Nelvden','Olfsink','Palvden','Quinink','Ralden',
-      'Salvink','Taldden','Ulmink','Valden','Warink','Xalden','Yalmink','Zalden','Arnsink','Bralden',
-      'Caldink','Dalmden','Envsink','Faldsink','Galmden','Helnsink','Iraldsink','Jalvsink','Keldsink','Lalmsink',
+      'Bakker','Bos','de Boer','de Vries','Dijkstra','Evers','Gerritsen',
+      'Hendriks','Jansen','Koopmans','Lammers','Mulder','Peters','Smit',
+      'Timmermans','van den Berg','Vermeer','Willems','Wolfs','Zijlstra',
+      'Aalbers','Bergman','Claassen','Dijk','Engbers','Franke',
+      'Groenendijk','Hoekstra','Jonker','Kuipers',
     ],
   },
 
+  // ── Turkish ──────────────────────────────────────────────────────────────
   tr: {
     first: [
-      'Aldiran','Bernavin','Celdiran','Delvran','Elrivan','Farkan','Gelkan','Helkan','Ilvkan','Jalkan',
-      'Keldran','Lorkan','Maldran','Nelkan','Ofkan','Palkan','Quelran','Raldran','Selkan','Taldran',
-      'Ulkan','Valkan','Waldran','Xaldran','Yaldran','Zaldran','Arkan','Brendan','Coldran','Delvran',
-      'Erkan','Faldran','Gelkan','Helkan','Irkan','Jaldran','Kelkan','Laldran','Melvkan','Naldran',
+      'Ahmet','Barış','Cem','Emre','Fatih','Hakan','İbrahim','Kadir',
+      'Mert','Okan','Sercan','Umut','Volkan','Kerem','Burak','Caner',
+      'Ercan','Gökhan','Haluk','Tayfun','Alper','Berkay','Cenk','Doruk',
+      'Enes','Furkan','Güneş','Kaan','Levent','Oğuz',
     ],
     last: [
-      'Varkan','Quindkan','Aldaroğlu','Bernoğlu','Carlskan','Delvoğlu','Enrekan','Falmoğlu','Galvkan','Hernoğlu',
-      'Iralkan','Jalvoğlu','Kaldkan','Larmoğlu','Maldkan','Nelvoğlu','Olfskan','Palvoğlu','Quinkan','Ralkan',
-      'Salvoğlu','Taldkan','Ulmoğlu','Valdkan','Waroğlu','Xaldkan','Yalmoğlu','Zaldkan','Arnskan','Braldkan',
-      'Caldoğlu','Dalmoğlu','Envkan','Faldkan','Galmkan','Helnkan','Iraldkan','Jalvkan','Keldkan','Lalmkan',
+      'Aydın','Çelik','Demir','Doğan','Güneş','Kaya','Koç','Kurt',
+      'Özdemir','Polat','Şahin','Tekin','Uysal','Yıldız','Yılmaz',
+      'Arslan','Aslan','Bulut','Can','Çakır','Duman','Erdoğan',
+      'Güler','Kaplan','Kılıç','Mutlu','Öztürk','Şimşek','Tunç','Uzun',
     ],
   },
 
+  // ── Polish ───────────────────────────────────────────────────────────────
   pl: {
     first: [
-      'Aldrek','Bernvik','Celdrek','Delvrek','Elrvek','Farnek','Gelrek','Helrek','Ilvrek','Jalmek',
-      'Keldrek','Lornek','Maldrek','Nelrek','Ofrek','Palmek','Quelrek','Raldrek','Selvek','Taldrek',
-      'Ulrek','Valmek','Waldrek','Xaldrek','Yaldrek','Zaldrek','Arvek','Brendek','Coldrek','Delvrek',
-      'Errek','Faldrek','Gelnek','Helnek','Irrek','Jaldrek','Kelmek','Laldrek','Melvrek','Naldrek',
+      'Adam','Bartosz','Damian','Filip','Grzegorz','Hubert','Jakub',
+      'Kamil','Łukasz','Marek','Michał','Paweł','Piotr','Rafał','Robert',
+      'Sebastian','Tomasz','Wojciech','Artur','Krzysztof','Adrian','Błażej',
+      'Cezary','Daniel','Eryk','Franciszek','Gustaw','Igor','Jan','Karol',
     ],
     last: [
-      'Varczyk','Quinczyk','Aldarski','Bernski','Carlczyk','Delvski','Enreski','Falmski','Galvski','Hernski',
-      'Iraldski','Jalvski','Kaldski','Larmski','Maldski','Nelvski','Olfski','Palvski','Quinski','Raldski',
-      'Salvski','Taldski','Ulmski','Valdski','Warski','Xaldski','Yalmski','Zaldski','Arnski','Braldski',
-      'Caldski','Dalmski','Envski','Faldski','Galmski','Helnski','Iraldski','Jalvski','Keldski','Lalmski',
+      'Kowalski','Wiśniewski','Wójcik','Kowalczyk','Kamiński','Lewandowski',
+      'Zieliński','Szymański','Woźniak','Dąbrowski','Kozłowski','Jankowski',
+      'Mazur','Kwiatkowski','Krawczyk','Piotrowski','Grabowski','Nowakowski',
+      'Pawlak','Michalski','Adamczyk','Baran','Chmielewski','Dudek',
+      'Filipiak','Górski','Jabłoński','Kaczmarek','Lis','Markowski',
     ],
   },
 
+  // ── Arabic ───────────────────────────────────────────────────────────────
   ar: {
     first: [
-      'Aldram','Bernavin','Celdam','Delvam','Elram','Farkam','Gelkam','Helkam','Ilvkam','Jalkam',
-      'Keldram','Lorkam','Maldram','Nelkam','Ofkam','Palkam','Quelram','Raldram','Selkam','Taldram',
-      'Ulkam','Valkam','Waldram','Xaldram','Yaldram','Zaldram','Arkam','Brendam','Coldram','Delvram',
-      'Erkam','Faldram','Gelkam','Helkam','Irkam','Jaldram','Kelkam','Laldram','Melvkam','Naldram',
+      'Ahmed','Ali','Faisal','Hassan','Ibrahim','Karim','Mahmoud','Mohamed',
+      'Nasser','Omar','Rami','Samir','Tarek','Walid','Yousef','Abdullah',
+      'Adel','Bilal','Hamza','Khalid','Amr','Bassem','Diaa','Essam',
+      'Fahad','Gamal','Hossam','Ismail','Kareem','Loay',
     ],
     last: [
-      'Varhani','Quindani','Aldarhani','Bernhani','Carlhani','Delvhani','Enrehani','Falmhani','Galvhani','Hernhani',
-      'Iraldhani','Jalvhani','Kaldhani','Larmhani','Maldhani','Nelvhani','Olfhani','Palvhani','Quinhani','Raldhani',
-      'Salvhani','Taldhani','Ulmhani','Valdhani','Warhani','Xaldhani','Yalmhani','Zaldhani','Arnhani','Braldhani',
-      'Caldhani','Dalmhani','Envhani','Faldhani','Galmhani','Helnhani','Iraldhani','Jalvhani','Keldhani','Lalmhani',
+      'Al-Hassan','Al-Rashid','Benali','El-Amin','Haddad','Khalil',
+      'Mansouri','Nasser','Farid','Kamal','Hamid','Aziz','Salih','Tahir',
+      'Wahid','Amir','Bashir','Ghazi','Jamil','Zaki',
+      'Abdallah','Bakr','Chalabi','Darwish','Fakhouri','Ghanem',
+      'Husseini','Idris','Jabri','Khoury',
     ],
   },
 
+  // ── Japanese ─────────────────────────────────────────────────────────────
   jp: {
     first: [
-      'Aldomi','Bernomi','Celdomi','Delvomi','Elromi','Faromi','Gelomi','Helomi','Ilvomi','Jalomi',
-      'Keldomi','Loromi','Maldomi','Nelomi','Ofomi','Palomi','Quelomi','Raldomi','Selomi','Taldomi',
-      'Ulomi','Valomi','Walomi','Xalomi','Yalomi','Zalomi','Aromi','Brendomi','Colomi','Delvomi',
-      'Eromi','Faldomi','Gelomi','Helomi','Iromi','Jalomi','Kelomi','Lalomi','Melvomi','Nalomi',
+      'Haruto','Yuto','Sota','Hinata','Kaito','Ren','Hayato','Riku',
+      'Shota','Daiki','Yuki','Ryusei','Tomoya','Kenshin','Makoto',
+      'Naoki','Ryota','Sho','Taichi','Wataru','Akito','Genki','Hiroto',
+      'Issei','Junpei','Keisuke','Masato','Nobuki','Osamu','Raito',
     ],
     last: [
-      'Varamoto','Quindamoto','Aldaramoto','Bernamoto','Carlamoto','Delvamoto','Enramoto','Falmamoto','Galvamoto','Hernamoto',
-      'Iraldamoto','Jalvamoto','Kaldamoto','Larmamoto','Maldamoto','Nelvamoto','Olfamoto','Palvamoto','Quinamoto','Raldamoto',
-      'Salvamoto','Taldamoto','Ulmamoto','Valdamoto','Waramoto','Xaldamoto','Yalmamoto','Zaldamoto','Arnamoto','Braldamoto',
-      'Caldamoto','Dalmamoto','Envamoto','Faldamoto','Galmamoto','Helnamoto','Iraldamoto','Jalvamoto','Keldamoto','Lalmamoto',
+      'Sato','Suzuki','Tanaka','Watanabe','Ito','Yamamoto','Nakamura',
+      'Hayashi','Kobayashi','Yoshida','Yamada','Sasaki','Yamaguchi',
+      'Matsumoto','Inoue','Kimura','Shimizu','Fujii','Ogawa','Ikeda',
+      'Abe','Baba','Chiba','Doi','Endo','Fujita','Goto','Hara',
+      'Ishii','Kato',
     ],
   },
 
+  // ── Korean ───────────────────────────────────────────────────────────────
+  ko: {
+    first: [
+      'Joon','Seungmin','Hyunwoo','Taehyun','Minjun','Jihoon','Sungho',
+      'Donghyun','Jaehyun','Yunho','Kyungjun','Sangwoo','Woojin','Eunsoo',
+      'Hyunseok','Jongwoo','Minseok','Seokjun','Taejun','Youngmin',
+    ],
+    last: [
+      'Kim','Lee','Park','Choi','Jung','Kang','Cho','Yoon','Jang','Lim',
+      'Han','Oh','Seo','Shin','Kwon','Hwang','Ahn','Song','Yoo','Hong',
+    ],
+  },
+
+  // ── Chinese ──────────────────────────────────────────────────────────────
+  zh: {
+    first: [
+      'Wei','Hao','Jun','Peng','Chao','Bo','Yang','Tao','Lei','Jie',
+      'Qiang','Bin','Fei','Gang','Hui','Jian','Kai','Long','Ming','Ning',
+    ],
+    last: [
+      'Wang','Li','Zhang','Liu','Chen','Yang','Huang','Zhao','Wu','Zhou',
+      'Xu','Sun','Ma','Zhu','Hu','Guo','He','Lin','Luo','Song',
+    ],
+  },
+
+  // ── African (West/East) ──────────────────────────────────────────────────
   af: {
     first: [
-      'Aldeko','Berneko','Celdeko','Delveko','Elreko','Fareko','Geleko','Heleko','Ilveko','Jaleko',
-      'Keldeko','Loreko','Maldeko','Neleko','Ofeko','Paleko','Queleko','Raldeko','Seleko','Taldeko',
-      'Uleko','Valeko','Waleko','Xaleko','Yaleko','Zaleko','Areko','Brendeko','Coleko','Delveko',
-      'Ereko','Faldeko','Geleko','Heleko','Ireko','Jaleko','Keleko','Laleko','Melveko','Naleko',
+      'Emeka','Festus','Godwin','Ikenna','Kelechi','Nnamdi','Obinna',
+      'Uche','Biodun','Chinonso','Dayo','Ebuka','Femi','Tunde','Yemi',
+      'Kofi','Kwame','Kwabena','Yaw','Fiifi','Nana','Kwesi','Kobby',
+      'Chukwu','Amara','Bello','Chidi','Dele','Funmi',
     ],
     last: [
-      'Varobi','Quindobi','Aldarobi','Bernobi','Carlobi','Delvobi','Enreobi','Falmobi','Galvobi','Hernobi',
-      'Iraldobi','Jalvobi','Kaldobi','Larmobi','Maldobi','Nelvobi','Olfobi','Palvobi','Quinobi','Raldobi',
-      'Salvobi','Taldobi','Ulmobi','Valdobi','Warobi','Xaldobi','Yalmobi','Zaldobi','Arnobi','Braldobi',
-      'Caldobi','Dalmobi','Envobi','Faldobi','Galmobi','Helnobi','Iraldobi','Jalvobi','Keldobi','Lalmobi',
+      'Okafor','Adeyemi','Okeke','Afolabi','Nwosu','Eze','Obi','Nwachukwu',
+      'Adesanya','Olawale','Chukwuma','Adeola','Nwankwo','Okonkwo','Adebayo',
+      'Mensah','Asante','Boateng','Owusu','Annan',
+      'Diallo','Camara','Traore','Coulibaly','Toure','Keita','Bah','Sylla',
+      'Kouyate','Diarra',
     ],
   },
 
+  // ── English-speaking ─────────────────────────────────────────────────────
   en: {
     first: [
-      'Aldwick','Brentwick','Caldwick','Darvick','Eldwick','Farvick','Galdwick','Haldwick','Ilvick','Jaldwick',
-      'Keldwick','Lardwick','Maldwick','Naldwick','Oldwick','Pardwick','Quelwick','Raldwick','Saldwick','Taldwick',
-      'Ulwick','Valdwick','Wardwick','Xaldwick','Yaldwick','Zaldwick','Arvick','Brendwick','Coldwick','Delvick',
-      'Erwick','Faldwick','Gelvick','Helvick','Irwick','Jaldwick','Kelmick','Laldwick','Melvick','Naldwick',
+      'Alexander','Benjamin','Charlie','Daniel','Ethan','Freddie','George',
+      'Harry','Jack','Liam','Matthew','Noah','Oliver','Patrick','Ryan',
+      'Samuel','Thomas','William','Aaron','Bradley','Connor','Dean',
+      'Elliot','Fletcher','Gareth','Harvey','James','Kyle','Leon',
     ],
     last: [
-      'Varwick','Quinwick','Aldarwick','Bernwick','Carlwick','Delvwick','Enrwick','Falmwick','Galvwick','Hernwick',
-      'Iraldwick','Jalvwick','Kaldwick','Larmwick','Maldwick','Nelvwick','Olfwick','Palvwick','Quinwick','Raldwick',
-      'Salvwick','Taldwick','Ulmwick','Valdwick','Warwick','Xaldwick','Yalmwick','Zaldwick','Arnwick','Braldwick',
-      'Caldwick','Dalmwick','Envwick','Faldwick','Galmwick','Helnwick','Iraldwick','Jalvwick','Keldwick','Lalmwick',
+      'Anderson','Brown','Clarke','Davies','Evans','Foster','Graham',
+      'Harris','Johnson','King','Lewis','Morgan','Nelson','O\'Brien',
+      'Parker','Quinn','Roberts','Smith','Taylor','Williams',
+      'Armstrong','Bell','Cooper','Dixon','Ellis','Fletcher','Gibson',
+      'Henderson','Ingram','Jenkins',
     ],
   },
 
+  // ── Generic (fallback) ───────────────────────────────────────────────────
   generic: {
     first: [
-      'Zavar','Orin','Thalec','Brenn','Yoskel','Dranik','Farvel','Gunto','Imrek','Jorav',
-      'Kelash','Lorven','Mindo','Norec','Osval','Pelkon','Ryzel','Servo','Thaldo','Unark',
-      'Valto','Wyrek','Xandro','Yarkon','Zornel','Aldric','Brenco','Ceval','Daxon','Elron',
-      'Fenrik','Gorvil','Harnek','Irzel','Jelkon','Korvan','Ledric','Mercon','Narkel','Olven',
+      'Adrian','Bruno','Carlos','Dario','Emil','Fabio','Goran','Hugo',
+      'Ivan','Jonas','Kosta','Luca','Marco','Niko','Oscar','Pavel',
+      'Radu','Stefan','Tomas','Vlad','Anton','Boris','Cristian','Denis',
+      'Eugen','Filip','Gregor','Haris','Igor','Jan',
     ],
     last: [
-      'Varkon','Theldric','Omrek','Belzon','Farvec','Guldric','Henkar','Invor','Jornek','Kelvar',
-      'Lornec','Meldric','Narzon','Ovkar','Pelrec','Rosvon','Sultec','Tharvon','Undrek','Veldric',
-      'Wornek','Xalvar','Yondric','Zornek','Aldrec','Balvon','Crender','Dornek','Elvark','Forcon',
-      'Grelvar','Hornek','Indrec','Jolvon','Keldrac','Lorvec','Mendric','Norvar','Oldrek','Prevon',
+      'Ardon','Barek','Celnik','Dorn','Elvar','Faron','Gornik','Harek',
+      'Ilvar','Jornek','Kelvar','Lorn','Mardon','Norvik','Oldrek',
+      'Pelvar','Rondek','Salvar','Tornik','Ulvon',
+      'Vandrek','Weldric','Xornek','Yalvar','Zondek',
+      'Arnek','Bolvon','Crondek','Delvon','Endrec',
     ],
   },
 };
 
-// Map country names (Russian) to language pool key
-const countryToPool: Record<string, string> = {
-  // Russian-speaking
-  'Россия':'ru','Беларусь':'ru','Украина':'ru','Казахстан':'ru',
-  'Молдавия':'ru','Киргизия':'ru','Таджикистан':'ru','Туркмения':'ru',
-  'Узбекистан':'ru','Армения':'ru','Азербайджан':'ru','Грузия':'ru',
+// ── Country → pool mapping ────────────────────────────────────────────────
 
-  // Spanish-speaking
+const countryToPool: Record<string, string> = {
+  // Russian
+  'Россия':'ru','Беларусь':'ru','Казахстан':'ru',
+  'Молдавия':'ru','Киргизия':'ru','Таджикистан':'ru',
+  'Туркмения':'ru','Узбекистан':'ru','Армения':'ru',
+
+  // Ukrainian
+  'Украина':'uk',
+
+  // Spanish
   'Испания':'es','Аргентина':'es','Мексика':'es','Колумбия':'es',
   'Венесуэла':'es','Чили':'es','Перу':'es','Эквадор':'es',
   'Боливия':'es','Парагвай':'es','Уругвай':'es','Куба':'es',
   'Доминиканская Республика':'es','Гватемала':'es','Гондурас':'es',
   'Сальвадор':'es','Никарагуа':'es','Коста-Рика':'es','Панама':'es',
 
-  // Portuguese-speaking
+  // Portuguese/Brazilian
   'Бразилия':'pt','Португалия':'pt','Ангола':'pt','Мозамбик':'pt',
 
-  // German-speaking
+  // German
   'Германия':'de','Австрия':'de','Лихтенштейн':'de',
 
-  // French-speaking
+  // French
   'Франция':'fr','Люксембург':'fr','Монако':'fr',
-  'Кот-д\'Ивуар':'fr','Мали':'fr',
-  'Буркина-Фасо':'fr','Бенин':'fr',
-  'Того':'fr','Гвинея':'fr','Конго (ДРК)':'fr','Конго (Республика)':'fr',
+  'Кот-д\'Ивуар':'fr','Мали':'fr','Буркина-Фасо':'fr',
+  'Бенин':'fr','Того':'fr','Гвинея':'fr',
+  'Конго (ДРК)':'fr','Конго (Республика)':'fr',
 
-  // Italian-speaking
+  // Italian
   'Италия':'it','Сан-Марино':'it',
 
-  // Dutch-speaking
+  // Dutch
   'Нидерланды':'nl',
 
-  // Turkish-speaking
-  'Турция':'tr',
+  // Turkish
+  'Турция':'tr','Азербайджан':'tr',
 
   // Polish
   'Польша':'pl',
 
-  // Arabic-speaking
+  // Arabic
   'Саудовская Аравия':'ar','Египет':'ar','Марокко':'ar',
   'Алжир':'ar','ОАЭ':'ar','Катар':'ar','Ирак':'ar',
   'Иордания':'ar','Ливан':'ar','Сирия':'ar','Йемен':'ar',
@@ -266,13 +345,19 @@ const countryToPool: Record<string, string> = {
   // Japanese
   'Япония':'jp',
 
-  // African (English-influenced)
+  // Korean
+  'Южная Корея':'ko','Северная Корея':'ko',
+
+  // Chinese
+  'Китай':'zh',
+
+  // African
   'Нигерия':'af','Гана':'af','Камерун':'af','ЮАР':'af',
   'Кения':'af','Эфиопия':'af','Танзания':'af','Уганда':'af',
   'Замбия':'af','Зимбабве':'af','Руанда':'af','Сенегал':'af',
   'Сьерра-Леоне':'af','Либерия':'af','Намибия':'af',
 
-  // English-speaking
+  // English
   'Великобритания':'en','США':'en','Австралия':'en',
   'Ирландия':'en','Канада':'en','Новая Зеландия':'en',
 };
@@ -289,7 +374,7 @@ function seeded(i: number, seed: number): number {
 }
 
 export function generateName(pool: NamePool, index: number, seed: number): string {
-  const fi = Math.floor(seeded(index, seed) * pool.first.length);
+  const fi = Math.floor(seeded(index, seed)     * pool.first.length);
   const li = Math.floor(seeded(index, seed + 1) * pool.last.length);
   return `${pool.first[fi]} ${pool.last[li]}`;
 }
