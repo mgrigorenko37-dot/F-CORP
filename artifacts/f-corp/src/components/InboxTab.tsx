@@ -1,95 +1,96 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, Check, X } from 'lucide-react';
+import { loadGameState, type InboxMessage } from '../lib/gameState';
 
 type MessageStatus = 'pending' | 'approved' | 'rejected' | 'read';
 type InboxFilter = 'new' | 'action' | 'all';
 
+// Static messages have a `date` for sorting (season pre-start)
+const STATIC_DATE = '2025-08-01';
+
 interface Message {
-  id: string;
-  type: 'REPORT' | 'OFFER' | 'REQUEST';
-  time: string;
-  sender: string;
-  text: string;
-  status: MessageStatus;
+  id:             string;
+  type:           'REPORT' | 'OFFER' | 'REQUEST';
+  date:           string;  // ISO date — newest-first sort key
+  time:           string;
+  sender:         string;
+  text:           string;
+  status:         MessageStatus;
   requiresAction: boolean;
 }
 
 function buildMessages(clubName: string, leagueName: string): Message[] {
   return [
     {
-      id: 'welcome',
-      type: 'REPORT',
-      time: '00:00',
+      id: 'welcome', type: 'REPORT', date: STATIC_DATE, time: '00:00',
       sender: 'Футбольная лига',
       text: `Добро пожаловать в профессиональный футбол! Клуб «${clubName}» официально зарегистрирован в ${leagueName}. Желаем успехов в предстоящем сезоне. Удачи, менеджер!`,
-      status: 'pending',
-      requiresAction: false,
+      status: 'pending', requiresAction: false,
     },
     {
-      id: '1',
-      type: 'REPORT',
-      time: '08:00',
+      id: '1', type: 'REPORT', date: STATIC_DATE, time: '08:00',
       sender: 'AI Менеджер',
       text: 'Предсезонная подготовка завершена. Состав готов к старту сезона. Рекомендую сосредоточиться на физической форме игроков на этой неделе.',
-      status: 'pending',
-      requiresAction: false,
+      status: 'pending', requiresAction: false,
     },
     {
-      id: '2',
-      type: 'OFFER',
-      time: '09:15',
+      id: '2', type: 'OFFER', date: STATIC_DATE, time: '09:15',
       sender: 'Greywood United',
       text: `Мы заинтересованы в приобретении одного из ваших полузащитников. Готовы обсудить сумму от €2.8M. Требуется ваше решение.`,
-      status: 'pending',
-      requiresAction: true,
+      status: 'pending', requiresAction: true,
     },
     {
-      id: '3',
-      type: 'REPORT',
-      time: '11:30',
+      id: '3', type: 'REPORT', date: STATIC_DATE, time: '11:30',
       sender: 'Медицинский штаб',
       text: 'Плановые предсезонные медицинские осмотры завершены. Весь состав признан здоровым и готовым к соревновательной нагрузке.',
-      status: 'pending',
-      requiresAction: false,
+      status: 'pending', requiresAction: false,
     },
     {
-      id: '4',
-      type: 'REQUEST',
-      time: '14:00',
+      id: '4', type: 'REQUEST', date: STATIC_DATE, time: '14:00',
       sender: 'Тренерский штаб',
       text: 'Необходимо определить тактическую схему на первый тур. Предлагаю 4-3-3 или 4-4-2 в зависимости от соперника. Ваше решение, босс.',
-      status: 'pending',
-      requiresAction: true,
+      status: 'pending', requiresAction: true,
     },
     {
-      id: '5',
-      type: 'REPORT',
-      time: '18:45',
+      id: '5', type: 'REPORT', date: STATIC_DATE, time: '18:45',
       sender: 'Аналитика',
       text: 'Анализ соперников в предстоящем сезоне готов. Наибольшую угрозу в группе представляет AFC Dunmoor — мощная игра на стандартах.',
-      status: 'pending',
-      requiresAction: false,
+      status: 'pending', requiresAction: false,
     },
     {
-      id: '6',
-      type: 'OFFER',
-      time: '21:00',
+      id: '6', type: 'OFFER', date: STATIC_DATE, time: '21:00',
       sender: 'Спонсор: VortexPro',
       text: 'VortexPro предлагает спонсорский контракт на сезон — €800K. Логотип на форме + права на название тренировочного поля. Требуется одобрение.',
-      status: 'pending',
-      requiresAction: true,
+      status: 'pending', requiresAction: true,
     },
     {
-      id: '7',
-      type: 'REQUEST',
-      time: '22:10',
+      id: '7', type: 'REQUEST', date: STATIC_DATE, time: '22:10',
       sender: 'Директор скаутинга',
       text: 'Обнаружен талантливый 19-летний нападающий в резервной лиге, рейтинг 74, потенциал 86. Запрашиваю бюджет €350K на скаутинг.',
-      status: 'pending',
-      requiresAction: true,
+      status: 'pending', requiresAction: true,
     },
   ];
+}
+
+/** Merge static + dynamic messages, apply stored statuses to both, sort newest-first. */
+function mergeMessages(
+  staticMsgs:  Message[],
+  dynamicMsgs: InboxMessage[],
+  statuses:    Record<string, MessageStatus>,
+): Message[] {
+  const dynamic: Message[] = dynamicMsgs.map(dm => ({
+    ...dm,
+    status: statuses[dm.id] ?? 'pending',
+  }));
+  const statics: Message[] = staticMsgs.map(m => ({
+    ...m,
+    status: statuses[m.id] ?? m.status,   // preserve persisted read/approved/rejected
+  }));
+  return [...dynamic, ...statics].sort((a, b) => {
+    const d = b.date.localeCompare(a.date);
+    return d !== 0 ? d : b.time.localeCompare(a.time);
+  });
 }
 
 const TYPE_LABEL: Record<Message['type'], string> = {
@@ -141,12 +142,19 @@ function saveStatuses(msgs: Message[]) {
 export default function InboxTab() {
   const stored   = readStoredClub();
   const clubName = stored.name;
-  const [messages, setMessages] = useState<Message[]>(() => {
+
+  // Load on every mount so new tick messages appear immediately when the user
+  // switches to the inbox tab without having to reload the app.
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [filter, setFilter]     = useState<InboxFilter>('new');
+
+  useEffect(() => {
+    const gs       = loadGameState();
     const base     = buildMessages(stored.name, stored.league);
     const statuses = loadStatuses();
-    return base.map(m => statuses[m.id] ? { ...m, status: statuses[m.id] } : m);
-  });
-  const [filter, setFilter]     = useState<InboxFilter>('new');
+    setMessages(mergeMessages(base, gs.inbox ?? [], statuses));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleAction = (id: string, action: 'approved' | 'rejected' | 'read') => {
     setMessages(msgs => {

@@ -56,6 +56,13 @@ description: Key decisions for the football manager game engine — training, co
 - **Integration in TournamentTab**: `handleAdvanceWeek` uses try/finally to always clear `simulatingRef` even on errors. "Старт сезона" on first press (no schedule) → calls `initializeSeason` then `applyWeeklyTick`.
 - `getThisWeekMatches(schedule, currentDate)` — used by UI to preview matches in the upcoming week window.
 
+## Inbox (InboxTab.tsx + GameState.inbox) — built, in production
+- `GameState.inbox: InboxMessage[]` — dynamic messages, newest first, capped at 200. Version 4.
+- `tickEngine.applyWeeklyTick` generates: match result (per match), injury (per new injury, ID = `injury_${playerId}_${weekEnd}`), recovery (per healed player)
+- Static messages in `buildMessages()` have `date: '2025-08-01'` so they sort below dynamic messages
+- `mergeMessages(static, dynamic, statuses)` applies `fcorp_inbox_statuses` to **both** static and dynamic messages — critical, static status must not regress on remount
+- `InboxTab` uses `useEffect([])` to reload on every mount — picks up new tick messages without app reload (works because MainGame conditionally mounts tabs)
+
 **Why:** Decisions on Day 1 of implementation should be consistent. Future work (inbox events, transfer AI) should extend GameState and use applyWeeklyTick as the time-progression entry point.
 
 **How to apply:** When adding new game systems, read gameState.ts first and extend the `GameState` interface rather than creating new localStorage keys. All time-based progression (injuries, fatigue, aging) belongs in tickEngine, not matchEngine.

@@ -15,11 +15,23 @@
  *   and anchors currentDate 7 days before the first fixture.
  */
 
-import type { GameState, ScheduledMatch, InjuryType } from './gameState';
+import type { GameState, ScheduledMatch, InjuryType, InboxMessage } from './gameState';
 import { simulateMatch } from './matchEngine';
 import type { SimulateMatchOutput } from './matchEngine';
 import { generateSeasonSchedule } from './scheduleEngine';
 import type { SeasonScheduleInput } from './scheduleEngine';
+
+// ─── INJURY DISPLAY NAMES ────────────────────────────────────────────────────
+
+const INJURY_NAMES: Record<InjuryType, string> = {
+  bruise:        'Ушиб',
+  muscle_strain: 'Растяжение мышцы',
+  sprain:        'Растяжение связок',
+  muscle_tear:   'Разрыв мышцы',
+  fracture:      'Перелом',
+  acl:           'Разрыв крестообразной связки',
+  concussion:    'Сотрясение мозга',
+};
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -43,6 +55,7 @@ export interface WeeklyTickResult {
   matchesPlayed:     MatchSummary[];
   injuriesHealed:    number[]; // player IDs whose injury cleared this week
   injuriesOccurred:  InjuryEvent[];
+  inboxMessages:     InboxMessage[]; // new messages generated this tick
 }
 
 // ─── DATE UTILS ───────────────────────────────────────────────────────────────
@@ -227,11 +240,64 @@ export function applyWeeklyTick(
     };
   });
 
+  // ── Generate inbox messages ──
+  const inboxMessages: InboxMessage[] = [];
+
+  // Match result messages
+  for (const { match, myGoals, oppGoals } of matchesPlayed) {
+    const won      = myGoals > oppGoals;
+    const drew     = myGoals === oppGoals;
+    const opponent = (match.isHome ? match.away : match.home).replace('MY_CLUB', clubName);
+    const scoreStr = match.isHome ? `${myGoals}:${oppGoals}` : `${oppGoals}:${myGoals}`;
+    const homeTeam = match.isHome ? clubName : opponent;
+    const awayTeam = match.isHome ? opponent : clubName;
+    const outcome  = won ? 'ПОБЕДА! 🏆' : drew ? 'Ничья ⚡' : 'Поражение ❌';
+    inboxMessages.push({
+      id:             `match_${match.id}`,
+      type:           'REPORT',
+      date:           match.date,
+      time:           '20:45',
+      sender:         'Пресс-служба',
+      text:           `${match.competitionName} · ${typeof match.round === 'string' ? match.round : `Тур ${match.round}`}\n${homeTeam} ${scoreStr} ${awayTeam} — ${outcome}`,
+      requiresAction: false,
+    });
+  }
+
+  // Injury messages (new this tick) — use playerId not name to avoid collision if two
+  // players share a display name; playerId is unique per player in the roster.
+  for (const { playerId, playerName, injuryType } of injuriesOccurred) {
+    inboxMessages.push({
+      id:             `injury_${playerId}_${weekEnd}`,
+      type:           'REPORT',
+      date:           weekEnd,
+      time:           '22:00',
+      sender:         'Медицинский штаб',
+      text:           `${playerName} получил травму: ${INJURY_NAMES[injuryType]}. Выбывает на несколько недель.`,
+      requiresAction: false,
+    });
+  }
+
+  // Recovery messages
+  for (const playerId of injuriesHealed) {
+    const name = squadNames.get(playerId) ?? `Игрок #${playerId}`;
+    inboxMessages.push({
+      id:             `healed_${playerId}_${weekEnd}`,
+      type:           'REPORT',
+      date:           weekEnd,
+      time:           '09:00',
+      sender:         'Медицинский штаб',
+      text:           `${name} полностью восстановился после травмы и готов к тренировкам.`,
+      requiresAction: false,
+    });
+  }
+
   // ── Assemble new state ──
+  const prevInbox = gameState.inbox ?? [];
   const newState: GameState = {
     ...gameState,
     playerStates: finalPlayerStates,
     lastWeekTick: isoDate(new Date()),
+    inbox:        [...inboxMessages, ...prevInbox].slice(0, 200), // cap at 200 messages
     season: {
       ...season,
       currentDate: weekEnd,
@@ -240,7 +306,7 @@ export function applyWeeklyTick(
     },
   };
 
-  return { newState, weekStart, weekEnd, matchesPlayed, injuriesHealed, injuriesOccurred };
+  return { newState, weekStart, weekEnd, matchesPlayed, injuriesHealed, injuriesOccurred, inboxMessages };
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
