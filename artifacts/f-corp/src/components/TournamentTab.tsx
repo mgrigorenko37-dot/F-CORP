@@ -16,6 +16,9 @@ import { loadGameState, updateGameState, createDefaultPlayerState, type GameStat
 import { applyWeeklyTick, initializeSeason, getThisWeekMatches } from '../lib/tickEngine';
 import { ALL_MARKET_PLAYERS } from '../data/playersMarket';
 import { FIRST_SQUAD_TMPL, scaleRating } from '../data/squadData';
+import {
+  getLastTickTs, setLastTickTs, msUntilNextTick, formatCountdown, tickProgress, TICK_INTERVAL_MS,
+} from '../lib/autoTick';
 
 const C = {
   card: '#1a1c25', card2: '#1f222d', border: '#1c1f28', border2: '#2a2d38',
@@ -363,6 +366,10 @@ export default function TournamentTab() {
   const [gameState, setGameState]   = useState<GameState | null>(null);
   const [simulating, setSimulating] = useState(false);
   const simulatingRef               = useRef(false); // ref guard prevents double-execution
+  const gameStateRef                = useRef<GameState | null>(null);
+
+  // countdown in ms until the next auto-tick
+  const [countdown, setCountdown]   = useState<number>(() => msUntilNextTick(Date.now()));
 
   useEffect(() => {
     setMyClub(getStoredClubName());
@@ -370,6 +377,9 @@ export default function TournamentTab() {
     setLevel(getLeagueLevel());
     setGameState(loadGameState());
   }, []);
+
+  // Keep ref in sync so interval closure always sees latest state
+  useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
 
   const league     = getLeagueAtLevel(country, level);
   const levelColor = LEVEL_COLOR[level] ?? C.dim;
@@ -415,58 +425,98 @@ export default function TournamentTab() {
   const currentDateStr  = gameState?.season.currentDate ?? '';
   const thisWeekMatches = getThisWeekMatches(schedule, currentDateStr);
 
-  // ── Advance one week (init season if needed, then tick) ──
-  const handleAdvanceWeek = useCallback(() => {
-    if (simulatingRef.current || !gameState) return;
-    simulatingRef.current = true;
-    setSimulating(true);
-
-    // Initialise season on first press if schedule is empty
-    let state = gameState;
-    if (!hasSchedule) {
+  // ── Pure tick helper — takes a state, returns the next state ──
+  const runOneTick = useCallback((state: GameState): GameState => {
+    // Init season if not started
+    let s = state;
+    if (!s.season.schedule.length) {
       const totalRoundsForSeason = (league.totalClubs - 1) * 2;
       const comps = level === 1
         ? ['league', 'national_cup', 'league_cup', 'uel']
         : level === 2 ? ['league', 'national_cup', 'league_cup'] : ['league', 'national_cup'];
-      state = initializeSeason(state, {
-        country,
-        leagueLevel:        level,
-        rivals:             league.rivals,
-        leagueName:         league.name,
-        totalRounds:        totalRoundsForSeason,
-        activeCompetitions: comps,
-        seasonStartDate:    '2025-08-09',
+      s = initializeSeason(s, {
+        country, leagueLevel: level, rivals: league.rivals,
+        leagueName: league.name, totalRounds: totalRoundsForSeason,
+        activeCompetitions: comps, seasonStartDate: '2025-08-09',
       });
     }
-
-    // Initialise playerStates from first-squad templates if empty.
-    // This connects the squad display (SquadTab) with the match simulation engine.
-    if (state.playerStates.length === 0) {
-      const playerStates = FIRST_SQUAD_TMPL.map(tmpl =>
+    // Init playerStates from squad templates if empty
+    if (s.playerStates.length === 0) {
+      s = { ...s, playerStates: FIRST_SQUAD_TMPL.map(tmpl =>
         createDefaultPlayerState(tmpl.id, tmpl.pos, scaleRating(tmpl.rating, level))
-      );
-      state = { ...state, playerStates };
+      )};
     }
-
-    // Build squad name map
+    // Build squad name lookup
     const squadNames = new Map<number, string>();
-    for (const id of state.purchasedPlayerIds) {
+    for (const id of s.purchasedPlayerIds) {
       const p = ALL_MARKET_PLAYERS.find(mp => mp.id === id);
       if (p) squadNames.set(id, p.name);
     }
-    for (const ps of state.playerStates) {
+    for (const ps of s.playerStates) {
       if (!squadNames.has(ps.id)) squadNames.set(ps.id, `Игрок #${ps.id}`);
     }
+    const { newState } = applyWeeklyTick(s, squadNames, level, myClub);
+    return newState;
+  }, [league, level, country, myClub]);
 
+  // Keep a stable ref so the countdown interval can call the latest version
+  const runOneTickRef = useRef(runOneTick);
+  useEffect(() => { runOneTickRef.current = runOneTick; }, [runOneTick]);
+
+  // ── Manual advance ──
+  const handleAdvanceWeek = useCallback(() => {
+    if (simulatingRef.current || !gameState) return;
+    simulatingRef.current = true;
+    setSimulating(true);
     try {
-      const tickResult = applyWeeklyTick(state, squadNames, level, myClub);
-      updateGameState(() => tickResult.newState);
-      setGameState(tickResult.newState);
+      const newState = runOneTick(gameState);
+      updateGameState(() => newState);
+      setGameState(newState);
+      setLastTickTs(Date.now());
+      setCountdown(TICK_INTERVAL_MS);
     } finally {
       simulatingRef.current = false;
       setSimulating(false);
     }
-  }, [gameState, hasSchedule, league, level, country, myClub]);
+  }, [gameState, runOneTick]);
+
+  // Track the reference point used by the live interval (initialised from storage
+  // so the first render is already accurate even without a prior manual tick).
+  const lastAutoTickRef = useRef<number>(getLastTickTs() || Date.now());
+
+  // ── Countdown interval — updates every second, auto-ticks on elapsed threshold ──
+  useEffect(() => {
+    const id = setInterval(() => {
+      const now = Date.now();
+      const elapsed = now - lastAutoTickRef.current;
+      const remaining = Math.max(0, TICK_INTERVAL_MS - elapsed);
+      setCountdown(remaining);
+
+      // Fire when a full interval has elapsed — robust against missed poll windows
+      if (elapsed >= TICK_INTERVAL_MS && gameStateRef.current && !simulatingRef.current) {
+        const state = gameStateRef.current;
+        if (state.season.schedule.length > 0 && state.season.schedule.some(m => !m.played)) {
+          simulatingRef.current = true;
+          try {
+            const newState = runOneTickRef.current(state);
+            updateGameState(() => newState);
+            setGameState(newState);
+            setLastTickTs(now);
+            lastAutoTickRef.current = now;
+            setCountdown(TICK_INTERVAL_MS);
+          } finally {
+            simulatingRef.current = false;
+          }
+        } else {
+          // Season ended — reset the timer so it doesn't keep firing
+          setLastTickTs(now);
+          lastAutoTickRef.current = now;
+          setCountdown(TICK_INTERVAL_MS);
+        }
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, []); // stable — reads from refs
   const cups      = getDomesticCups(country);
   const conf      = getConfederation(country);
   const allLeagues = [4, 3, 2, 1].map(l => getLeagueAtLevel(country, l));
@@ -671,6 +721,26 @@ export default function TournamentTab() {
               marginBottom: 6,
             }}>
               🏆 Сезон завершён
+            </div>
+          )}
+
+          {/* Auto-tick countdown bar — visible once season has started */}
+          {hasSchedule && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              background: C.card, borderRadius: 10, padding: '8px 12px', marginBottom: 2,
+            }}>
+              {/* Progress bar */}
+              <div style={{ flex: 1, height: 3, background: C.border2, borderRadius: 2, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%', borderRadius: 2, background: C.teal,
+                  width: `${Math.round(tickProgress(Date.now()) * 100)}%`,
+                  transition: 'width 1s linear',
+                }} />
+              </div>
+              <span style={{ fontSize: 10, color: C.vdim, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+                авто {formatCountdown(countdown)}
+              </span>
             </div>
           )}
 

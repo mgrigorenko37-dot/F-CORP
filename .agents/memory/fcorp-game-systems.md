@@ -78,6 +78,13 @@ description: Key decisions for the football manager game engine — training, co
 - `mergeMessages(static, dynamic, statuses)` applies `fcorp_inbox_statuses` to both static and dynamic messages
 - `InboxTab` uses `useEffect([])` to reload on every mount — picks up new tick messages without app reload
 
+## Auto-Tick / Cron System
+- `src/lib/autoTick.ts` — pure timing utilities: `TICK_INTERVAL_MS` (1 real hour = 1 game week), `getLastTickTs/setLastTickTs` (key: `fcorp_tick_ts`), `getMissedTicks` (capped at `MAX_CATCH_UP=4`), `msUntilNextTick`, `formatCountdown`, `tickProgress`
+- `src/hooks/useOfflineProgress.ts` — runs once on `MainGame` mount, silently applies missed ticks to localStorage. Guards: season must have started AND have unplayed matches; fresh installs (no stored ts) skip catch-up
+- `MainGame.tsx` — calls `useOfflineProgress()` so catch-up fires regardless of active tab
+- `TournamentTab.tsx` — extracted `runOneTick(state)` useCallback (season init + playerStates init + applyWeeklyTick); `handleAdvanceWeek` calls it + `setLastTickTs`; 1s interval uses elapsed-threshold check (`now - lastAutoTickRef.current >= TICK_INTERVAL_MS`) — more robust than countdown-window approach; countdown progress bar visible in Calendar view when season active
+- **Critical design rule**: both offline catch-up and live interval must guard `schedule.some(m => !m.played)` to prevent post-season drift
+
 **Why:** All time-based progression (injuries, fatigue, aging) belongs in tickEngine, not matchEngine. Position data must flow from squad templates → playerStates → match engine to produce realistic simulation.
 
 **How to apply:** When adding new game systems, extend `GameState` interface in gameState.ts. Player physical state always goes through tickEngine. Match events always go through simulateMatch → result.events array.

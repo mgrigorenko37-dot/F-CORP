@@ -12,6 +12,7 @@ import PersonnelTab from '../components/PersonnelTab';
 import TrainingTab from '../components/TrainingTab';
 import WorldTab from '../components/WorldTab';
 import ClubTab from '../components/ClubTab';
+import { useOfflineProgress } from '../hooks/useOfflineProgress';
 
 export type TabType = 'inbox' | 'squad' | 'personnel' | 'training' | 'market' | 'commerce' | 'tournament' | 'club' | 'world';
 
@@ -25,6 +26,9 @@ const C = {
 };
 
 export default function MainGame() {
+  // Silent offline catch-up: apply any ticks missed while the app was closed.
+  useOfflineProgress();
+
   const [activeTab, setActiveTab] = useState<TabType>('inbox');
   const [clubName, setClubName] = useState('ВЫАВЫБА');
   // Which sub-tab Market should open on
