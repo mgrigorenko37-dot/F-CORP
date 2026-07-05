@@ -10,11 +10,16 @@ const API = `https://api.telegram.org/bot${TOKEN}`;
 // and REPLIT_DEV_DOMAIN in development.
 const domains = process.env.REPLIT_DOMAINS;
 const devDomain = process.env.REPLIT_DEV_DOMAIN;
-const APP_URL = domains
+const BASE_APP_URL = domains
   ? `https://${domains.split(',')[0].trim()}`
   : devDomain
     ? `https://${devDomain}`
     : null;
+
+// Cache-busting version tag: forces Telegram's WebView to fetch a fresh
+// index.html/JS bundle instead of serving a stale cached copy on each launch.
+const BUILD_VERSION = Date.now().toString(36);
+const APP_URL = BASE_APP_URL ? `${BASE_APP_URL}/?v=${BUILD_VERSION}` : null;
 
 if (!TOKEN) {
   console.error('[F-CORP Bot] ERROR: TELEGRAM_BOT_TOKEN is not set.');
