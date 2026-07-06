@@ -3,9 +3,10 @@ import { motion } from 'framer-motion';
 import {
   TrendingUp, TrendingDown, Wallet, Plus, Minus,
   ArrowUpRight, ArrowDownRight, Dumbbell, Heart,
-  GraduationCap, Eye, Tv, Building2,
+  GraduationCap, Eye, Tv, Building2, Users, Ticket, Clock,
 } from 'lucide-react';
 import { loadGameState, topUpWallet, withdrawFromWallet } from '../lib/gameState';
+import { getLeagueLevel } from '../lib/storage';
 
 const C = {
   card:'#111111', border:'#242424', border2:'#2a2a2a',
@@ -161,6 +162,34 @@ const BUILDINGS: Omit<InfraBuilding, 'level'>[] = [
   },
 ];
 
+// ── Stadium ───────────────────────────────────────────────────────────────────
+const STADIUM_KEY = 'fcorp_stadium';
+interface StadiumState { capacity: number; constructing: number; constructDays: number; }
+const DEFAULT_STADIUM: StadiumState = { capacity: 5_000, constructing: 0, constructDays: 0 };
+
+function loadStadium(): StadiumState {
+  try { return { ...DEFAULT_STADIUM, ...JSON.parse(localStorage.getItem(STADIUM_KEY) ?? '{}') }; }
+  catch { return DEFAULT_STADIUM; }
+}
+function saveStadium(s: StadiumState) { localStorage.setItem(STADIUM_KEY, JSON.stringify(s)); }
+
+/** Cost = ΔSeats × basePricePerSeat × scaleFactor */
+function stadiumBuildCost(currentCapacity: number, seatsToAdd: number): number {
+  const scaleFactor = 1 + currentCapacity / 50_000;
+  return Math.round(seatsToAdd * 100 * scaleFactor);
+}
+/** Days = ceil(seatsToAdd / 500) */
+function buildDays(seats: number): number { return Math.max(1, Math.ceil(seats / 500)); }
+
+/** Auto-pricing estimate: base ticket price based on league level + capacity */
+function autoTicketPrice(leagueLevel: number, capacity: number): number {
+  const baseByLeague = [0, 80, 45, 25, 12]; // level 1-4
+  const base = baseByLeague[leagueLevel] ?? 12;
+  // Bigger stadium = slightly lower avg price (more cheap seats)
+  const capacityFactor = Math.max(0.7, 1 - (capacity - 5_000) / 200_000);
+  return Math.round(base * capacityFactor);
+}
+
 // ── Misc ──────────────────────────────────────────────────────────────────────
 const INCOME = 275_000;
 const TOPUP_AMOUNTS = [500_000, 1_000_000, 2_000_000, 5_000_000];
@@ -183,6 +212,9 @@ export default function CommerceTab() {
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [customAmount, setCustomAmount] = useState('');
   const [infra, setInfra]           = useState<Record<string, number>>(loadInfra);
+  const [stadium, setStadium]       = useState<StadiumState>(loadStadium);
+  const [seatsInput, setSeatsInput] = useState('');
+  const leagueLevel                 = getLeagueLevel();
 
   useEffect(() => {
     const gs = loadGameState();
@@ -205,6 +237,20 @@ export default function CommerceTab() {
   const doWithdraw = (amount: number) => {
     const safe = Math.min(amount, walletBalance);
     withdrawFromWallet(safe); setWallet(b => Math.max(0, b - safe)); setShowWithdraw(false); setCustomAmount('');
+  };
+
+  const buildStadium = () => {
+    const seats = parseInt(seatsInput.replace(/\D/g, ''), 10);
+    if (!seats || seats < 100) return;
+    const cost = stadiumBuildCost(stadium.capacity, seats);
+    if (walletBalance < cost) return;
+    withdrawFromWallet(cost);
+    setWallet(b => b - cost);
+    const days = buildDays(seats);
+    const next: StadiumState = { capacity: stadium.capacity + seats, constructing: seats, constructDays: days };
+    setStadium(next);
+    saveStadium(next);
+    setSeatsInput('');
   };
 
   const upgradeInfra = (id: string) => {
@@ -443,6 +489,179 @@ export default function CommerceTab() {
         <div style={{padding:'0 18px 80px'}}>
           <div style={{fontSize:11,color:C.dim,letterSpacing:'0.5px',marginBottom:14,marginTop:4}}>
             Улучшай объекты клуба — каждые 5 уровней открывают новую технологическую эпоху
+          </div>
+
+          {/* ── STADIUM CARD ── */}
+          <div style={{background:C.card,borderRadius:14,padding:16,marginBottom:16,border:`1px solid #333`}}>
+            {/* Header */}
+            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
+              <div style={{
+                width:42,height:42,borderRadius:12,flexShrink:0,
+                background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.15)',
+                display:'flex',alignItems:'center',justifyContent:'center',
+              }}>
+                <Building2 size={20} color={C.white} />
+              </div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:14,fontWeight:700,color:C.white}}>Стадион</div>
+                <div style={{fontSize:10,color:C.vdim,marginTop:1}}>Динамический калькулятор мест</div>
+              </div>
+              {stadium.constructing > 0 && (
+                <div style={{
+                  display:'flex',alignItems:'center',gap:4,
+                  background:'rgba(245,158,11,0.12)',border:'0.5px solid rgba(245,158,11,0.3)',
+                  borderRadius:8,padding:'3px 8px',
+                }}>
+                  <Clock size={9} color={C.yellow} />
+                  <span style={{fontSize:9,fontWeight:700,color:C.yellow}}>Строится</span>
+                </div>
+              )}
+            </div>
+
+            {/* Capacity + ticket price row */}
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:16}}>
+              <div style={{background:'#1a1a1a',borderRadius:10,padding:'10px 8px',textAlign:'center'}}>
+                <div style={{fontSize:9,color:C.vdim,letterSpacing:'0.5px',marginBottom:4}}>ВМЕСТИМОСТЬ</div>
+                <div style={{fontSize:15,fontWeight:800,color:C.white}}>
+                  {stadium.capacity.toLocaleString('ru')}
+                </div>
+                <div style={{fontSize:8,color:C.vdim,marginTop:2}}>мест</div>
+              </div>
+              <div style={{background:'#1a1a1a',borderRadius:10,padding:'10px 8px',textAlign:'center'}}>
+                <div style={{fontSize:9,color:C.vdim,letterSpacing:'0.5px',marginBottom:4}}>БИЛЕТ</div>
+                <div style={{fontSize:15,fontWeight:800,color:C.teal}}>
+                  €{autoTicketPrice(leagueLevel, stadium.capacity)}
+                </div>
+                <div style={{fontSize:8,color:C.vdim,marginTop:2}}>авто-цена</div>
+              </div>
+              <div style={{background:'#1a1a1a',borderRadius:10,padding:'10px 8px',textAlign:'center'}}>
+                <div style={{fontSize:9,color:C.vdim,letterSpacing:'0.5px',marginBottom:4}}>ДОХОД/МАТ.</div>
+                <div style={{fontSize:15,fontWeight:800,color:C.teal}}>
+                  €{Math.round(stadium.capacity * autoTicketPrice(leagueLevel, stadium.capacity) * 0.75 / 1000)}K
+                </div>
+                <div style={{fontSize:8,color:C.vdim,marginTop:2}}>ср. заполн.</div>
+              </div>
+            </div>
+
+            {/* Auto-pricing hint */}
+            <div style={{
+              background:'rgba(255,255,255,0.03)',border:`0.5px solid ${C.border2}`,
+              borderRadius:10,padding:'10px 12px',marginBottom:14,
+            }}>
+              <div style={{fontSize:10,fontWeight:700,color:C.muted,marginBottom:6,letterSpacing:'0.3px'}}>
+                🎟 АВТО-ЦЕНООБРАЗОВАНИЕ БИЛЕТОВ
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:4}}>
+                {[
+                  {icon:<Users size={10} color={C.dim}/>, text:'Репутация клуба и уровень лиги'},
+                  {icon:<Ticket size={10} color={C.dim}/>, text:'Рейтинг соперника — топ-матчи дороже'},
+                  {icon:<TrendingUp size={10} color={C.dim}/>, text:'Заполняемость — аншлаг повышает цену'},
+                ].map((r,i) => (
+                  <div key={i} style={{display:'flex',alignItems:'center',gap:6}}>
+                    {r.icon}
+                    <span style={{fontSize:10,color:C.dim}}>{r.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Construction in progress banner */}
+            {stadium.constructing > 0 && (
+              <div style={{
+                background:'rgba(245,158,11,0.08)',border:`0.5px solid rgba(245,158,11,0.25)`,
+                borderRadius:10,padding:'10px 12px',marginBottom:14,
+                display:'flex',alignItems:'center',gap:8,
+              }}>
+                <Clock size={14} color={C.yellow} />
+                <div>
+                  <div style={{fontSize:11,fontWeight:600,color:C.yellow}}>
+                    Строится +{stadium.constructing.toLocaleString('ru')} мест
+                  </div>
+                  <div style={{fontSize:10,color:C.dim}}>
+                    ~{stadium.constructDays} {stadium.constructDays === 1 ? 'день' : 'дней'} до завершения
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Seat calculator */}
+            <div>
+              <div style={{fontSize:10,fontWeight:700,color:C.dim,letterSpacing:'0.5px',marginBottom:8}}>
+                ДОБАВИТЬ МЕСТА
+              </div>
+
+              {/* Quick presets */}
+              <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6,marginBottom:10}}>
+                {[1_000, 5_000, 10_000, 25_000].map(n => (
+                  <button key={n} onClick={() => setSeatsInput(String(n))}
+                    style={{
+                      padding:'6px 0',borderRadius:10,fontSize:11,fontWeight:600,cursor:'pointer',
+                      background: seatsInput === String(n) ? 'rgba(255,255,255,0.1)' : '#1a1a1a',
+                      border: seatsInput === String(n) ? `1px solid ${C.white}` : `1px solid ${C.border2}`,
+                      color: seatsInput === String(n) ? C.white : C.dim,
+                    }}>
+                    +{n >= 1000 ? `${n/1000}K` : n}
+                  </button>
+                ))}
+              </div>
+
+              {/* Custom input + cost preview */}
+              <div style={{display:'flex',gap:8,marginBottom:10}}>
+                <input
+                  value={seatsInput}
+                  onChange={e => setSeatsInput(e.target.value.replace(/\D/g,''))}
+                  placeholder="Кол-во мест"
+                  style={{
+                    flex:1,background:'transparent',border:`0.5px solid ${C.border2}`,
+                    color:C.white,fontSize:12,padding:'9px 12px',borderRadius:12,outline:'none',
+                  }}
+                />
+              </div>
+
+              {/* Cost + time preview */}
+              {seatsInput && parseInt(seatsInput) > 0 && (() => {
+                const seats = parseInt(seatsInput);
+                const cost = stadiumBuildCost(stadium.capacity, seats);
+                const days = buildDays(seats);
+                const canAfford = walletBalance >= cost;
+                return (
+                  <div>
+                    <div style={{
+                      display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10,
+                      background:'#1a1a1a',borderRadius:10,padding:'10px 12px',
+                    }}>
+                      <div>
+                        <div style={{fontSize:9,color:C.vdim,marginBottom:2}}>СТОИМОСТЬ</div>
+                        <div style={{fontSize:14,fontWeight:700,color:canAfford?C.white:C.salmon}}>
+                          {fmtMoney(cost)}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{fontSize:9,color:C.vdim,marginBottom:2}}>СРОК</div>
+                        <div style={{fontSize:14,fontWeight:700,color:C.white}}>
+                          {days} {days===1?'день':days<5?'дня':'дней'}
+                        </div>
+                      </div>
+                    </div>
+                    <button onClick={buildStadium} disabled={!canAfford}
+                      style={{
+                        width:'100%',padding:'10px',borderRadius:20,fontSize:12,fontWeight:700,
+                        cursor:canAfford?'pointer':'not-allowed',
+                        background:canAfford?C.white:'transparent',
+                        border:canAfford?'none':`0.5px solid ${C.border2}`,
+                        color:canAfford?'#000':C.vdim,
+                      }}>
+                      {canAfford ? `Построить · ${fmtMoney(cost)}` : `Нет средств · ${fmtMoney(cost)}`}
+                    </button>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+
+          {/* Divider before buildings */}
+          <div style={{fontSize:11,color:C.dim,letterSpacing:'0.5px',marginBottom:12,marginTop:4}}>
+            ОБЪЕКТЫ КЛУБА
           </div>
 
           {BUILDINGS.map(b => {
