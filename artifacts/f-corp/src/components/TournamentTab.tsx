@@ -12,7 +12,7 @@ import { Trophy, ArrowUp, ArrowDown, Minus, Calendar, Map as MapIcon } from 'luc
 import { getLeagueAtLevel } from '../data/leaguesData';
 import { getDomesticCups, getContinentalComps, getConfederation, getQualificationMap } from '../data/competitions';
 import { getLeagueLevel, saveLeagueLevel } from '../lib/storage';
-import { loadGameState, updateGameState, createDefaultPlayerState, type GameState, type ScheduledMatch } from '../lib/gameState';
+import { loadGameState, updateGameState, createDefaultPlayerState, type GameState, type ScheduledMatch, type RivalLeagueStat } from '../lib/gameState';
 import { applyWeeklyTick, initializeSeason, getThisWeekMatches } from '../lib/tickEngine';
 import { ALL_MARKET_PLAYERS } from '../data/playersMarket';
 import { FIRST_SQUAD_TMPL, scaleRating } from '../data/squadData';
@@ -106,7 +106,8 @@ function buildTableWithRealResults(
   rivals: string[],
   schedule: ScheduledMatch[],
   leagueRound: number,
-  totalClubs: number
+  totalClubs: number,
+  rivalLeagueStats?: Record<string, RivalLeagueStat>,
 ): Team[] {
   const rivalSlice  = rivals.slice(0, totalClubs - 1);
   const totalRounds = (totalClubs - 1) * 2;
@@ -127,11 +128,23 @@ function buildTableWithRealResults(
   const myPoints = myW * 3 + myD;
   const myPlayed = myW + myD + myL;
 
-  // Build rival rows with mock formula
+  // Build rival rows: real simulated stats when available, fall back to mock
   const teams: Team[] = rivalSlice.map((name, i) => {
     if (leagueRound === 0) {
       return { pos: i + 1, name, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, points: 0, isMe: false, trend: 'same' as const };
     }
+    const stat = rivalLeagueStats?.[name];
+    if (stat && (stat.w + stat.d + stat.l) > 0) {
+      const pts    = stat.w * 3 + stat.d;
+      const played = stat.w + stat.d + stat.l;
+      return {
+        pos: i + 1, name,
+        played, won: stat.w, drawn: stat.d, lost: stat.l,
+        gf: stat.gf, ga: stat.ga, points: pts, isMe: false,
+        trend: stat.w > stat.l ? 'up' : stat.w < stat.l ? 'down' : 'same',
+      };
+    }
+    // Fallback mock (before any AI vs AI rounds have been simulated)
     const rankFactor = 1 - i / rivalSlice.length;
     const baseMax    = Math.round(totalRounds * (0.45 + rankFactor * 0.45));
     const jitter     = Math.sin(i * 7.31 + 1.1) > 0 ? 1 : -1;
@@ -396,9 +409,9 @@ export default function TournamentTab() {
   const totalRounds = (league.totalClubs - 1) * 2;
 
   const table = useMemo(
-    () => buildTableWithRealResults(myClub, league.rivals, schedule, leagueRound, league.totalClubs),
+    () => buildTableWithRealResults(myClub, league.rivals, schedule, leagueRound, league.totalClubs, gameState?.rivalLeagueStats ?? {}),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [myClub, league.rivals, schedule, leagueRound, league.totalClubs],
+    [myClub, league.rivals, schedule, leagueRound, league.totalClubs, gameState?.rivalLeagueStats],
   );
   const myRow = table.find(t => t.isMe) ?? table[0];
   const myPos = myRow?.pos ?? 1;

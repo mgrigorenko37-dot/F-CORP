@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, Check, X } from 'lucide-react';
-import { loadGameState, type InboxMessage, type TransferOffer } from '../lib/gameState';
+import { loadGameState, getTransferWindowStatus, type InboxMessage, type TransferOffer } from '../lib/gameState';
 
 type MessageStatus = 'pending' | 'approved' | 'rejected' | 'read';
 type InboxFilter = 'new' | 'action' | 'all';
@@ -185,15 +185,23 @@ export default function InboxTab() {
     });
   };
 
-  /** Accept a transfer offer: sell player, credit money, remove offer. */
-  const acceptTransferOffer = (offer: TransferOffer) => {
+  /** Accept a transfer offer: sell player, credit money, remove offer.
+   *  Returns `true` if the sale actually completed (window open, no errors). */
+  const acceptTransferOffer = (offer: TransferOffer): boolean => {
     try {
       const raw = localStorage.getItem('fcorp_game_state');
-      if (!raw) return;
+      if (!raw) return false;
       const gs = JSON.parse(raw);
 
+      // ── Transfer window check ───────────────────────────────────────────────
+      const winStatus = getTransferWindowStatus(gs.season?.currentDate ?? '');
+      if (!winStatus.open) {
+        showToast(`❌ Трансферное окно закрыто — сейчас продать игрока невозможно.`);
+        return false;
+      }
+
       // Remove player from squad
-      const newPlayerStates      = (gs.playerStates      ?? []).filter((p: {id: number}) => p.id !== offer.playerId);
+      const newPlayerStates       = (gs.playerStates      ?? []).filter((p: {id: number}) => p.id !== offer.playerId);
       const newPurchasedPlayerIds = (gs.purchasedPlayerIds ?? []).filter((pid: number) => pid !== offer.playerId);
 
       // Credit money to wallet
@@ -219,18 +227,19 @@ export default function InboxTab() {
 
       const updated = {
         ...gs,
-        playerStates:      newPlayerStates,
+        playerStates:       newPlayerStates,
         purchasedPlayerIds: newPurchasedPlayerIds,
-        walletBalance:     newWallet,
-        activeOffers:      newOffers,
-        inbox:             [...(gs.inbox ?? []), confirmMsg],
+        walletBalance:      newWallet,
+        activeOffers:       newOffers,
+        inbox:              [...(gs.inbox ?? []), confirmMsg],
       };
       localStorage.setItem('fcorp_game_state', JSON.stringify(updated));
       setActiveOffers(newOffers);
 
       showToast(`${offer.playerName} продан за ${fmtM(offer.offerAmount)}! 💰`);
+      return true;
     } catch {
-      // silent fail
+      return false;
     }
   };
 
@@ -418,8 +427,9 @@ export default function InboxTab() {
                         return (
                           <>
                             <button onClick={() => {
-                              acceptTransferOffer(offer);
-                              handleAction(msg.id, 'approved');
+                              if (acceptTransferOffer(offer)) {
+                                handleAction(msg.id, 'approved');
+                              }
                             }}
                               className="flex items-center gap-[6px] px-4 py-[7px] rounded-full text-white text-[13px] font-semibold active:scale-95 transition-transform"
                               style={{ background: '#27AE60' }}>

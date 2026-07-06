@@ -16,7 +16,7 @@
  *   anchors `currentDate` 7 days before the first fixture, and seeds rival data.
  */
 
-import type { GameState, ScheduledMatch, InjuryType, InboxMessage, PlayerGameState, SeasonTransition, TransferOffer, SponsorContract, WeeklyFinanceEntry } from './gameState';
+import type { GameState, ScheduledMatch, InjuryType, InboxMessage, PlayerGameState, SeasonTransition, TransferOffer, SponsorContract, WeeklyFinanceEntry, RivalLeagueStat, ScoutingMission, ScoutedPlayer } from './gameState';
 import { generateAttributesForPosition, playerWeeklySalary, getTransferWindowStatus } from './gameState';
 import { AWAY_TRAVEL_COST, EUROPE_TRAVEL_COST, TV_RIGHTS_WEEKLY, infraMaintenanceCost, computeAttendance, OPTIMAL_TICKET_PRICE } from '../data/financeData';
 import { simulateMatch } from './matchEngine';
@@ -212,6 +212,8 @@ export function initializeSeason(
     ...gameState,
     rivalStrengths,
     rivalForms,
+    rivalLeagueStats:        {},  // reset per-season stats
+    scoutingMissions:        gameState.scoutingMissions ?? [],  // carry over missions
     pendingSeasonTransition: undefined,
     season: {
       ...gameState.season,
@@ -224,6 +226,115 @@ export function initializeSeason(
       activeCompetitions: input.activeCompetitions,
     },
   };
+}
+
+// ─── AI vs AI LEAGUE SIMULATION ──────────────────────────────────────────────
+
+/** Deterministic pseudo-random float in [0,1) from an integer seed. */
+function detRand(seed: number): number {
+  const x = Math.sin((seed + 1) * 9301.7 + 49297.3) * 233280.1;
+  return x - Math.floor(x);
+}
+
+/** Strength-weighted Poisson-approximation goal simulation (deterministic). */
+function detGoals(str1: number, str2: number, seed: number): [number, number] {
+  const diff = (str1 - str2) / 200; // −0.5 to +0.5
+  const lam1 = Math.max(0.1, 1.35 + diff * 1.2);
+  const lam2 = Math.max(0.1, 1.35 - diff * 1.2);
+  let g1 = 0, g2 = 0;
+  for (let i = 0; i < 8; i++) {
+    if (detRand(seed + i * 83)        < lam1 / 8) g1++;
+    if (detRand(seed + i * 83 + 1000) < lam2 / 8) g2++;
+  }
+  return [Math.min(g1, 7), Math.min(g2, 7)];
+}
+
+function applyGoalResult(
+  stats: Record<string, RivalLeagueStat>,
+  name:  string,
+  gf:    number,
+  ga:    number,
+): void {
+  if (!stats[name]) stats[name] = { w: 0, d: 0, l: 0, gf: 0, ga: 0 };
+  const s = stats[name]!;
+  s.gf += gf; s.ga += ga;
+  if (gf > ga) s.w++; else if (gf < ga) s.l++; else s.d++;
+}
+
+/**
+ * Simulate one round of AI vs AI league matches.
+ * Rivals are paired deterministically from the round seed.
+ * Odd rival out gets a "bye" versus an average (str 62) opponent.
+ */
+function simulateRivalLeagueRound(
+  rivals:    string[],
+  strengths: Record<string, number>,
+  prevStats: Record<string, RivalLeagueStat>,
+  round:     number,
+): Record<string, RivalLeagueStat> {
+  const stats: Record<string, RivalLeagueStat> = {};
+  for (const r of rivals) {
+    const ps = prevStats[r];
+    stats[r] = ps ? { ...ps } : { w: 0, d: 0, l: 0, gf: 0, ga: 0 };
+  }
+
+  // Seeded shuffle for this round's pairings
+  const order = [...rivals];
+  let seed = ((round * 7919) + 13_381) >>> 0;
+  for (let i = order.length - 1; i > 0; i--) {
+    seed = (Math.imul(seed, 1_664_525) + 1_013_904_223) >>> 0;
+    const j = seed % (i + 1);
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+
+  for (let i = 0; i < order.length; i += 2) {
+    const r1 = order[i];
+    const r2 = order[i + 1];
+    const s1 = strengths[r1] ?? 60;
+    const s2 = r2 ? (strengths[r2] ?? 60) : 62; // bye = avg opponent
+    const [g1, g2] = detGoals(s1, s2, round * 1_000 + i);
+    applyGoalResult(stats, r1, g1, g2);
+    if (r2) applyGoalResult(stats, r2, g2, g1);
+  }
+  return stats;
+}
+
+// ─── SCOUTING REPORT GENERATION ──────────────────────────────────────────────
+
+const _SF = ['Rodrigo','Amadou','Kenji','Viktor','Carlos','Diego','Youssef','Andrei','Tomás','Kwame','Luca','Rashid','Emeka','Hiroto','Aleksei','Ibrahim','Sandro','Danilo','Moussa','Yuri'];
+const _SL = ['Silva','Diallo','Nakamura','Petrov','García','Fernández','Mansour','Popescu','Santos','Mensah','Ndoye','Okafor','Kim','Suzuki','Costa','Moreira','Traoré','Coulibaly','Oliveira','Bekele'];
+const _SR: Record<string, { nats: string[]; positions: string[] }> = {
+  'Южная Америка':    { nats: ['BR','AR','CO','UY','CL'],              positions: ['ST','CAM','LW','RW','CM'] },
+  'Африка':           { nats: ['NG','GH','SN','CM','CI','MA','EG'],    positions: ['ST','LW','RW','CB','CDM'] },
+  'Азия':             { nats: ['JP','KR'],                             positions: ['CM','CAM','ST','GK'] },
+  'Восточная Европа': { nats: ['PL','HR','RS','CZ','UA','RU'],         positions: ['GK','CB','CDM','CM'] },
+  'Европа (юниоры)':  { nats: ['FR','DE','ES','IT','PT','NL'],         positions: ['CM','CB','LB','RB','CDM','ST'] },
+};
+
+function sRand(seed: number): number {
+  const x = Math.sin((seed + 7) * 12_345.6789) * 987_654.321;
+  return x - Math.floor(x);
+}
+
+function generateScoutReport(region: string): ScoutedPlayer[] {
+  const baseSeed = Math.round(Math.abs(Math.sin(Date.now() * 0.00001 + region.length * 17)) * 999_983);
+  const data     = _SR[region] ?? _SR['Южная Америка'];
+  const count    = 3 + Math.floor(sRand(baseSeed) * 3); // 3–5 players
+  const report: ScoutedPlayer[] = [];
+  for (let i = 0; i < count; i++) {
+    const s         = baseSeed + i * 100;
+    const age       = 17 + Math.floor(sRand(s)     * 9);   // 17–25
+    const rating    = 58 + Math.floor(sRand(s + 1) * 22);  // 58–79
+    const potential = Math.min(99, rating + 6 + Math.floor(sRand(s + 2) * 18));
+    const nat       = data.nats[Math.floor(sRand(s + 3) * data.nats.length)];
+    const pos       = data.positions[Math.floor(sRand(s + 4) * data.positions.length)];
+    const price     = Math.round(100_000 * Math.pow(25, (rating - 30) / 35) / 50_000) * 50_000;
+    report.push({
+      name:        `${_SF[Math.floor(sRand(s+5)*_SF.length)]} ${_SL[Math.floor(sRand(s+6)*_SL.length)]}`,
+      nationality: nat, age, position: pos, rating, potential, price,
+    });
+  }
+  return report;
 }
 
 // ─── WEEKLY TICK ──────────────────────────────────────────────────────────────
@@ -281,6 +392,7 @@ export function applyWeeklyTick(
   const matchesPlayed:    MatchSummary[] = [];
   const injuriesOccurred: InjuryEvent[]  = [];
   let updatedSchedule   = [...season.schedule];
+  const prevLeagueRound = season.leagueRound;
   let leagueRound       = season.leagueRound;
 
   // Track which opponents we faced this week (for rivalForms update)
@@ -346,6 +458,51 @@ export function applyWeeklyTick(
 
   // ── Drift rival strengths slightly each week ──
   const finalRivalStrengths = driftRivalStrengths(gameState.rivalStrengths);
+
+  // ── AI vs AI league simulation ────────────────────────────────────────────
+  // For every league round MY_CLUB played this tick:
+  //   a) Record the REAL result for MY_CLUB's actual opponent this week.
+  //   b) Simulate AI vs AI fixtures for all *other* rivals (they didn't play us).
+  const leagueMatchesThisTick = leagueRound - prevLeagueRound;
+  let updatedRivalLeagueStats: Record<string, RivalLeagueStat> = {
+    ...(gameState.rivalLeagueStats ?? {}),
+  };
+  if (leagueMatchesThisTick > 0) {
+    // All rival team names from the league schedule
+    const allLeagueRivals = [...new Set(
+      season.schedule
+        .filter(m => m.competition === 'league')
+        .flatMap(m => [m.home, m.away])
+        .filter(n => n !== 'MY_CLUB'),
+    )];
+
+    // Step 1: apply real results for opponents that faced MY_CLUB this tick
+    const realResultOpponents = new Set<string>();
+    for (const wm of weekMatches.filter(m => m.competition === 'league')) {
+      // Find played result from updatedSchedule (same date + teams)
+      const played = updatedSchedule.find(
+        m => m.competition === 'league' && m.date === wm.date
+          && m.home === wm.home && m.away === wm.away
+      );
+      if (!played?.played || !played.result) continue;
+      const opponent = played.isHome ? played.away : played.home;
+      if (opponent === 'MY_CLUB') continue;
+      realResultOpponents.add(opponent);
+      // Opponent's perspective: flip home/away goals
+      const oppGF = played.isHome ? played.result.awayGoals : played.result.homeGoals;
+      const oppGA = played.isHome ? played.result.homeGoals : played.result.awayGoals;
+      applyGoalResult(updatedRivalLeagueStats, opponent, oppGF, oppGA);
+    }
+
+    // Step 2: simulate AI vs AI for rivals who didn't face MY_CLUB this round
+    const rivalsForSim = allLeagueRivals.filter(r => !realResultOpponents.has(r));
+    for (let offset = 0; offset < leagueMatchesThisTick; offset++) {
+      const round = prevLeagueRound + offset + 1;
+      updatedRivalLeagueStats = simulateRivalLeagueRound(
+        rivalsForSim, gameState.rivalStrengths, updatedRivalLeagueStats, round,
+      );
+    }
+  }
 
   // ── Post-week player updates ──
   const matchDays = weekMatches.length;
@@ -824,6 +981,71 @@ export function applyWeeklyTick(
     });
   }
 
+  // ── Remove expired-contract players from squad (they become free agents) ──
+  if (contractExpiredIds.length > 0) {
+    progressedStates = progressedStates.filter(p => !contractExpiredIds.includes(p.id));
+  }
+  const newPurchasedPlayerIds = contractExpiredIds.length > 0
+    ? (gameState.purchasedPlayerIds ?? []).filter(id => !contractExpiredIds.includes(id))
+    : [...(gameState.purchasedPlayerIds ?? [])];
+
+  // ── Progress active scouting missions ─────────────────────────────────────
+  let scoutingMissions: ScoutingMission[] = [...(gameState.scoutingMissions ?? [])];
+  {
+    const completedThisWeek: ScoutingMission[] = [];
+    scoutingMissions = scoutingMissions.map(mission => {
+      if (mission.status !== 'active') return mission;
+      const remaining = mission.durationWeeks - 1;
+      if (remaining <= 0) {
+        const report = generateScoutReport(mission.region);
+        const done: ScoutingMission = { ...mission, status: 'completed', durationWeeks: 0, report };
+        completedThisWeek.push(done);
+        return done;
+      }
+      return { ...mission, durationWeeks: remaining };
+    });
+    for (const mission of completedThisWeek) {
+      const lines = (mission.report ?? []).map(
+        p => `• ${p.name} (${p.position}, ${p.age} л., рт ${p.rating}, поц ${p.potential})`
+      ).join('\n');
+      inboxMessages.push({
+        id:             `scout_done_${mission.id}_${weekEnd}`,
+        type:           'REPORT',
+        date:           weekEnd,
+        time:           '10:00',
+        sender:         'Директор скаутинга',
+        text:           `📋 Скаутинговый отчёт — ${mission.region}\n\nСкауты вернулись. Перспективные игроки:\n${lines}\n\nОбновлённые данные доступны в Маркет → Скаутинг.`,
+        requiresAction: false,
+      });
+    }
+  }
+
+  // ── Periodic REQUEST from coaching/scouting staff (every 8 weeks) ────────
+  {
+    const weekNum = Math.round(
+      (new Date(weekEnd).getTime() - new Date(season.startDate || weekEnd).getTime())
+      / (7 * 24 * 60 * 60 * 1000)
+    );
+    if (weekNum > 0 && weekNum % 8 === 0) {
+      const staffRequests = [
+        { sender: 'Директор скаутинга',  text: `🔍 Запрос на скаутинг\n\nОбнаружен перспективный игрок в молодёжном чемпионате (возраст 19–21, поц 85+). Прошу одобрить командировку скаутов. Регион: Южная Америка. Стоимость: €80K, срок: 4 недели.` },
+        { sender: 'Главный тренер',       text: `📋 Запрос тренера\n\nДля укрепления прессинга не хватает быстрого крайнего защитника. Рекомендую рассмотреть усиление в ближайшее трансферное окно. Целевой бюджет: €0.5–2M.` },
+        { sender: 'Спортивный директор', text: `💼 Свободные агенты\n\nРяд интересных игроков доступны без компенсации. Рекомендую рассмотреть их в разделе Маркет.` },
+        { sender: 'Начальник медслужбы', text: `🏥 Риск травм\n\nПовышенная нагрузка создала предпосылки для травм у игроков с высокой усталостью. Рекомендую разгрузочный день.` },
+      ];
+      const pick = staffRequests[Math.floor(Math.abs(Math.sin(weekNum * 137)) * staffRequests.length)];
+      inboxMessages.push({
+        id:             `request_staff_${weekEnd}`,
+        type:           'REQUEST',
+        date:           weekEnd,
+        time:           '11:30',
+        sender:         pick.sender,
+        text:           pick.text,
+        requiresAction: true,
+      });
+    }
+  }
+
   // ── Contract expiry warnings (4 weeks remaining) ──────────────────────────
   for (const p of progressedStates) {
     if (p.contractWeeksLeft === 4) {
@@ -966,14 +1188,23 @@ export function applyWeeklyTick(
     const myPoints = myW * 3 + myD;
     const myGD     = myGF - myGA;
 
-    // --- Count rivals who finished above MY_CLUB (mock formula, same as table UI) ---
+    // --- Count rivals who finished above MY_CLUB (real stats when available) ----
     let position = 1;
     for (let i = 0; i < rivals.length; i++) {
-      const rankFactor = 1 - i / rivals.length;
-      const baseMax    = Math.round(season.totalRounds * (0.45 + rankFactor * 0.45));
-      const jitter     = Math.sin(i * 7.31 + 1.1) > 0 ? 1 : -1;
-      const rivalPts   = Math.max(0, baseMax + jitter);   // pctScale = 1 (full season)
-      const rivalGD    = Math.round((1 - i / rivals.length) * 20 - 10); // rough mock
+      const stat = updatedRivalLeagueStats[rivals[i]];
+      let rivalPts: number;
+      let rivalGD: number;
+      if (stat && (stat.w + stat.d + stat.l) > 0) {
+        rivalPts = stat.w * 3 + stat.d;
+        rivalGD  = stat.gf - stat.ga;
+      } else {
+        // Fallback for first season before any AI vs AI rounds have been simulated
+        const rankFactor = 1 - i / rivals.length;
+        const baseMax    = Math.round(season.totalRounds * (0.45 + rankFactor * 0.45));
+        const jitter     = Math.sin(i * 7.31 + 1.1) > 0 ? 1 : -1;
+        rivalPts = Math.max(0, baseMax + jitter);
+        rivalGD  = Math.round((1 - i / rivals.length) * 20 - 10);
+      }
       if (rivalPts > myPoints || (rivalPts === myPoints && rivalGD > myGD)) {
         position++;
       }
@@ -1036,10 +1267,13 @@ export function applyWeeklyTick(
   const newState: GameState = {
     ...gameState,
     playerStates:            progressedStates,
+    purchasedPlayerIds:      newPurchasedPlayerIds,
     lastWeekTick:            isoDate(new Date()),
     inbox:                   [...allNewInbox, ...prevInbox].slice(0, 200),
     rivalStrengths:          finalRivalStrengths,
     rivalForms:              finalRivalForms,
+    rivalLeagueStats:        updatedRivalLeagueStats,
+    scoutingMissions,
     lastAgeIncrementYear,
     pendingSeasonTransition,
     walletBalance:           newWalletBalance,

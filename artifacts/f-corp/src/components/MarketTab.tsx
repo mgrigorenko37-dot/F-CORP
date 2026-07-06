@@ -3,7 +3,11 @@ import { motion } from 'framer-motion';
 import { Search, ChevronDown, History } from 'lucide-react';
 import { ALL_MARKET_PLAYERS } from '../data/playersMarket';
 import { ALL_MARKET_STAFF } from '../data/staffMarketData';
-import { loadGameState, buyPlayer, hireStaff, getTransferWindowStatus } from '../lib/gameState';
+import {
+  loadGameState, buyPlayer, hireStaff, getTransferWindowStatus,
+  computePlayerMarketValue, startScoutingMission, scoutMarketPlayer,
+  SCOUTING_REGIONS, type ScoutingMission,
+} from '../lib/gameState';
 import type { TransferWindowStatus } from '../lib/gameState';
 
 const TRANSFER_LOG_KEY = 'fcorp_transfer_log';
@@ -82,11 +86,11 @@ function fmtMoney(n: number) {
 }
 
 interface Props {
-  initialTab?: 'players' | 'staff' | 'history';
+  initialTab?: 'players' | 'staff' | 'history' | 'scouting';
 }
 
 export default function MarketTab({ initialTab = 'players' }: Props) {
-  const [tab, setTab]               = useState<'players'|'staff'|'history'>(initialTab);
+  const [tab, setTab]               = useState<'players'|'staff'|'history'|'scouting'>(initialTab);
   const [search, setSearch]         = useState('');
   const [posFilter, setPosFilter]   = useState<PosFilter>('ALL');
   const [roleFilter, setRoleFilter] = useState('ALL');
@@ -104,7 +108,11 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
   const [transferWindow, setTransferWindow] = useState<TransferWindowStatus>(
     { open: true, name: 'Летнее', closes: '', opens: '' }, // default open so first render looks ok
   );
-  const [transferLog, setTransferLog] = useState<TransferEntry[]>([]);
+  const [transferLog, setTransferLog]           = useState<TransferEntry[]>([]);
+  const [scoutedPlayerIds, setScoutedPlayerIds] = useState<Set<number>>(new Set());
+  const [scoutingMissions, setScoutingMissions] = useState<ScoutingMission[]>([]);
+  const [scoutToast, setScoutToast]             = useState<string | null>(null);
+  const [walletBalance, setWalletBalance]       = useState(0); // used for scouting affordability
 
   // Load persisted market state on mount
   useEffect(() => {
@@ -114,7 +122,17 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
     setHiredStaff(new Set(gs.hiredStaffIds));
     setTransferWindow(getTransferWindowStatus(gs.season?.currentDate ?? ''));
     setTransferLog(loadTransferLog());
+    setScoutedPlayerIds(new Set(gs.scoutedMarketPlayerIds ?? []));
+    setScoutingMissions(gs.scoutingMissions ?? []);
+    setWalletBalance(gs.walletBalance ?? 0);
   }, []);
+
+  // Auto-dismiss scout toast
+  useEffect(() => {
+    if (!scoutToast) return;
+    const t = setTimeout(() => setScoutToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [scoutToast]);
 
   const allNats = useMemo(() => {
     const set = new Set<string>();
@@ -178,7 +196,7 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
     setTransferLog(l => [entry, ...l]);
   };
 
-  const handleTabChange = (t: 'players' | 'staff' | 'history') => {
+  const handleTabChange = (t: 'players' | 'staff' | 'history' | 'scouting') => {
     setTab(t);
     setSearch('');
     setRatingMin(30);
@@ -191,6 +209,38 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
     setRoleFilter('ALL');
     setPlayerPage(1);
     setStaffPage(1);
+  };
+
+  const handleScoutPlayer = (playerId: number) => {
+    const SCOUT_COST = 50_000;
+    if (walletBalance < SCOUT_COST) {
+      setScoutToast(`❌ Недостаточно средств для скаутинга (${fmtMoney(SCOUT_COST)})`);
+      return;
+    }
+    const ok = scoutMarketPlayer(playerId, SCOUT_COST);
+    if (ok) {
+      setScoutedPlayerIds(s => new Set(s).add(playerId));
+      setWalletBalance(b => b - SCOUT_COST);
+      setScoutToast(`✅ Игрок заскаутирован за ${fmtMoney(SCOUT_COST)}`);
+    } else {
+      setScoutToast(`❌ Недостаточно средств для скаутинга (${fmtMoney(SCOUT_COST)})`);
+    }
+  };
+
+  const handleSendMission = (region: string, cost: number, durationWeeks: number) => {
+    if (walletBalance < cost) {
+      setScoutToast(`❌ Недостаточно средств (${fmtMoney(cost)})`);
+      return;
+    }
+    const ok = startScoutingMission(region, cost, durationWeeks);
+    if (ok) {
+      setWalletBalance(b => b - cost);
+      const gs = loadGameState();
+      setScoutingMissions(gs.scoutingMissions ?? []);
+      setScoutToast(`✅ Миссия в «${region}» запущена!`);
+    } else {
+      setScoutToast(`❌ Недостаточно средств (${fmtMoney(cost)})`);
+    }
   };
 
   return (
@@ -207,22 +257,27 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
           <span style={{fontSize:11,letterSpacing:'0.5px',color:C.dim}}>
             {tab === 'players'
               ? `${visiblePlayers.length.toLocaleString()} ИГРОКОВ ДОСТУПНО`
-              : `${visibleStaff.length.toLocaleString()} ПЕРСОНАЛА ДОСТУПНО`}
+              : tab === 'staff'
+              ? `${visibleStaff.length.toLocaleString()} ПЕРСОНАЛА ДОСТУПНО`
+              : tab === 'scouting'
+              ? `${scoutingMissions.filter(m => m.status === 'active').length} АКТИВНЫХ МИССИЙ`
+              : ''}
           </span>
           <span style={{fontSize:11,letterSpacing:'0.5px',color:C.dim}}>БЮДЖЕТ</span>
         </div>
 
-        {/* ── PLAYERS / STAFF / HISTORY toggle ── */}
+        {/* ── PLAYERS / STAFF / SCOUTING / HISTORY toggle ── */}
         <div style={{display:'flex',background:C.card,borderRadius:20,padding:3,marginBottom:14}}>
           {([
-            {id:'players', label:'ИГРОКИ'},
-            {id:'staff',   label:'ПЕРСОНАЛ'},
-            {id:'history', label:'ИСТОРИЯ'},
+            {id:'players',  label:'ИГРОКИ'},
+            {id:'staff',    label:'ПЕРСОНАЛ'},
+            {id:'scouting', label:'СКАУТИНГ'},
+            {id:'history',  label:'ИСТОРИЯ'},
           ] as const).map(t => {
             const active = tab === t.id;
             return (
               <button key={t.id} onClick={() => handleTabChange(t.id)}
-                style={{flex:1,textAlign:'center',fontSize:10,fontWeight:active?700:600,
+                style={{flex:1,textAlign:'center',fontSize:9,fontWeight:active?700:600,
                   color:active?C.tealText:C.vdim,background:active?C.teal:'transparent',
                   padding:'7px 0',borderRadius:20,border:'none',cursor:'pointer'}}>
                 {t.label}
@@ -230,6 +285,14 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
             );
           })}
         </div>
+
+        {/* ── Scout toast ── */}
+        {scoutToast && (
+          <div style={{background:'rgba(15,212,168,0.12)',border:'0.5px solid rgba(15,212,168,0.3)',
+            borderRadius:10,padding:'8px 12px',marginBottom:10,fontSize:11,color:C.muted,textAlign:'center'}}>
+            {scoutToast}
+          </div>
+        )}
 
         {/* ── Transfer window banner (players tab only) ── */}
         {tab === 'players' && (
@@ -378,8 +441,11 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
             </div>
           )}
           {shownPlayers.map(p => {
-            const col    = POS_COLOR[p.pos] ?? C.muted;
-            const canBuy = p.price <= budget;
+            const col          = POS_COLOR[p.pos] ?? C.muted;
+            const isScouted    = scoutedPlayerIds.has(p.id);
+            const dynamicPrice = computePlayerMarketValue(p.rating, p.age);
+            const canBuy       = dynamicPrice <= budget;
+            const canScout     = !isScouted && budget >= 50_000;
             return (
               <div key={p.id} style={{background:C.card,borderRadius:12,padding:'12px 14px'}}>
                 <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
@@ -394,25 +460,37 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
                       {p.name} <span style={{fontSize:10,color:C.vdim}}>{p.nat}</span>
                     </div>
                     <div style={{fontSize:10,color:C.vdim}}>
-                      {p.age} лет · рейтинг {p.rating} · пот. {p.potential}
+                      {p.age} лет · рт {p.rating} · поц {isScouted
+                        ? <span style={{color:'#a78bfa'}}>{p.potential}</span>
+                        : <span style={{color:C.dim}}>? <span style={{color:'rgba(167,139,250,0.5)',fontSize:9}}>(скаут)</span></span>}
                     </div>
                   </div>
                   <span style={{fontSize:13,fontWeight:700,color:canBuy?C.teal:C.salmon}}>
-                    {fmtMoney(p.price)}
+                    {fmtMoney(dynamicPrice)}
                   </span>
                 </div>
                 <div style={{display:'flex',gap:8}}>
-                  <button onClick={() => buy(p.id, p.price, p.pos, p.rating, p.name)} disabled={!canBuy}
+                  <button onClick={() => buy(p.id, dynamicPrice, p.pos, p.rating, p.name)} disabled={!canBuy}
                     style={{flex:1,background:canBuy?C.teal:C.border2,border:'none',
                       color:canBuy?C.tealText:C.dim,fontWeight:700,fontSize:11,
                       padding:'8px',borderRadius:20,cursor:canBuy?'pointer':'default'}}>
                     {canBuy ? 'Купить' : 'Недостаточно €'}
                   </button>
-                  <button style={{flex:1,background:'transparent',
-                    border:`0.5px solid ${C.border2}`,color:C.vdim,
-                    fontSize:11,padding:'8px',borderRadius:20,cursor:'pointer'}}>
-                    Пропустить
-                  </button>
+                  {!isScouted ? (
+                    <button onClick={() => handleScoutPlayer(p.id)} disabled={!canScout}
+                      style={{flex:1,background:'transparent',
+                        border:`0.5px solid ${canScout ? '#a78bfa' : C.border2}`,
+                        color:canScout ? '#a78bfa' : C.dim,
+                        fontSize:11,padding:'8px',borderRadius:20,cursor:canScout?'pointer':'default'}}>
+                      🔍 Скаут €50K
+                    </button>
+                  ) : (
+                    <button style={{flex:1,background:'transparent',
+                      border:`0.5px solid ${C.border2}`,color:C.vdim,
+                      fontSize:11,padding:'8px',borderRadius:20,cursor:'pointer'}}>
+                      Пропустить
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -496,6 +574,116 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
           )}
           {shownStaff.length >= visibleStaff.length && shownStaff.length > 0 && (
             <div style={{height:64}} />
+          )}
+        </div>
+      )}
+
+      {/* ── SCOUTING tab ── */}
+      {tab === 'scouting' && (
+        <div style={{padding:'0 18px 80px',display:'flex',flexDirection:'column',gap:14}}>
+
+          {/* Send a mission section */}
+          <div style={{background:C.card,borderRadius:14,padding:'14px'}}>
+            <div style={{fontSize:12,fontWeight:700,color:C.white,marginBottom:12,letterSpacing:'0.4px'}}>
+              🌍 ОТПРАВИТЬ СКАУТОВ
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {SCOUTING_REGIONS.map(region => {
+                const hasActiveMission = scoutingMissions.some(
+                  m => m.region === region.name && m.status === 'active'
+                );
+                const canAfford = walletBalance >= region.cost;
+                return (
+                  <div key={region.name} style={{
+                    background:'#0d0d0d', borderRadius:10, padding:'10px 12px',
+                    border:`0.5px solid ${hasActiveMission ? 'rgba(15,212,168,0.25)' : C.border}`,
+                    opacity: hasActiveMission ? 0.7 : 1,
+                  }}>
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
+                      <span style={{fontSize:12,fontWeight:700,color:C.white}}>{region.name}</span>
+                      <span style={{fontSize:11,color:canAfford ? C.teal : C.salmon, fontWeight:700}}>
+                        {fmtMoney(region.cost)} · {region.durationWeeks} нед.
+                      </span>
+                    </div>
+                    <div style={{fontSize:10,color:C.dim,marginBottom:8}}>{region.description}</div>
+                    <button
+                      onClick={() => !hasActiveMission && handleSendMission(region.name, region.cost, region.durationWeeks)}
+                      disabled={hasActiveMission || !canAfford}
+                      style={{width:'100%',background:hasActiveMission?C.border2:canAfford?C.teal:'transparent',
+                        border:`0.5px solid ${hasActiveMission?C.border:canAfford?C.teal:C.salmon}`,
+                        color:hasActiveMission?C.vdim:canAfford?C.tealText:C.salmon,
+                        fontWeight:700,fontSize:11,padding:'7px',borderRadius:20,
+                        cursor:hasActiveMission||!canAfford?'default':'pointer'}}>
+                      {hasActiveMission ? '✓ Миссия активна' : canAfford ? 'Отправить' : 'Недостаточно €'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Active missions */}
+          {scoutingMissions.filter(m => m.status === 'active').length > 0 && (
+            <div style={{background:C.card,borderRadius:14,padding:'14px'}}>
+              <div style={{fontSize:12,fontWeight:700,color:C.white,marginBottom:12,letterSpacing:'0.4px'}}>
+                ⏳ АКТИВНЫЕ МИССИИ
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                {scoutingMissions.filter(m => m.status === 'active').map(m => (
+                  <div key={m.id} style={{
+                    background:'rgba(15,212,168,0.06)',borderRadius:10,padding:'10px 12px',
+                    border:'0.5px solid rgba(15,212,168,0.15)',
+                  }}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                      <span style={{fontSize:12,color:C.white,fontWeight:600}}>{m.region}</span>
+                      <span style={{fontSize:11,color:C.teal}}>осталось {m.durationWeeks} нед.</span>
+                    </div>
+                    <div style={{fontSize:10,color:C.dim,marginTop:3}}>
+                      Стоимость: {fmtMoney(m.costPaid)} · Начало: {m.startDate}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Completed missions */}
+          {scoutingMissions.filter(m => m.status === 'completed' && (m.report ?? []).length > 0).length > 0 && (
+            <div style={{background:C.card,borderRadius:14,padding:'14px'}}>
+              <div style={{fontSize:12,fontWeight:700,color:C.white,marginBottom:12,letterSpacing:'0.4px'}}>
+                📋 ОТЧЁТЫ СКАУТОВ
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                {scoutingMissions.filter(m => m.status === 'completed').map(m => (
+                  <div key={m.id} style={{borderRadius:10,overflow:'hidden',border:`0.5px solid ${C.border}`}}>
+                    <div style={{background:'#0d0d0d',padding:'8px 12px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                      <span style={{fontSize:11,fontWeight:700,color:C.muted}}>🌍 {m.region}</span>
+                      <span style={{fontSize:10,color:C.dim}}>{m.startDate}</span>
+                    </div>
+                    {(m.report ?? []).map((player, pi) => (
+                      <div key={pi} style={{padding:'8px 12px',borderTop:`0.5px solid ${C.border}`,
+                        background:pi%2===0?C.card:'transparent',
+                        display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                        <div>
+                          <div style={{fontSize:11,color:C.white}}>{player.name} <span style={{fontSize:9,color:C.vdim}}>{player.nationality}</span></div>
+                          <div style={{fontSize:10,color:C.dim}}>{player.position} · {player.age} лет · рт {player.rating} · поц <span style={{color:'#a78bfa'}}>{player.potential}</span></div>
+                        </div>
+                        <span style={{fontSize:11,fontWeight:700,color:C.teal}}>{fmtMoney(player.price)}</span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Empty state */}
+          {scoutingMissions.length === 0 && (
+            <div style={{textAlign:'center',padding:'60px 0'}}>
+              <div style={{fontSize:32,marginBottom:12}}>🔭</div>
+              <div style={{fontSize:14,fontWeight:600,color:C.dim,marginBottom:6}}>Скаутов ещё не отправляли</div>
+              <div style={{fontSize:11,color:C.vdim}}>Выберите регион выше и отправьте скаутов на разведку</div>
+            </div>
           )}
         </div>
       )}

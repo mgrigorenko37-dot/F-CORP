@@ -1,1 +1,1 @@
-- [F-CORP game systems](fcorp-game-systems.md) — key architectural decisions: coach AI, training types, competition names, schedule engine
+- [F-CORP game systems](fcorp-game-systems.md) — key architectural decisions: rival stats, scouting, contracts, transfer window, VERSION=10

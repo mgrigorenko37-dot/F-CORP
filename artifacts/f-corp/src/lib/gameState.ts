@@ -266,6 +266,15 @@ export interface ScoutingMission {
   report?:       ScoutedPlayer[];
 }
 
+/** Per-rival accumulated league statistics (from AI vs AI simulation). */
+export interface RivalLeagueStat {
+  w:  number; // wins
+  d:  number; // draws
+  l:  number; // losses
+  gf: number; // goals for
+  ga: number; // goals against
+}
+
 /** Set when a season finishes; consumed by runOneTick to init the next season. */
 export interface SeasonTransition {
   position:     number;   // MY_CLUB's final league position (1-based)
@@ -340,6 +349,15 @@ export interface GameState {
    */
   rivalForms:         Record<string, number[]>;
   /**
+   * Accumulated W/D/L/GF/GA for every rival from AI vs AI weekly simulation.
+   * Used to build the real league table instead of a mock formula.
+   */
+  rivalLeagueStats:   Record<string, RivalLeagueStat>;
+  /** Active and completed scouting missions. */
+  scoutingMissions:   ScoutingMission[];
+  /** Market player IDs that have been individually scouted (reveals potential). */
+  scoutedMarketPlayerIds: number[];
+  /**
    * Last game-year when all player ages were incremented (typically a July crossing).
    * Prevents double-aging within the same calendar year.
    */
@@ -362,7 +380,7 @@ export interface GameState {
 // ─── STORAGE HELPERS ──────────────────────────────────────────────────────────
 
 const KEY     = 'fcorp_game_state';
-const VERSION = 9; // v9: ticketPrice, activeSponsors, financeLedger; full finance model
+const VERSION = 10; // v10: rivalLeagueStats, scoutingMissions, scoutedMarketPlayerIds
 
 // ─── CONTRACT HELPERS ──────────────────────────────────────────────────────────
 
@@ -402,8 +420,11 @@ function buildDefaultGameState(): GameState {
     hiredStaffIds:      [],
     reservePlayerIds:   [],
     inbox:              [],
-    rivalStrengths:     {},
-    rivalForms:         {},
+    rivalStrengths:         {},
+    rivalForms:             {},
+    rivalLeagueStats:       {},
+    scoutingMissions:       [],
+    scoutedMarketPlayerIds: [],
     lastAgeIncrementYear: new Date().getFullYear(),
     ticketPrice:        0,
     activeSponsors:     [],
@@ -472,8 +493,11 @@ export function loadGameState(): GameState {
         reservePlayerIds:   (parsed as GameState).reservePlayerIds ?? def.reservePlayerIds,
         inbox:              (parsed as GameState).inbox             ?? def.inbox,
         season:             { ...season, schedule: normaliseSchedule(season.schedule ?? []) },
-        rivalStrengths:       (parsed as GameState).rivalStrengths       ?? {},
-        rivalForms:           (parsed as GameState).rivalForms           ?? {},
+        rivalStrengths:         (parsed as GameState).rivalStrengths         ?? {},
+        rivalForms:             (parsed as GameState).rivalForms             ?? {},
+        rivalLeagueStats:       (parsed as GameState).rivalLeagueStats       ?? {},
+        scoutingMissions:       (parsed as GameState).scoutingMissions       ?? [],
+        scoutedMarketPlayerIds: (parsed as GameState).scoutedMarketPlayerIds ?? [],
         lastAgeIncrementYear: (parsed as GameState).lastAgeIncrementYear ?? new Date().getFullYear(),
         ticketPrice:          (parsed as GameState).ticketPrice          ?? 0,
         activeSponsors:       (parsed as GameState).activeSponsors       ?? [],
@@ -487,6 +511,9 @@ export function loadGameState(): GameState {
       ...state,
       rivalStrengths:          state.rivalStrengths          ?? {},
       rivalForms:              state.rivalForms              ?? {},
+      rivalLeagueStats:        state.rivalLeagueStats        ?? {},
+      scoutingMissions:        state.scoutingMissions        ?? [],
+      scoutedMarketPlayerIds:  state.scoutedMarketPlayerIds  ?? [],
       lastAgeIncrementYear:    state.lastAgeIncrementYear    ?? new Date().getFullYear(),
       pendingSeasonTransition: state.pendingSeasonTransition ?? undefined,
       playerStates:            (state.playerStates ?? []).map(migratePlayerState),
@@ -695,4 +722,86 @@ export function fatigueLabel(fatigue: number): string {
   if (fatigue <= 70)  return 'Устал';
   if (fatigue <= 85)  return 'Сильно устал';
   return 'На грани';
+}
+
+// ─── MARKET VALUE ─────────────────────────────────────────────────────────────
+
+/**
+ * Compute a player's current market value based on rating and age.
+ * Uses the same exponential base as the static price generator but applies
+ * an age factor: peak at 24–28, youth discount (lower value but high potential),
+ * and accelerating decline after 30.
+ */
+export function computePlayerMarketValue(rating: number, age: number): number {
+  const base = Math.round(100_000 * Math.pow(25, (rating - 30) / 35));
+  let ageFactor = 1.0;
+  if      (age <= 18) ageFactor = 0.70;
+  else if (age <= 20) ageFactor = 0.82;
+  else if (age <= 23) ageFactor = 0.93;
+  else if (age <= 28) ageFactor = 1.00;
+  else if (age <= 30) ageFactor = 0.88;
+  else if (age <= 32) ageFactor = 0.72;
+  else if (age <= 34) ageFactor = 0.52;
+  else ageFactor = Math.max(0.18, 0.52 - (age - 34) * 0.10);
+  return Math.max(50_000, Math.round(base * ageFactor / 50_000) * 50_000);
+}
+
+// ─── SCOUTING HELPERS ─────────────────────────────────────────────────────────
+
+export interface ScoutingRegion {
+  name:          string;
+  cost:          number;   // €
+  durationWeeks: number;
+  description:   string;
+}
+
+export const SCOUTING_REGIONS: ScoutingRegion[] = [
+  { name: 'Южная Америка',    cost:  80_000, durationWeeks: 4, description: 'Нападающие и атакующие хавбеки, возраст 17–24' },
+  { name: 'Африка',           cost:  60_000, durationWeeks: 5, description: 'Быстрые крайние и физически мощные игроки' },
+  { name: 'Азия',             cost:  70_000, durationWeeks: 5, description: 'Технари и вратари, высокий потенциал' },
+  { name: 'Восточная Европа', cost:  75_000, durationWeeks: 4, description: 'Защитники и опорники, универсальные игроки' },
+  { name: 'Европа (юниоры)',  cost: 120_000, durationWeeks: 3, description: 'Топ-таланты из молодёжных академий' },
+];
+
+/** Start a scouting mission if the club has enough balance. */
+export function startScoutingMission(
+  region: string,
+  cost: number,
+  durationWeeks: number,
+): boolean {
+  let ok = false;
+  updateGameState(s => {
+    if ((s.walletBalance ?? 0) < cost) return s;
+    ok = true;
+    const mission: ScoutingMission = {
+      id:            `scout_${region.replace(/\s/g, '_')}_${Date.now()}`,
+      region,
+      costPaid:      cost,
+      startDate:     s.season.currentDate || new Date().toISOString().slice(0, 10),
+      durationWeeks,
+      status:        'active',
+    };
+    return {
+      ...s,
+      walletBalance:    s.walletBalance - cost,
+      scoutingMissions: [...(s.scoutingMissions ?? []), mission],
+    };
+  });
+  return ok;
+}
+
+/** Scout an individual market player (reveals potential). */
+export function scoutMarketPlayer(playerId: number, cost: number): boolean {
+  let ok = false;
+  updateGameState(s => {
+    if ((s.scoutedMarketPlayerIds ?? []).includes(playerId)) { ok = true; return s; }
+    if ((s.walletBalance ?? 0) < cost) return s;
+    ok = true;
+    return {
+      ...s,
+      walletBalance:          s.walletBalance - cost,
+      scoutedMarketPlayerIds: [...(s.scoutedMarketPlayerIds ?? []), playerId],
+    };
+  });
+  return ok;
 }
