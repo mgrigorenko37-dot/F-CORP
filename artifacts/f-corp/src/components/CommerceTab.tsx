@@ -135,6 +135,8 @@ export default function CommerceTab() {
   const [showTopup, setShowTopup]   = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [customAmount, setCustomAmount] = useState('');
+  const [incomeOpen, setIncomeOpen]     = useState(true);
+  const [expensesOpen, setExpensesOpen] = useState(true);
 
   // Finance data from gameState
   const [playerWageWeekly, setPlayerWageWeekly] = useState(0);
@@ -323,61 +325,97 @@ export default function CommerceTab() {
             ))}
           </div>
 
-          {/* Income breakdown */}
-          <div style={{background:C.card,borderRadius:14,padding:16,marginBottom:12,border:`1px solid ${C.border}`}}>
-            <div style={{fontSize:10,fontWeight:700,letterSpacing:'0.5px',color:C.dim,marginBottom:12}}>ДОХОДЫ — РАЗБИВКА</div>
-            {[
-              {
-                icon:'🎟', label:'Матчевые доходы', sub:'билеты',
-                val: lastEntry?.ticketIncome ?? estTicketWeekly,
-                note: lastEntry ? 'прошлая нед' : 'оценка',
-              },
-              { icon:'🤝', label:'Спонсоры', sub:`${activeSponsors.length} контракт(а)`, val:sponsorWeekly, note:'гарантировано' },
-              { icon:'📺', label:'TV-права', sub:`Уровень ${leagueLevel}`, val:tvWeekly, note:'в сезоне' },
-            ].map(r => (
-              <div key={r.label} style={{display:'flex',alignItems:'center',marginBottom:10}}>
-                <span style={{fontSize:18,marginRight:10}}>{r.icon}</span>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:12,fontWeight:600,color:C.white}}>{r.label}</div>
-                  <div style={{fontSize:10,color:C.dim}}>{r.sub} · {r.note}</div>
-                </div>
-                <div style={{textAlign:'right'}}>
-                  <div style={{fontSize:13,fontWeight:700,color:C.teal}}>+{fmtMoney(r.val)}</div>
-                  <div style={{fontSize:9,color:C.vdim}}>в нед</div>
-                </div>
+          {/* Income breakdown — collapsible */}
+          <div style={{background:C.card,borderRadius:14,marginBottom:12,border:`1px solid ${C.border}`,overflow:'hidden'}}>
+            {/* Header row */}
+            <button onClick={()=>setIncomeOpen(o=>!o)} style={{
+              width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',
+              padding:'14px 16px',background:'none',border:'none',cursor:'pointer',
+            }}>
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <ArrowUpRight size={14} color={C.teal}/>
+                <span style={{fontSize:12,fontWeight:700,letterSpacing:'0.5px',color:C.teal}}>ДОХОДЫ</span>
               </div>
-            ))}
-            <div style={{borderTop:`1px solid ${C.border}`,paddingTop:10,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-              <span style={{fontSize:11,fontWeight:600,color:C.muted}}>Итого доходы</span>
-              <span style={{fontSize:15,fontWeight:800,color:C.teal}}>+{fmtMoney(totalIncomeWeekly)}/нед</span>
-            </div>
+              <div style={{display:'flex',alignItems:'center',gap:10}}>
+                <span style={{fontSize:13,fontWeight:800,color:C.teal}}>+{fmtMoney(totalIncomeWeekly)}/нед</span>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
+                  style={{transform:incomeOpen?'rotate(180deg)':'rotate(0deg)',transition:'transform 0.2s',flexShrink:0}}>
+                  <path d="M2.5 5L7 9.5L11.5 5" stroke={C.dim} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+            </button>
+            {/* Collapsible body */}
+            {incomeOpen && (
+              <div style={{padding:'0 16px 14px'}}>
+                <div style={{height:1,background:C.border,marginBottom:14}}/>
+                {[
+                  {
+                    icon:'🎟', label:'Матчевые доходы', sub:'билеты',
+                    val: lastEntry?.ticketIncome ?? estTicketWeekly,
+                    note: lastEntry ? 'прошлая нед' : 'оценка',
+                  },
+                  { icon:'🤝', label:'Спонсоры', sub:`${activeSponsors.length} контракт(а)`, val:sponsorWeekly, note:'гарантировано' },
+                  { icon:'📺', label:'TV-права', sub:`Уровень ${leagueLevel}`, val:tvWeekly, note:'в сезоне' },
+                ].map(r => (
+                  <div key={r.label} style={{display:'flex',alignItems:'center',marginBottom:12}}>
+                    <span style={{fontSize:18,marginRight:10}}>{r.icon}</span>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,fontWeight:600,color:C.white}}>{r.label}</div>
+                      <div style={{fontSize:10,color:C.dim}}>{r.sub} · {r.note}</div>
+                    </div>
+                    <div style={{textAlign:'right'}}>
+                      <div style={{fontSize:13,fontWeight:700,color:C.teal}}>+{fmtMoney(r.val)}</div>
+                      <div style={{fontSize:9,color:C.vdim}}>в нед</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Expenses breakdown */}
-          <div style={{background:C.card,borderRadius:14,padding:16,marginBottom:12,border:`1px solid ${C.border}`}}>
-            <div style={{fontSize:10,fontWeight:700,letterSpacing:'0.5px',color:C.dim,marginBottom:12}}>РАСХОДЫ — РАЗБИВКА</div>
-            {[
-              { icon:'👥', label:'Зарплаты игроков', sub:`${(playerWageWeekly/1000).toFixed(0)}K × 4.33 в мес`, val:playerWageWeekly },
-              { icon:'🏟', label:'Тренер + штаб', sub:'фонд оплаты труда', val:staffWageWeekly },
-              { icon:'✈️', label:'Перелёты', sub:'выездные матчи', val:lastEntry?.travelCost ?? travelEstWeekly, note:'оценка' },
-              { icon:'🏗', label:'Содержание базы', sub:'техобслуживание', val:infraMaintWeekly },
-            ].map(r => (
-              <div key={r.label} style={{display:'flex',alignItems:'center',marginBottom:10}}>
-                <span style={{fontSize:18,marginRight:10}}>{r.icon}</span>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:12,fontWeight:600,color:C.white}}>{r.label}</div>
-                  <div style={{fontSize:10,color:C.dim}}>{r.sub}</div>
-                </div>
-                <div style={{textAlign:'right'}}>
-                  <div style={{fontSize:13,fontWeight:700,color:C.salmon}}>−{fmtMoney(r.val)}</div>
-                  <div style={{fontSize:9,color:C.vdim}}>в нед</div>
-                </div>
+          {/* Expenses breakdown — collapsible */}
+          <div style={{background:C.card,borderRadius:14,marginBottom:12,border:`1px solid ${C.border}`,overflow:'hidden'}}>
+            {/* Header row */}
+            <button onClick={()=>setExpensesOpen(o=>!o)} style={{
+              width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',
+              padding:'14px 16px',background:'none',border:'none',cursor:'pointer',
+            }}>
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <ArrowDownRight size={14} color={C.salmon}/>
+                <span style={{fontSize:12,fontWeight:700,letterSpacing:'0.5px',color:C.salmon}}>РАСХОДЫ</span>
               </div>
-            ))}
-            <div style={{borderTop:`1px solid ${C.border}`,paddingTop:10,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-              <span style={{fontSize:11,fontWeight:600,color:C.muted}}>Итого расходы</span>
-              <span style={{fontSize:15,fontWeight:800,color:C.salmon}}>−{fmtMoney(totalExpensesWeekly)}/нед</span>
-            </div>
+              <div style={{display:'flex',alignItems:'center',gap:10}}>
+                <span style={{fontSize:13,fontWeight:800,color:C.salmon}}>−{fmtMoney(totalExpensesWeekly)}/нед</span>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
+                  style={{transform:expensesOpen?'rotate(180deg)':'rotate(0deg)',transition:'transform 0.2s',flexShrink:0}}>
+                  <path d="M2.5 5L7 9.5L11.5 5" stroke={C.dim} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+            </button>
+            {/* Collapsible body */}
+            {expensesOpen && (
+              <div style={{padding:'0 16px 14px'}}>
+                <div style={{height:1,background:C.border,marginBottom:14}}/>
+                {[
+                  { icon:'👥', label:'Зарплаты игроков', sub:`${(playerWageWeekly/1000).toFixed(0)}K × 4.33 в мес`, val:playerWageWeekly },
+                  { icon:'🏟', label:'Тренер + штаб', sub:'фонд оплаты труда', val:staffWageWeekly },
+                  { icon:'✈️', label:'Перелёты', sub:'выездные матчи', val:lastEntry?.travelCost ?? travelEstWeekly },
+                  { icon:'🏗', label:'Содержание базы', sub:'техобслуживание', val:infraMaintWeekly },
+                ].map(r => (
+                  <div key={r.label} style={{display:'flex',alignItems:'center',marginBottom:12}}>
+                    <span style={{fontSize:18,marginRight:10}}>{r.icon}</span>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,fontWeight:600,color:C.white}}>{r.label}</div>
+                      <div style={{fontSize:10,color:C.dim}}>{r.sub}</div>
+                    </div>
+                    <div style={{textAlign:'right'}}>
+                      <div style={{fontSize:13,fontWeight:700,color:C.salmon}}>−{fmtMoney(r.val)}</div>
+                      <div style={{fontSize:9,color:C.vdim}}>в нед</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Net trend chart */}

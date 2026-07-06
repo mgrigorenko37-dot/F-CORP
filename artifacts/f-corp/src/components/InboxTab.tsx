@@ -373,12 +373,13 @@ export default function InboxTab() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2 }}
-              className="flex gap-3 py-4 border-b border-gray-100 last:border-0"
+              className="flex gap-3 py-4 last:border-0"
+              style={{ borderBottom: '1px solid #222' }}
             >
               {/* dot */}
               <div className="shrink-0 pt-[3px]">
                 <div className="w-[7px] h-[7px] rounded-full"
-                  style={{ background: msg.status === 'pending' ? C.teal : 'rgba(0,0,0,0.12)' }} />
+                  style={{ background: msg.status === 'pending' ? C.teal : '#333' }} />
               </div>
 
               <div className="flex-1 min-w-0">
@@ -392,19 +393,18 @@ export default function InboxTab() {
                       }}>
                       {TYPE_LABEL[msg.type]}
                     </span>
-                    <span className="text-muted-foreground text-[11px] leading-none shrink-0">·</span>
-                    <span className="text-muted-foreground text-[12px] leading-none truncate">
+                    <span className="text-[11px] leading-none shrink-0" style={{ color: '#555' }}>·</span>
+                    <span className="text-[12px] leading-none truncate" style={{ color: 'rgba(255,255,255,0.50)' }}>
                       {msg.sender}
                     </span>
                   </div>
-                  <span className="text-muted-foreground text-[12px] shrink-0"
-                    style={{ fontVariantNumeric: 'tabular-nums' }}>
+                  <span className="text-[12px] shrink-0" style={{ color: 'rgba(255,255,255,0.40)', fontVariantNumeric: 'tabular-nums' }}>
                     {msg.time}
                   </span>
                 </div>
 
                 {/* Body */}
-                <p className="text-gray-700 mb-[14px] leading-[1.55]" style={{ fontSize: '14px' }}>
+                <p className="mb-[14px] leading-[1.55]" style={{ fontSize: '14px', color: 'rgba(255,255,255,0.88)' }}>
                   {msg.text}
                 </p>
 
@@ -457,8 +457,8 @@ export default function InboxTab() {
                       );
                     })() : (
                       <button onClick={() => handleAction(msg.id, 'read')}
-                        className="flex items-center gap-[6px] px-4 py-[7px] rounded-full text-gray-600 text-[13px] font-semibold active:scale-95 transition-transform"
-                        style={{ background: '#1e1e1e', border: '1px solid #333333' }}>
+                        className="flex items-center gap-[6px] px-4 py-[7px] rounded-full text-[13px] font-semibold active:scale-95 transition-transform"
+                        style={{ background: '#1e1e1e', border: '1px solid #333', color: 'rgba(255,255,255,0.60)' }}>
                         <Check className="w-[13px] h-[13px]" strokeWidth={2.5} />
                         Прочитано
                       </button>
@@ -468,10 +468,8 @@ export default function InboxTab() {
 
                 {/* Status after action */}
                 {msg.status !== 'pending' && (
-                  <span className={`inline-flex items-center gap-[5px] text-[12px] font-semibold ${
-                    msg.status === 'approved' ? 'text-primary'
-                    : msg.status === 'rejected' ? 'text-red-400'
-                    : 'text-gray-400'}`}>
+                  <span style={{ display:'inline-flex', alignItems:'center', gap:5, fontSize:12, fontWeight:600,
+                    color: msg.status==='approved' ? C.teal : msg.status==='rejected' ? '#f87171' : 'rgba(255,255,255,0.40)' }}>
                     <Check className="w-[12px] h-[12px]" strokeWidth={2.5} />
                     {msg.status === 'approved' ? 'Одобрено' : msg.status === 'rejected' ? 'Отклонено' : 'Прочитано'}
                   </span>
