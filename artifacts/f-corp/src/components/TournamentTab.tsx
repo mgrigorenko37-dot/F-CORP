@@ -443,7 +443,7 @@ export default function TournamentTab() {
     // Init playerStates from squad templates if empty
     if (s.playerStates.length === 0) {
       s = { ...s, playerStates: FIRST_SQUAD_TMPL.map(tmpl =>
-        createDefaultPlayerState(tmpl.id, tmpl.pos, scaleRating(tmpl.rating, level))
+        createDefaultPlayerState(tmpl.id, tmpl.pos, scaleRating(tmpl.rating, level), tmpl.age)
       )};
     }
     // Build squad name lookup

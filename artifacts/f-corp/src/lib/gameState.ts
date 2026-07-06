@@ -121,6 +121,13 @@ export interface PlayerGameState {
   injury:           InjuryRecord | null;
   /** Matches remaining to serve for a red-card ban. 0 = eligible to play. */
   suspendedMatches: number;
+  /** Player's current age (incremented once per game year each summer). */
+  age:              number;
+  /**
+   * Fractional rating accumulator for growth/decline.
+   * When this reaches ±1.0 it is applied to `rating` and reset.
+   */
+  ratingDelta:      number;
 
   attributes: PlayerAttributes;
   hidden:     HiddenAttributes;
@@ -254,12 +261,17 @@ export interface GameState {
    * Keyed by team name. Updated every tick.
    */
   rivalForms:         Record<string, number[]>;
+  /**
+   * Last game-year when all player ages were incremented (typically a July crossing).
+   * Prevents double-aging within the same calendar year.
+   */
+  lastAgeIncrementYear: number;
 }
 
 // ─── STORAGE HELPERS ──────────────────────────────────────────────────────────
 
 const KEY     = 'fcorp_game_state';
-const VERSION = 6; // v6: suspendedMatches, rivalStrengths, rivalForms, substitution event
+const VERSION = 7; // v7: age + ratingDelta per player; lastAgeIncrementYear in GameState
 
 const DEFAULT_MARKET_BUDGET = 2_400_000;
 const DEFAULT_WALLET         = 5_000_000;
@@ -288,6 +300,7 @@ function buildDefaultGameState(): GameState {
     inbox:              [],
     rivalStrengths:     {},
     rivalForms:         {},
+    lastAgeIncrementYear: new Date().getFullYear(),
   };
 }
 
@@ -300,7 +313,16 @@ function normaliseSchedule(schedule: ScheduledMatch[]): ScheduledMatch[] {
   });
 }
 
-/** Migrate old PlayerGameState entries that are missing pos / rating / attributes / suspendedMatches. */
+/** Estimate a player's age from their squad template ID when migrating. */
+function guessAge(id: number): number {
+  if (id >= 101 && id <= 116) return 14;   // U15
+  if (id >= 201 && id <= 218) return 18;   // U19
+  if (id >= 301 && id <= 319) return 21;   // U23
+  if (id >= 1   && id <= 25)  return 26;   // First squad (average)
+  return 25;                                // Market / unknown
+}
+
+/** Migrate old PlayerGameState entries that are missing fields added in later versions. */
 function migratePlayerState(p: PlayerGameState): PlayerGameState {
   const pos    = (p as PlayerGameState & { pos?: string }).pos    ?? 'CM';
   const rating = (p as PlayerGameState & { rating?: number }).rating ?? 60;
@@ -310,7 +332,9 @@ function migratePlayerState(p: PlayerGameState): PlayerGameState {
     pos,
     rating,
     suspendedMatches: (p as PlayerGameState).suspendedMatches ?? 0,
-    attributes: hasRealAttrs ? p.attributes : generateAttributesForPosition(pos, rating),
+    age:         (p as PlayerGameState).age         ?? guessAge(p.id),
+    ratingDelta: (p as PlayerGameState).ratingDelta ?? 0,
+    attributes:  hasRealAttrs ? p.attributes : generateAttributesForPosition(pos, rating),
   };
 }
 
@@ -338,18 +362,20 @@ export function loadGameState(): GameState {
         reservePlayerIds:   (parsed as GameState).reservePlayerIds ?? def.reservePlayerIds,
         inbox:              (parsed as GameState).inbox             ?? def.inbox,
         season:             { ...season, schedule: normaliseSchedule(season.schedule ?? []) },
-        rivalStrengths:     (parsed as GameState).rivalStrengths ?? {},
-        rivalForms:         (parsed as GameState).rivalForms     ?? {},
-        version:            VERSION,
+        rivalStrengths:       (parsed as GameState).rivalStrengths       ?? {},
+        rivalForms:           (parsed as GameState).rivalForms           ?? {},
+        lastAgeIncrementYear: (parsed as GameState).lastAgeIncrementYear ?? new Date().getFullYear(),
+        version:              VERSION,
       };
     }
 
     const state = parsed as GameState;
     const migrated: GameState = {
       ...state,
-      rivalStrengths: state.rivalStrengths ?? {},
-      rivalForms:     state.rivalForms     ?? {},
-      playerStates:   (state.playerStates ?? []).map(migratePlayerState),
+      rivalStrengths:       state.rivalStrengths       ?? {},
+      rivalForms:           state.rivalForms           ?? {},
+      lastAgeIncrementYear: state.lastAgeIncrementYear ?? new Date().getFullYear(),
+      playerStates:         (state.playerStates ?? []).map(migratePlayerState),
     };
     if (migrated.season?.schedule?.length) {
       return { ...migrated, season: { ...migrated.season, schedule: normaliseSchedule(migrated.season.schedule) } };
@@ -444,6 +470,7 @@ export function createDefaultPlayerState(
   id:     number,
   pos     = 'CM',
   rating  = 60,
+  age     = 25,
 ): PlayerGameState {
   return {
     id,
@@ -456,6 +483,8 @@ export function createDefaultPlayerState(
     morale:     65,
     injury:     null,
     suspendedMatches: 0,
+    age,
+    ratingDelta: 0,
     attributes: generateAttributesForPosition(pos, rating),
     hidden: {
       injuryProne:     Math.ceil(Math.random() * 5),

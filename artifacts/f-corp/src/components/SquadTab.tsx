@@ -43,7 +43,8 @@ export default function SquadTab() {
   const [view, setView]               = useState<SquadView>('first');
   const [youthTeam, setYouthTeam]     = useState<YouthTeam>('U23');
   const [posFilter, setPosFilter]     = useState<PosFilter>('ALL');
-  const [reserveIds, setReserveIds]   = useState<Set<number>>(new Set());
+  const [reserveIds, setReserveIds]         = useState<Set<number>>(new Set());
+  const [playerOverrides, setPlayerOverrides] = useState<Map<number, {age: number; rating: number}>>(new Map());
 
   const country = getStoredCountry();
   const level   = getLeagueLevel();
@@ -52,6 +53,11 @@ export default function SquadTab() {
   useEffect(() => {
     const gs = loadGameState();
     setReserveIds(new Set(gs.reservePlayerIds));
+    const overrides = new Map<number, {age: number; rating: number}>();
+    for (const ps of gs.playerStates) {
+      overrides.set(ps.id, { age: ps.age, rating: ps.rating });
+    }
+    setPlayerOverrides(overrides);
   }, []);
 
   const handleMoveToReserve = useCallback((id: number) => {
@@ -86,7 +92,7 @@ export default function SquadTab() {
   }, [view, youthTeam, FIRST_SQUAD, U15_SQUAD, U19_SQUAD, U23_SQUAD, reserveIds]);
 
   const filtered   = posFilter === 'ALL' ? activePlayers : activePlayers.filter(p => p.pos === posFilter);
-  const avgRating  = avg(activePlayers.map(p => p.rating));
+  const avgRating  = avg(activePlayers.map(p => playerOverrides.get(p.id)?.rating ?? p.rating));
 
   return (
     <motion.div initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-10}}
@@ -225,9 +231,9 @@ export default function SquadTab() {
                   </div>
                   <div style={{flex:1}}>
                     <div style={{fontSize:13,color:inReserve ? C.vdim : C.white}}>{p.name}</div>
-                    <div style={{fontSize:10,color:C.vdim}}>{p.sub} · {p.age} лет</div>
+                    <div style={{fontSize:10,color:C.vdim}}>{p.sub} · {playerOverrides.get(p.id)?.age ?? p.age} лет</div>
                   </div>
-                  <span style={{fontSize:14,fontWeight:700,color:inReserve ? C.vdim : '#ffffff',marginRight:4}}>{p.rating}</span>
+                  <span style={{fontSize:14,fontWeight:700,color:inReserve ? C.vdim : '#ffffff',marginRight:4}}>{playerOverrides.get(p.id)?.rating ?? p.rating}</span>
                   {view === 'first' && (
                     <button
                       onClick={() => inReserve ? handleMoveFromReserve(p.id) : handleMoveToReserve(p.id)}

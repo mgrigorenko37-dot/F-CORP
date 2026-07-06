@@ -16,7 +16,8 @@
  *   anchors `currentDate` 7 days before the first fixture, and seeds rival data.
  */
 
-import type { GameState, ScheduledMatch, InjuryType, InboxMessage } from './gameState';
+import type { GameState, ScheduledMatch, InjuryType, InboxMessage, PlayerGameState } from './gameState';
+import { generateAttributesForPosition } from './gameState';
 import { simulateMatch } from './matchEngine';
 import type { SimulateMatchOutput } from './matchEngine';
 import { generateSeasonSchedule } from './scheduleEngine';
@@ -378,6 +379,105 @@ export function applyWeeklyTick(
     };
   });
 
+  // ── Rating progression (weekly growth / veteran decline) ──────────────────
+  const progressionInbox: InboxMessage[] = [];
+  let progressedStates = finalPlayerStates.map(p => {
+    if (p.injury) return p;                        // injured players skip progression
+
+    const delta   = weeklyRatingDelta(p.age, p.hidden.professionalism, p.hidden.longevity);
+    const newAccum = (p.ratingDelta ?? 0) + delta;
+
+    let newRating  = p.rating;
+    let remainder  = newAccum;
+
+    if (newAccum >= 1.0) {
+      const gained = Math.floor(newAccum);
+      newRating    = Math.min(99, p.rating + gained);
+      remainder    = newAccum - gained;
+      if (newRating !== p.rating && p.age <= 23) {
+        const name = squadNames.get(p.id) ?? `Игрок #${p.id}`;
+        progressionInbox.push({
+          id:             `growth_${p.id}_${weekEnd}`,
+          type:           'REPORT',
+          date:           weekEnd,
+          time:           '11:00',
+          sender:         'Тренер по развитию',
+          text:           `🌱 ${name} (${p.age} лет) прогрессирует: рейтинг вырос до ${newRating}.`,
+          requiresAction: false,
+        });
+      }
+    } else if (newAccum <= -1.0) {
+      const lost   = Math.floor(Math.abs(newAccum));
+      newRating    = Math.max(20, p.rating - lost);
+      remainder    = newAccum + lost;
+      if (newRating !== p.rating && p.age >= 30) {
+        const name = squadNames.get(p.id) ?? `Игрок #${p.id}`;
+        progressionInbox.push({
+          id:             `decline_${p.id}_${weekEnd}`,
+          type:           'REPORT',
+          date:           weekEnd,
+          time:           '11:00',
+          sender:         'Тренер по развитию',
+          text:           `📉 ${name} (${p.age} лет) теряет форму: рейтинг упал до ${newRating}.`,
+          requiresAction: false,
+        });
+      }
+    }
+
+    const newAttrs = newRating !== p.rating
+      ? generateAttributesForPosition(p.pos, newRating)
+      : p.attributes;
+
+    return { ...p, rating: newRating, ratingDelta: remainder, attributes: newAttrs };
+  });
+
+  // ── Age increment: once per game year, when weekEnd crosses July 1st ────────
+  let lastAgeIncrementYear = gameState.lastAgeIncrementYear ?? new Date().getFullYear();
+  {
+    const wd    = new Date(weekEnd);
+    const yr    = wd.getFullYear();
+    const month = wd.getMonth(); // 0-indexed; July = 6
+    if (yr > lastAgeIncrementYear && month >= 6) {
+      lastAgeIncrementYear = yr;
+      progressedStates = progressedStates.map(p => ({ ...p, age: p.age + 1 }));
+
+      progressionInbox.push({
+        id:             `age_increment_${yr}`,
+        type:           'REPORT',
+        date:           weekEnd,
+        time:           '08:00',
+        sender:         'Клубный секретарь',
+        text:           `📅 Новый футбольный год! Возраст игроков обновлён. Молодёжь подрастает — таланты прогрессируют.`,
+        requiresAction: false,
+      });
+
+      for (const p of progressedStates) {
+        const name = squadNames.get(p.id) ?? `Игрок #${p.id}`;
+        if (p.age >= 38) {
+          progressionInbox.push({
+            id:             `retirement_${p.id}_${yr}`,
+            type:           'OFFER',
+            date:           weekEnd,
+            time:           '09:00',
+            sender:         'Спортивный директор',
+            text:           `🏁 ${name} (${p.age} лет, рт ${p.rating}) достиг критического возраста. Рекомендуем завершить карьеру и освободить место в составе.`,
+            requiresAction: false,
+          });
+        } else if (p.age >= 35) {
+          progressionInbox.push({
+            id:             `aging_warn_${p.id}_${yr}`,
+            type:           'ALERT',
+            date:           weekEnd,
+            time:           '09:00',
+            sender:         'Спортивный директор',
+            text:           `⚠️ ${name} (${p.age} лет) — ветеран. Карьера близится к завершению. Стоит планировать замену.`,
+            requiresAction: false,
+          });
+        }
+      }
+    }
+  }
+
   // ── Generate inbox messages ──
   const inboxMessages: InboxMessage[] = [];
   const mySide = (m: ScheduledMatch) => m.isHome ? 'home' : 'away';
@@ -530,14 +630,16 @@ export function applyWeeklyTick(
   }
 
   // ── Assemble new state ──
-  const prevInbox = gameState.inbox ?? [];
+  const prevInbox    = gameState.inbox ?? [];
+  const allNewInbox  = [...progressionInbox, ...inboxMessages];
   const newState: GameState = {
     ...gameState,
-    playerStates:    finalPlayerStates,
-    lastWeekTick:    isoDate(new Date()),
-    inbox:           [...inboxMessages, ...prevInbox].slice(0, 200),
-    rivalStrengths:  finalRivalStrengths,
-    rivalForms:      finalRivalForms,
+    playerStates:         progressedStates,
+    lastWeekTick:         isoDate(new Date()),
+    inbox:                [...allNewInbox, ...prevInbox].slice(0, 200),
+    rivalStrengths:       finalRivalStrengths,
+    rivalForms:           finalRivalForms,
+    lastAgeIncrementYear,
     season: {
       ...season,
       currentDate: weekEnd,
@@ -546,13 +648,50 @@ export function applyWeeklyTick(
     },
   };
 
-  return { newState, weekStart, weekEnd, matchesPlayed, injuriesHealed, injuriesOccurred, inboxMessages };
+  return { newState, weekStart, weekEnd, matchesPlayed, injuriesHealed, injuriesOccurred, inboxMessages: allNewInbox };
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 
 function clamp(v: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, v));
+}
+
+/**
+ * How much (fractional rating points) a player grows or declines each week.
+ *
+ * Growth curve:
+ *   age ≤ 20  → +0.08 … +0.18/wk  (≈ +3 … +7/season)  — driven by professionalism
+ *   age ≤ 23  → +0.03 … +0.078/wk (≈ +1 … +3/season)
+ *   age ≤ 28  → +0.008/wk max      (very slight if professionalism ≥ 4)
+ *
+ * Decline curve:
+ *   age 29-31 → −0.035 … −0.051/wk (≈ −1.4 … −2/season) × longevityFactor
+ *   age 32-34 → −0.08  … −0.11/wk  (≈ −3 … −4.3/season) × longevityFactor
+ *   age 35+   → −0.15  … +/season   (accelerating)       × longevityFactor
+ *
+ * longevity 1-5 where 5 = slowest decline:
+ *   factor = 1.40 - longevity × 0.12  →  1→1.28, 3→1.04, 5→0.80
+ */
+function weeklyRatingDelta(age: number, professionalism: number, longevity: number): number {
+  const prof = Math.max(1, Math.min(5, professionalism));
+  const lon  = Math.max(1, Math.min(5, longevity));
+  const longevityFactor = 1.40 - lon * 0.12;   // 1.28 (worst) … 0.80 (best)
+
+  if (age <= 20) return 0.08 + (prof - 1) * 0.025;       // 0.08 … 0.18
+  if (age <= 23) return 0.03 + (prof - 1) * 0.012;       // 0.03 … 0.078
+  if (age <= 28) return prof >= 4 ? 0.008 : 0;           // prime: tiny gain or flat
+  if (age <= 31) {
+    const d = 0.035 + (age - 29) * 0.008;                 // 0.035 … 0.051
+    return -(d * longevityFactor);
+  }
+  if (age <= 34) {
+    const d = 0.08 + (age - 32) * 0.015;                  // 0.08 … 0.11
+    return -(d * longevityFactor);
+  }
+  // age 35+
+  const d = 0.15 + (age - 35) * 0.02;                     // 0.15, 0.17, 0.19 …
+  return -(d * longevityFactor);
 }
 
 // ─── QUERY HELPERS ────────────────────────────────────────────────────────────

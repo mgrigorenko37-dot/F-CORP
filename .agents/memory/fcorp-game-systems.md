@@ -93,6 +93,24 @@ description: Key decisions for the football manager game engine — training, co
 - `TournamentTab.tsx` — extracted `runOneTick(state)` useCallback (season init + playerStates init + applyWeeklyTick); `handleAdvanceWeek` calls it + `setLastTickTs`; 1s interval uses elapsed-threshold check (`now - lastAutoTickRef.current >= TICK_INTERVAL_MS`) — more robust than countdown-window approach; countdown progress bar visible in Calendar view when season active
 - **Critical design rule**: both offline catch-up and live interval must guard `schedule.some(m => !m.played)` to prevent post-season drift
 
+## Player Aging & Rating Progression System (VERSION 7)
+- **New fields**: `PlayerGameState.age: number` + `ratingDelta: number` (float accumulator); `GameState.lastAgeIncrementYear: number`
+- **Weekly delta** (accumulates in `ratingDelta`; applies to `rating` when abs ≥ 1.0):
+  - age ≤ 20: +0.08…+0.18/wk (professionalism 1–5)
+  - age ≤ 23: +0.03…+0.078/wk
+  - age ≤ 28: +0.008/wk if prof ≥ 4, else 0
+  - age 29-31: −0.035…−0.051 × longevityFactor
+  - age 32-34: −0.08…−0.11 × longevityFactor
+  - age 35+:   −0.15…(accelerating) × longevityFactor
+  - longevityFactor = 1.40 − longevity×0.12 (longevity 1=1.28, 5=0.80)
+- **Age increment**: when weekEnd year > lastAgeIncrementYear AND weekEnd month ≥ 6 (July) → all ages +1; `lastAgeIncrementYear` updated
+- **Inbox notifications**: 🌱 youth (≤23) gains point; 📉 veteran (≥30) loses point; ⚠️ age ≥ 35 career warning; 🏁 age ≥ 38 retirement offer
+- **SquadTab**: shows live age and rating from playerStates via `playerOverrides` map (loaded in useEffect)
+- **TournamentTab**: passes `tmpl.age` to `createDefaultPlayerState`
+- **Migration**: `guessAge(id)` estimates age by ID range; `migratePlayerState` adds `age` + `ratingDelta: 0`
+- **Injured players skip progression** this week (no ratingDelta update while injured)
+- `generateAttributesForPosition` regenerated when rating integer changes
+
 ## Match Engine v3 — 5 core fixes (now in production)
 - **Tactic**: `coach.philosophy` → `PHILOSOPHY_MODIFIERS` (atk/def deltas: attacking +9/-6, defensive -6/+9, physical +3/+4, technical +5/+2, possession +2/+5) applied in `computeTeamStrength`
 - **Suspension**: `PlayerGameState.suspendedMatches: number` — red card sets to 1; `selectStartingXI` filters `suspendedMatches === 0`; decremented at END of each `simulateMatch` loop (not in tickEngine); coach report lists suspended players
