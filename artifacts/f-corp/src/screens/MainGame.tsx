@@ -88,35 +88,35 @@ export default function MainGame() {
       {/* ── Club header strip ── */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '12px 16px 11px',
+        padding: '7px 12px 7px',
         background: '#ffffff',
         boxShadow: '0 1px 0 #f0f0f0',
         flexShrink: 0,
       }}>
         {/* Left: badge + name + league */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {/* Club badge */}
           <div style={{
-            width: 42, height: 42, borderRadius: '12px 12px 16px 16px', flexShrink: 0,
+            width: 34, height: 34, borderRadius: '10px 10px 13px 13px', flexShrink: 0,
             background: `linear-gradient(145deg, ${primaryColor}30 0%, ${primaryColor}18 100%)`,
             border: `2px solid ${primaryColor}55`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 13, fontWeight: 900, color: primaryColor,
+            fontSize: 11, fontWeight: 900, color: primaryColor,
             fontFamily: 'Inter,sans-serif',
-            boxShadow: `0 2px 8px ${primaryColor}22`,
+            boxShadow: `0 2px 6px ${primaryColor}22`,
           }}>
             {initials}
           </div>
 
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
               <span style={{
-                fontSize: 15, fontWeight: 800, color: '#111827',
+                fontSize: 13, fontWeight: 800, color: '#111827',
                 fontFamily: 'Inter,sans-serif', letterSpacing: -0.3,
               }}>
                 {clubName}
               </span>
-              <ChevronDown size={13} color="#9ca3af" />
+              <ChevronDown size={11} color="#9ca3af" />
             </div>
             {/* League badge */}
             <span style={{
@@ -124,7 +124,7 @@ export default function MainGame() {
               color: leagueColor,
               background: `${leagueColor}18`,
               border: `1px solid ${leagueColor}30`,
-              padding: '1px 7px', borderRadius: 8,
+              padding: '1px 6px', borderRadius: 6,
               letterSpacing: '0.3px',
             }}>
               {leagueLabel}
@@ -133,43 +133,42 @@ export default function MainGame() {
         </div>
 
         {/* Right: balance pill + bell */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {/* Balance pill */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            background: 'linear-gradient(135deg, #f0faf7 0%, #e8f5f0 100%)',
-            border: '1px solid rgba(15,212,168,0.30)',
-            borderRadius: 20, padding: '5px 11px 5px 8px',
-          }}>
-            <Banknote size={13} color="#0fd4a8" />
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 900, color: '#111827', fontFamily: 'Inter,sans-serif', letterSpacing: -0.4, lineHeight: 1 }}>
-                {fmtBalance(walletBalance)}
-              </div>
-              <div style={{ fontSize: 8, color: '#6b7280', fontWeight: 600, letterSpacing: '0.4px', lineHeight: 1, marginTop: 2 }}>
-                КОШЕЛЁК
-              </div>
-            </div>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {/* Balance pill — tappable, goes to Finances */}
+          <button
+            onClick={() => handleTabChange('commerce')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              background: 'linear-gradient(135deg, #f0faf7 0%, #e8f5f0 100%)',
+              border: '1px solid rgba(15,212,168,0.30)',
+              borderRadius: 16, padding: '4px 9px 4px 7px',
+              cursor: 'pointer',
+            }}
+          >
+            <Banknote size={12} color="#0fd4a8" />
+            <span style={{ fontSize: 13, fontWeight: 900, color: '#111827', fontFamily: 'Inter,sans-serif', letterSpacing: -0.4 }}>
+              {fmtBalance(walletBalance)}
+            </span>
+          </button>
 
-          {/* Bell */}
+          {/* Bell — goes to Inbox */}
           <button
             onClick={() => handleTabChange('inbox')}
             style={{
-              position: 'relative', width: 36, height: 36, borderRadius: 12,
+              position: 'relative', width: 32, height: 32, borderRadius: 10,
               background: '#f9fafb', border: '1px solid #f3f4f6',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer',
             }}
           >
-            <Bell size={16} color="#6b7280" />
+            <Bell size={15} color="#6b7280" />
             {inboxCount > 0 && (
               <span style={{
-                position: 'absolute', top: -4, right: -4,
-                width: 16, height: 16, borderRadius: '50%',
+                position: 'absolute', top: -3, right: -3,
+                width: 15, height: 15, borderRadius: '50%',
                 background: '#0fd4a8',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 9, fontWeight: 800, color: '#065f46',
+                fontSize: 8, fontWeight: 800, color: '#065f46',
                 border: '2px solid #E8EDE8',
               }}>
                 {inboxCount}
