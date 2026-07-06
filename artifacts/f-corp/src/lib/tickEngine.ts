@@ -16,8 +16,9 @@
  *   anchors `currentDate` 7 days before the first fixture, and seeds rival data.
  */
 
-import type { GameState, ScheduledMatch, InjuryType, InboxMessage, PlayerGameState, SeasonTransition, TransferOffer } from './gameState';
+import type { GameState, ScheduledMatch, InjuryType, InboxMessage, PlayerGameState, SeasonTransition, TransferOffer, SponsorContract, WeeklyFinanceEntry } from './gameState';
 import { generateAttributesForPosition, playerWeeklySalary, getTransferWindowStatus } from './gameState';
+import { AWAY_TRAVEL_COST, EUROPE_TRAVEL_COST, TV_RIGHTS_WEEKLY, infraMaintenanceCost, computeAttendance, OPTIMAL_TICKET_PRICE } from '../data/financeData';
 import { simulateMatch } from './matchEngine';
 import type { SimulateMatchOutput } from './matchEngine';
 import { generateSeasonSchedule } from './scheduleEngine';
@@ -527,7 +528,86 @@ export function applyWeeklyTick(
   }, 0);
 
   const totalWeeklyWages = playerPayroll + coachWeeklySalary + staffPayroll;
-  let newWalletBalance   = Math.max(0, (gameState.walletBalance ?? 0) - totalWeeklyWages);
+
+  // ── Full finance model ─────────────────────────────────────────────────────
+  const stadiumRaw = (() => {
+    try { return JSON.parse(localStorage.getItem('fcorp_stadium') ?? '{}'); } catch { return {}; }
+  })();
+  const stadiumCapacity: number = (stadiumRaw as { capacity?: number }).capacity ?? 5_000;
+  const infraRaw = (() => {
+    try { return JSON.parse(localStorage.getItem('fcorp_infra') ?? '{}'); } catch { return {}; }
+  })();
+
+  const ticketPriceSetting = gameState.ticketPrice ?? 0;
+  const effectiveTicketPrice = ticketPriceSetting > 0
+    ? ticketPriceSetting
+    : (OPTIMAL_TICKET_PRICE[leagueLevel] ?? 16);
+
+  // Recent wins from last 5 played matches (affects attendance)
+  const recentPlayed = updatedSchedule.filter(m => m.played && m.result).slice(-5);
+  const recentWins = recentPlayed.filter(m =>
+    m.isHome ? m.result!.homeGoals > m.result!.awayGoals : m.result!.awayGoals > m.result!.homeGoals,
+  ).length;
+
+  // Ticket income: each home match played this week
+  const homeThisWeek = matchesPlayed.filter(m => m.match.isHome);
+  const perMatchRevenue = computeAttendance(stadiumCapacity, effectiveTicketPrice, leagueLevel, recentWins)
+    * effectiveTicketPrice;
+  const weeklyTicketIncome = homeThisWeek.length * perMatchRevenue;
+
+  // Travel costs: each away match played this week
+  const awayThisWeek = matchesPlayed.filter(m => !m.match.isHome);
+  const weeklyTravelCost = awayThisWeek.reduce((sum, { match }) => {
+    const isEuropean = ['ucl', 'uel', 'uecl'].includes(match.competition);
+    return sum + (isEuropean ? EUROPE_TRAVEL_COST : (AWAY_TRAVEL_COST[leagueLevel] ?? 2_000));
+  }, 0);
+
+  // TV rights: flat weekly during active season
+  const seasonHasUnplayed = updatedSchedule.some(m => !m.played);
+  const weeklyTvIncome = seasonHasUnplayed ? (TV_RIGHTS_WEEKLY[leagueLevel] ?? 0) : 0;
+
+  // Sponsors: collect income + decrement contract weeks
+  const prevSponsors = gameState.activeSponsors ?? [];
+  const weeklySponsorIncome = prevSponsors.reduce((sum, c) => sum + c.weeklyPayment, 0);
+  const updatedSponsors: SponsorContract[] = prevSponsors
+    .map(c => ({ ...c, weeksLeft: c.weeksLeft - 1 }))
+    .filter(c => c.weeksLeft > 0);
+
+  // Infrastructure maintenance (all buildings)
+  const weeklyInfraMaintenance = Object.values(infraRaw).reduce<number>(
+    (sum, lvl) => sum + infraMaintenanceCost(lvl as number),
+    0,
+  );
+
+  // Final wallet balance incorporating all income and expenses
+  let newWalletBalance = Math.max(0,
+    (gameState.walletBalance ?? 0)
+    - totalWeeklyWages
+    - weeklyTravelCost
+    - weeklyInfraMaintenance
+    + weeklyTicketIncome
+    + weeklySponsorIncome
+    + weeklyTvIncome,
+  );
+
+  // Finance ledger entry (keep last 12 weeks)
+  const weekFinanceEntry: WeeklyFinanceEntry = {
+    weekDate:         weekEnd,
+    ticketIncome:     Math.round(weeklyTicketIncome),
+    sponsorIncome:    Math.round(weeklySponsorIncome),
+    tvIncome:         Math.round(weeklyTvIncome),
+    playerWages:      Math.round(playerPayroll),
+    staffWages:       Math.round(coachWeeklySalary + staffPayroll),
+    travelCost:       Math.round(weeklyTravelCost),
+    infraMaintenance: Math.round(weeklyInfraMaintenance),
+    net:              Math.round(
+      weeklyTicketIncome + weeklySponsorIncome + weeklyTvIncome
+      - totalWeeklyWages - weeklyTravelCost - weeklyInfraMaintenance,
+    ),
+  };
+  const updatedLedger: WeeklyFinanceEntry[] = [
+    ...(gameState.financeLedger ?? []), weekFinanceEntry,
+  ].slice(-12);
 
   // ── Generate inbox messages ──
   const inboxMessages: InboxMessage[] = [];
@@ -760,28 +840,42 @@ export function applyWeeklyTick(
     }
   }
 
-  // ── Weekly payroll summary (send once a month: every 4th week) ───────────
+  // ── Weekly finance summary (every 4th week) ──────────────────────────────
   {
     const weekNum = Math.floor(
       (new Date(weekEnd).getTime() - new Date(season.startDate || weekEnd).getTime())
       / (7 * 24 * 60 * 60 * 1000)
     );
-    const fmtW = (v: number) => v >= 1000 ? `€${(v / 1000).toFixed(0)}K` : `€${v}`;
     if (weekNum % 4 === 0) {
+      const fmt = (v: number) =>
+        v >= 1_000_000 ? `€${(v / 1_000_000).toFixed(2)}M`
+        : v >= 1_000   ? `€${(v / 1_000).toFixed(0)}K`
+        : `€${v}`;
+      const totalIncome   = weeklyTicketIncome + weeklySponsorIncome + weeklyTvIncome;
+      const totalExpenses = totalWeeklyWages + weeklyTravelCost + weeklyInfraMaintenance;
+      const lines: string[] = ['📊 Финансовый отчёт недели:', ''];
+      lines.push('ДОХОДЫ:');
+      if (weeklyTicketIncome  > 0) lines.push(`  🎟 Матч/билеты: +${fmt(weeklyTicketIncome)}`);
+      if (weeklySponsorIncome > 0) lines.push(`  🤝 Спонсоры: +${fmt(weeklySponsorIncome)}`);
+      if (weeklyTvIncome      > 0) lines.push(`  📺 TV-права: +${fmt(weeklyTvIncome)}`);
+      lines.push(`  Итого: +${fmt(totalIncome)}`);
+      lines.push('');
+      lines.push('РАСХОДЫ:');
+      lines.push(`  👥 Игроки: -${fmt(playerPayroll)}`);
+      lines.push(`  🏟 Тренер + штаб: -${fmt(coachWeeklySalary + staffPayroll)}`);
+      if (weeklyTravelCost      > 0) lines.push(`  ✈️ Перелёты: -${fmt(weeklyTravelCost)}`);
+      if (weeklyInfraMaintenance > 0) lines.push(`  🏗 База: -${fmt(weeklyInfraMaintenance)}`);
+      lines.push(`  Итого: -${fmt(totalExpenses)}`);
+      lines.push('');
+      lines.push(`${weekFinanceEntry.net >= 0 ? '✅' : '🔴'} РЕЗУЛЬТАТ: ${weekFinanceEntry.net >= 0 ? '+' : ''}${fmt(weekFinanceEntry.net)}/нед`);
+      lines.push(`💰 Баланс: ${fmt(newWalletBalance)}`);
       inboxMessages.push({
-        id:             `payroll_${weekEnd}`,
-        type:           'REPORT',
+        id:             `finance_report_${weekEnd}`,
+        type:           weekFinanceEntry.net < 0 ? 'ALERT' : 'REPORT',
         date:           weekEnd,
         time:           '08:00',
         sender:         'Финансовый директор',
-        text: [
-          `💰 Еженедельный фонд оплаты труда:`,
-          `  Игроки: ${fmtW(playerPayroll)}/нед`,
-          `  Тренер: ${fmtW(coachWeeklySalary)}/нед`,
-          `  Персонал: ${fmtW(staffPayroll)}/нед`,
-          `  Итого: ${fmtW(totalWeeklyWages)}/нед`,
-          `  Баланс после выплат: ${fmtW(newWalletBalance)}`,
-        ].join('\n'),
+        text:           lines.join('\n'),
         requiresAction: false,
       });
     }
@@ -950,6 +1044,8 @@ export function applyWeeklyTick(
     pendingSeasonTransition,
     walletBalance:           newWalletBalance,
     activeOffers:            newActiveOffers,
+    activeSponsors:          updatedSponsors,
+    financeLedger:           updatedLedger,
     season: {
       ...season,
       currentDate: weekEnd,

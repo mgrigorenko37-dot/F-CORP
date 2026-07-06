@@ -120,6 +120,21 @@ description: Key decisions for the football manager game engine — training, co
 - **VERSION bumped to 6**: migration adds `suspendedMatches:0` to all playerStates, `rivalStrengths:{}`, `rivalForms:{}`; `initializeSeason` seeds both from rivals list
 - **SimulateMatchInput** now requires `rivalStrengths` + `rivalForms`; `applyWeeklyTick` reads them from GameState and passes through; no TournamentTab signature change needed
 
-**Why:** All time-based progression (injuries, fatigue, aging) belongs in tickEngine, not matchEngine. Position data must flow from squad templates → playerStates → match engine to produce realistic simulation.
+## Finance System (VERSION 9 — full model in production)
+- `GameState` v9 adds: `ticketPrice: number`, `activeSponsors: SponsorContract[]`, `financeLedger: WeeklyFinanceEntry[]`
+- New data file: `src/data/financeData.ts` — attendance formula, TV rights, travel costs, sponsor catalog (12 sponsors across 3 tiers)
+- Attendance: `computeAttendance(capacity, price, level, recentWins)` — price elasticity 0.65 power, 70% base fill, ±form bonus
+- Optimal ticket price by level: €70 / €32 / €16 / €8 (levels 1–4)
+- TV rights weekly (active season): €150K / €40K / €10K / €2.5K
+- Away travel: €15K / €8K / €4K / €2K; European away: €30K
+- Infra maintenance: €200 × 1.18^(level−1) per building per week
+- tickEngine applies all finance each tick: ticket income (home matches × attendance × price), travel costs (away matches), sponsor income + decrement, TV rights, infra maintenance → `financeLedger` last 12 weeks
+- Finance inbox report every 4th week (type ALERT if net < 0)
+- Sponsor contracts: `signSponsorContract()`, `cancelSponsorContract()`, `setTicketPrice()` helpers
+- CommerceTab has 4 tabs: Обзор (real income/expense breakdown + chart), Билеты (slider + forecast), Спонсоры (catalog + active contracts + Telegram links), База (infra/stadium)
+- Stadium and infra state stored in localStorage (`fcorp_stadium`, `fcorp_infra`) — NOT in GameState (pre-existing design)
+- Sponsors eligibility: `leagueLevel <= offer.maxLeagueLevel && mediaLevel >= offer.minMediaOffice && cap >= offer.minStadiumCap`
 
-**How to apply:** When adding new game systems, extend `GameState` interface in gameState.ts. Player physical state always goes through tickEngine. Match events always go through simulateMatch → result.events array.
+**Why:** Full financial realism — owner sees every income/expense stream, can optimize pricing and sponsorship strategy.
+
+**How to apply:** When adding new game systems, extend `GameState` interface in gameState.ts. Player physical state always goes through tickEngine. Match events always go through simulateMatch → result.events array. Finance flows through tickEngine weekly tick.
