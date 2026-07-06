@@ -35,6 +35,8 @@ console.log(`[F-CORP Bot] Starting... Mini App URL: ${APP_URL}`);
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+let stopping = false;
+
 async function call(method, body = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 35_000);
@@ -49,6 +51,7 @@ async function call(method, body = {}) {
     if (!data.ok) {
       const err = new Error(`Telegram API error on ${method}: ${data.description ?? JSON.stringify(data)}`);
       err.errorCode = data.error_code;
+      err.retryAfter = data.parameters?.retry_after ?? null;
       throw err;
     }
     return data;
@@ -87,8 +90,7 @@ async function poll() {
   let offset = 0;
   console.log('[F-CORP Bot] Polling started. Waiting for messages...');
 
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
+  while (!stopping) {
     try {
       const data = await call('getUpdates', {
         offset,
@@ -98,13 +100,18 @@ async function poll() {
 
       if (Array.isArray(data.result) && data.result.length > 0) {
         for (const update of data.result) {
+          // Advance offset only after successful processing so a failed
+          // send doesn't silently drop the update.
+          try {
+            await handleUpdate(update);
+          } catch (err) {
+            console.error('[F-CORP Bot] Handler error:', err.message ?? err);
+          }
           offset = update.update_id + 1;
-          handleUpdate(update).catch((err) =>
-            console.error('[F-CORP Bot] Handler error:', err.message ?? err)
-          );
         }
       }
     } catch (err) {
+      if (stopping) break;
       const code = err.errorCode;
 
       if (code === 401) {
@@ -116,9 +123,10 @@ async function poll() {
         console.warn('[F-CORP Bot] Conflict (409): another instance is running. Retrying in 10s...');
         await sleep(10_000);
       } else if (code === 429) {
-        // Rate limited — respect retry_after if available, else 5s
-        console.warn('[F-CORP Bot] Rate limited (429). Retrying in 5s...');
-        await sleep(5_000);
+        // Rate limited — respect retry_after from Telegram, else 5s
+        const delay = err.retryAfter ? err.retryAfter * 1000 : 5_000;
+        console.warn(`[F-CORP Bot] Rate limited (429). Retrying in ${delay / 1000}s...`);
+        await sleep(delay);
       } else {
         // Network error or other API error — short backoff
         console.error('[F-CORP Bot] Error:', err.message ?? err);
@@ -126,6 +134,16 @@ async function poll() {
       }
     }
   }
+
+  console.log('[F-CORP Bot] Stopped.');
 }
+
+// Graceful shutdown: finish current update batch, then exit cleanly.
+function shutdown(signal) {
+  console.log(`[F-CORP Bot] Received ${signal}, shutting down...`);
+  stopping = true;
+}
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
 
 poll();
