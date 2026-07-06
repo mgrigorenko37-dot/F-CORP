@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, Check, Wallet, Plus, Minus } from 'lucide-react';
+import { TrendingUp, TrendingDown, Check, Wallet, Plus, Minus, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { loadGameState, topUpWallet, withdrawFromWallet } from '../lib/gameState';
 
 const C = {
@@ -9,6 +9,59 @@ const C = {
   white:'#111827', muted:'#374151', dim:'#6b7280', vdim:'#9ca3af',
   salmon:'#ef4444', yellow:'#f59e0b',
 };
+
+// ── Balance history (last 8 weekly snapshots) ─────────────────────────────────
+const BALANCE_HISTORY_KEY = 'fcorp_balance_history';
+
+interface BalancePoint { week: number; balance: number; }
+
+function loadBalanceHistory(): BalancePoint[] {
+  try { return JSON.parse(localStorage.getItem(BALANCE_HISTORY_KEY) ?? '[]'); } catch { return []; }
+}
+function saveBalanceSnapshot(balance: number) {
+  const hist = loadBalanceHistory();
+  const week = hist.length ? hist[hist.length - 1].week + 1 : 1;
+  hist.push({ week, balance });
+  localStorage.setItem(BALANCE_HISTORY_KEY, JSON.stringify(hist.slice(-8)));
+}
+
+/** If < 2 real points, synthesise a plausible 8-week history going backwards. */
+function buildChartPoints(current: number, monthlyProfit: number, real: BalancePoint[]): number[] {
+  if (real.length >= 2) return real.map(p => p.balance);
+  const weeklyChange = monthlyProfit / 4.33;
+  return Array.from({ length: 8 }, (_, i) => {
+    const weeksAgo = 7 - i;
+    return Math.max(0, current - weeklyChange * weeksAgo);
+  });
+}
+
+// ── SVG Sparkline ─────────────────────────────────────────────────────────────
+function BalanceChart({ points, color }: { points: number[]; color: string }) {
+  if (points.length < 2) return null;
+  const W = 320, H = 72, PAD = 6;
+  const min = Math.min(...points);
+  const max = Math.max(...points);
+  const range = max - min || 1;
+  const xs = points.map((_, i) => PAD + (i / (points.length - 1)) * (W - PAD * 2));
+  const ys = points.map(v => PAD + (1 - (v - min) / range) * (H - PAD * 2));
+  const linePath = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
+  const areaPath = `${linePath} L${xs[xs.length-1].toFixed(1)},${H} L${xs[0].toFixed(1)},${H} Z`;
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{display:'block',overflow:'visible'}}>
+      <defs>
+        <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.18" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.01" />
+        </linearGradient>
+      </defs>
+      <path d={areaPath} fill="url(#bg)" />
+      <path d={linePath} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      {/* Last point dot */}
+      <circle cx={xs[xs.length-1]} cy={ys[ys.length-1]} r="3.5" fill={color} />
+    </svg>
+  );
+}
 
 interface StadiumItem {
   id: string;
@@ -33,14 +86,21 @@ const INITIAL_SPONSORS = [
 ];
 
 const INCOME = 275_000;
-const EXPENSES = 265_000;
 
 const TOPUP_AMOUNTS = [500_000, 1_000_000, 2_000_000, 5_000_000];
+
+function fmtMoney(v: number): string {
+  if (v >= 1_000_000) return `€${(v / 1_000_000).toFixed(2)}M`;
+  if (v >= 1_000)     return `€${Math.round(v / 1_000)}K`;
+  return `€${v}`;
+}
 
 export default function CommerceTab() {
   const [stadium, setStadium]       = useState(INITIAL_STADIUM);
   const [sponsors, setSponsors]     = useState(INITIAL_SPONSORS);
   const [walletBalance, setWallet]  = useState(5_000_000);
+  const [monthlyExpenses, setMonthlyExpenses] = useState(265_000);
+  const [balanceHistory, setBalanceHistory] = useState<BalancePoint[]>([]);
   const [showTopup, setShowTopup]   = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [customAmount, setCustomAmount] = useState('');
@@ -48,9 +108,18 @@ export default function CommerceTab() {
   useEffect(() => {
     const gs = loadGameState();
     setWallet(gs.walletBalance);
+    const weeklyTotal = gs.playerStates.reduce((sum, p) => sum + (p.salary ?? 0), 0);
+    setMonthlyExpenses(Math.round(weeklyTotal * 4.33));
+    // Record a snapshot each time the tab is opened (max once per session via sessionStorage guard)
+    const sessionKey = 'fcorp_balance_snapped';
+    if (!sessionStorage.getItem(sessionKey)) {
+      saveBalanceSnapshot(gs.walletBalance);
+      sessionStorage.setItem(sessionKey, '1');
+    }
+    setBalanceHistory(loadBalanceHistory());
   }, []);
 
-  const profit = INCOME - EXPENSES;
+  const profit = INCOME - monthlyExpenses;
 
   const doTopup = (amount: number) => {
     topUpWallet(amount);
@@ -81,17 +150,69 @@ export default function CommerceTab() {
     <motion.div initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-10}}
       className="flex flex-col h-full overflow-y-auto">
 
-      {/* Title */}
-      <div style={{padding:'16px 18px 0'}}>
-        <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:4}}>
+      {/* Financial Summary Header */}
+      <div style={{padding:'16px 18px 4px'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
           <span style={{fontSize:22,fontWeight:700,color:C.white,fontFamily:'Inter,sans-serif'}}>Финансы</span>
-          <span style={{fontSize:22,fontWeight:700,color:profit>=0?C.teal:C.salmon,fontFamily:'Inter,sans-serif'}}>
-            {profit >= 0 ? '+' : ''}€{Math.round(profit/1000)}K
+          <span style={{
+            fontSize:13,fontWeight:700,
+            color: profit >= 0 ? C.teal : C.salmon,
+            background: profit >= 0 ? 'rgba(15,212,168,0.12)' : 'rgba(239,68,68,0.10)',
+            padding:'4px 10px',borderRadius:20,
+          }}>
+            {profit >= 0 ? '+' : ''}{fmtMoney(Math.abs(profit))}/мес
           </span>
         </div>
-        <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:18}}>
-          <span style={{fontSize:11,letterSpacing:'0.5px',color:C.dim}}>ФИНАНСЫ И ОБЪЕКТЫ</span>
-          <span style={{fontSize:11,letterSpacing:'0.5px',color:C.dim}}>ПРИБЫЛЬ/МЕС</span>
+
+        {/* 3-metric pill row */}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:18}}>
+          {/* Баланс */}
+          <div style={{
+            background:'linear-gradient(135deg,#f0faf7 0%,#e8f5f0 100%)',
+            border:`1px solid ${C.teal}30`,borderRadius:14,
+            padding:'10px 10px 8px',
+          }}>
+            <div style={{fontSize:9,fontWeight:700,letterSpacing:'0.5px',color:C.dim,marginBottom:6}}>БАЛАНС</div>
+            <div style={{fontSize:14,fontWeight:800,color:C.yellow,lineHeight:1,marginBottom:5}}>
+              {fmtMoney(walletBalance)}
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:3}}>
+              <Wallet size={10} color={C.dim} />
+              <span style={{fontSize:9,color:C.dim}}>кошелёк</span>
+            </div>
+          </div>
+
+          {/* Доходы */}
+          <div style={{
+            background:'#fff',
+            border:`1px solid ${C.border}`,borderRadius:14,
+            padding:'10px 10px 8px',
+          }}>
+            <div style={{fontSize:9,fontWeight:700,letterSpacing:'0.5px',color:C.dim,marginBottom:6}}>ДОХОДЫ</div>
+            <div style={{fontSize:14,fontWeight:800,color:C.teal,lineHeight:1,marginBottom:5}}>
+              {fmtMoney(INCOME)}
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:3}}>
+              <ArrowUpRight size={10} color={C.teal} />
+              <span style={{fontSize:9,color:C.dim}}>в месяц</span>
+            </div>
+          </div>
+
+          {/* Расходы */}
+          <div style={{
+            background:'#fff',
+            border:`1px solid ${C.border}`,borderRadius:14,
+            padding:'10px 10px 8px',
+          }}>
+            <div style={{fontSize:9,fontWeight:700,letterSpacing:'0.5px',color:C.dim,marginBottom:6}}>РАСХОДЫ</div>
+            <div style={{fontSize:14,fontWeight:800,color:C.salmon,lineHeight:1,marginBottom:5}}>
+              {fmtMoney(monthlyExpenses)}
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:3}}>
+              <ArrowDownRight size={10} color={C.salmon} />
+              <span style={{fontSize:9,color:C.dim}}>зарплаты</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -190,15 +311,39 @@ export default function CommerceTab() {
               <TrendingDown size={14} color={C.salmon} />
               <span style={{fontSize:12,color:C.muted}}>Расходы</span>
             </div>
-            <span style={{fontSize:13,fontWeight:700,color:C.salmon}}>-€{(EXPENSES/1000).toFixed(0)}K</span>
+            <span style={{fontSize:13,fontWeight:700,color:C.salmon}}>-{fmtMoney(monthlyExpenses)}</span>
           </div>
 
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',
             borderTop:`1px solid ${C.border}`,paddingTop:12}}>
             <span style={{fontSize:12,fontWeight:600,color:C.white}}>Чистая прибыль</span>
-            <span style={{fontSize:15,fontWeight:700,color:C.teal}}>
-              +€{Math.round(profit/1000).toLocaleString()},000/мес
+            <span style={{fontSize:15,fontWeight:700,color:profit>=0?C.teal:C.salmon}}>
+              {profit >= 0 ? '+' : ''}{fmtMoney(profit)}/мес
             </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Balance trend chart */}
+      <div style={{padding:'0 18px 20px'}}>
+        <div style={{background:C.card,borderRadius:12,padding:16}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
+            <div>
+              <div style={{fontSize:11,fontWeight:600,letterSpacing:'0.5px',color:C.dim,marginBottom:2}}>ДИНАМИКА БАЛАНСА</div>
+              <div style={{fontSize:9,color:C.vdim}}>последние недели</div>
+            </div>
+            <div style={{textAlign:'right'}}>
+              <div style={{fontSize:9,color:C.vdim,marginBottom:2}}>СЕЙЧАС</div>
+              <div style={{fontSize:13,fontWeight:700,color:C.yellow}}>{fmtMoney(walletBalance)}</div>
+            </div>
+          </div>
+          <BalanceChart
+            points={buildChartPoints(walletBalance, profit, balanceHistory)}
+            color={profit >= 0 ? C.teal : C.salmon}
+          />
+          <div style={{display:'flex',justifyContent:'space-between',marginTop:8}}>
+            <span style={{fontSize:9,color:C.vdim}}>−7 нед</span>
+            <span style={{fontSize:9,color:C.vdim}}>сейчас</span>
           </div>
         </div>
       </div>

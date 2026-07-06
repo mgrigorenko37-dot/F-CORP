@@ -1,10 +1,31 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, ChevronDown } from 'lucide-react';
+import { Search, ChevronDown, History } from 'lucide-react';
 import { ALL_MARKET_PLAYERS } from '../data/playersMarket';
 import { ALL_MARKET_STAFF } from '../data/staffMarketData';
 import { loadGameState, buyPlayer, hireStaff, getTransferWindowStatus } from '../lib/gameState';
 import type { TransferWindowStatus } from '../lib/gameState';
+
+const TRANSFER_LOG_KEY = 'fcorp_transfer_log';
+
+interface TransferEntry {
+  id: number;
+  type: 'player' | 'staff';
+  name: string;
+  pos: string;
+  rating: number;
+  price: number;
+  date: string; // ISO
+}
+
+function loadTransferLog(): TransferEntry[] {
+  try { return JSON.parse(localStorage.getItem(TRANSFER_LOG_KEY) ?? '[]'); } catch { return []; }
+}
+function appendTransferLog(entry: TransferEntry) {
+  const log = loadTransferLog();
+  log.unshift(entry);
+  localStorage.setItem(TRANSFER_LOG_KEY, JSON.stringify(log.slice(0, 100)));
+}
 
 const C = {
   card:'#ffffff', border:'#f3f4f6', border2:'#e5e7eb',
@@ -61,11 +82,11 @@ function fmtMoney(n: number) {
 }
 
 interface Props {
-  initialTab?: 'players' | 'staff';
+  initialTab?: 'players' | 'staff' | 'history';
 }
 
 export default function MarketTab({ initialTab = 'players' }: Props) {
-  const [tab, setTab]               = useState<'players'|'staff'>(initialTab);
+  const [tab, setTab]               = useState<'players'|'staff'|'history'>(initialTab);
   const [search, setSearch]         = useState('');
   const [posFilter, setPosFilter]   = useState<PosFilter>('ALL');
   const [roleFilter, setRoleFilter] = useState('ALL');
@@ -83,6 +104,7 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
   const [transferWindow, setTransferWindow] = useState<TransferWindowStatus>(
     { open: true, name: 'Летнее', closes: '', opens: '' }, // default open so first render looks ok
   );
+  const [transferLog, setTransferLog] = useState<TransferEntry[]>([]);
 
   // Load persisted market state on mount
   useEffect(() => {
@@ -91,6 +113,7 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
     setPurchased(new Set(gs.purchasedPlayerIds));
     setHiredStaff(new Set(gs.hiredStaffIds));
     setTransferWindow(getTransferWindowStatus(gs.season?.currentDate ?? ''));
+    setTransferLog(loadTransferLog());
   }, []);
 
   const allNats = useMemo(() => {
@@ -134,22 +157,28 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
   const shownPlayers = visiblePlayers.slice(0, playerPage * PAGE_SIZE);
   const shownStaff   = visibleStaff.slice(0, staffPage * PAGE_SIZE);
 
-  const buy = (id: number, price: number, pos: string, rating: number) => {
+  const buy = (id: number, price: number, pos: string, rating: number, name: string) => {
     if (price > budget) return;
-    if (!transferWindow.open) return; // blocked outside transfer window
+    if (!transferWindow.open) return;
     buyPlayer(id, price, pos, rating);
     setPurchased(s => new Set(s).add(id));
     setBudget(b => b - price);
     setPlayerPage(1);
+    const entry: TransferEntry = { id, type: 'player', name, pos, rating, price, date: new Date().toISOString() };
+    appendTransferLog(entry);
+    setTransferLog(l => [entry, ...l]);
   };
 
-  const hire = (id: number) => {
+  const hire = (id: number, name: string, pos: string, rating: number, salary: number) => {
     hireStaff(id);
     setHiredStaff(h => new Set(h).add(id));
     setStaffPage(1);
+    const entry: TransferEntry = { id, type: 'staff', name, pos, rating, price: salary, date: new Date().toISOString() };
+    appendTransferLog(entry);
+    setTransferLog(l => [entry, ...l]);
   };
 
-  const handleTabChange = (t: 'players' | 'staff') => {
+  const handleTabChange = (t: 'players' | 'staff' | 'history') => {
     setTab(t);
     setSearch('');
     setRatingMin(30);
@@ -183,16 +212,20 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
           <span style={{fontSize:11,letterSpacing:'0.5px',color:C.dim}}>БЮДЖЕТ</span>
         </div>
 
-        {/* ── PLAYERS / STAFF toggle ── */}
+        {/* ── PLAYERS / STAFF / HISTORY toggle ── */}
         <div style={{display:'flex',background:C.card,borderRadius:20,padding:3,marginBottom:14}}>
-          {(['players','staff'] as const).map(t => {
-            const active = tab === t;
+          {([
+            {id:'players', label:'ИГРОКИ'},
+            {id:'staff',   label:'ПЕРСОНАЛ'},
+            {id:'history', label:'ИСТОРИЯ'},
+          ] as const).map(t => {
+            const active = tab === t.id;
             return (
-              <button key={t} onClick={() => handleTabChange(t)}
-                style={{flex:1,textAlign:'center',fontSize:11,fontWeight:active?700:600,
+              <button key={t.id} onClick={() => handleTabChange(t.id)}
+                style={{flex:1,textAlign:'center',fontSize:10,fontWeight:active?700:600,
                   color:active?C.tealText:C.vdim,background:active?C.teal:'transparent',
                   padding:'7px 0',borderRadius:20,border:'none',cursor:'pointer'}}>
-                {t === 'players' ? 'ИГРОКИ' : 'ПЕРСОНАЛ'}
+                {t.label}
               </button>
             );
           })}
@@ -369,7 +402,7 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
                   </span>
                 </div>
                 <div style={{display:'flex',gap:8}}>
-                  <button onClick={() => buy(p.id, p.price, p.pos, p.rating)} disabled={!canBuy}
+                  <button onClick={() => buy(p.id, p.price, p.pos, p.rating, p.name)} disabled={!canBuy}
                     style={{flex:1,background:canBuy?C.teal:C.border2,border:'none',
                       color:canBuy?C.tealText:C.dim,fontWeight:700,fontSize:11,
                       padding:'8px',borderRadius:20,cursor:canBuy?'pointer':'default'}}>
@@ -434,7 +467,7 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
                   </span>
                 </div>
                 <div style={{display:'flex',gap:8}}>
-                  <button onClick={() => hire(s.id)}
+                  <button onClick={() => hire(s.id, s.name, s.role, s.rating, s.salary)}
                     style={{flex:1,background:C.teal,border:'none',
                       color:C.tealText,fontWeight:700,fontSize:11,
                       padding:'8px',borderRadius:20,cursor:'pointer'}}>
@@ -463,6 +496,92 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
           )}
           {shownStaff.length >= visibleStaff.length && shownStaff.length > 0 && (
             <div style={{height:64}} />
+          )}
+        </div>
+      )}
+
+      {/* ── HISTORY tab ── */}
+      {tab === 'history' && (
+        <div style={{padding:'0 18px 80px'}}>
+          {transferLog.length === 0 ? (
+            <div style={{textAlign:'center',padding:'60px 0'}}>
+              <div style={{fontSize:36,marginBottom:14}}>
+                <History size={40} color={C.vdim} style={{margin:'0 auto'}} />
+              </div>
+              <div style={{fontSize:14,fontWeight:600,color:C.dim,marginBottom:6}}>Трансферов ещё нет</div>
+              <div style={{fontSize:11,color:C.vdim}}>Купите игрока или наймите персонал — они появятся здесь</div>
+            </div>
+          ) : (
+            <>
+              {/* Summary row */}
+              <div style={{
+                display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:16,
+              }}>
+                <div style={{background:'rgba(15,212,168,0.08)',border:`1px solid ${C.teal}28`,
+                  borderRadius:12,padding:'10px 12px'}}>
+                  <div style={{fontSize:9,fontWeight:700,letterSpacing:'0.5px',color:C.dim,marginBottom:4}}>КУПЛЕНО ИГРОКОВ</div>
+                  <div style={{fontSize:18,fontWeight:800,color:C.teal}}>
+                    {transferLog.filter(e => e.type === 'player').length}
+                  </div>
+                </div>
+                <div style={{background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.25)',
+                  borderRadius:12,padding:'10px 12px'}}>
+                  <div style={{fontSize:9,fontWeight:700,letterSpacing:'0.5px',color:C.dim,marginBottom:4}}>ПОТРАЧЕНО ВСЕГО</div>
+                  <div style={{fontSize:18,fontWeight:800,color:'#f59e0b'}}>
+                    {fmtMoney(transferLog.reduce((s, e) => s + e.price, 0))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Entries */}
+              {transferLog.map((entry, i) => {
+                const col = entry.type === 'staff'
+                  ? '#a78bfa'
+                  : (POS_COLOR[entry.pos] ?? C.muted);
+                const d = new Date(entry.date);
+                const dateStr = d.toLocaleDateString('ru-RU', { day:'numeric', month:'short' });
+                const timeStr = d.toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' });
+
+                return (
+                  <div key={`${entry.id}-${i}`} style={{
+                    display:'flex',alignItems:'center',gap:10,
+                    padding:'10px 0',
+                    borderBottom: i < transferLog.length - 1 ? `0.5px solid ${C.border}` : 'none',
+                  }}>
+                    {/* Icon */}
+                    <div style={{
+                      width:34,height:34,borderRadius:'50%',flexShrink:0,
+                      background:`${col}20`,color:col,
+                      display:'flex',alignItems:'center',justifyContent:'center',
+                      fontSize:8,fontWeight:700,textAlign:'center',lineHeight:1.1,
+                    }}>
+                      {entry.type === 'staff' ? entry.pos.slice(0,3).toUpperCase() : entry.pos}
+                    </div>
+
+                    {/* Name + meta */}
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:13,fontWeight:600,color:C.white,
+                        overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                        {entry.name}
+                      </div>
+                      <div style={{fontSize:10,color:C.vdim,marginTop:1}}>
+                        {entry.type === 'player' ? `Игрок · рейт. ${entry.rating}` : `Персонал · рейт. ${entry.rating}`}
+                      </div>
+                    </div>
+
+                    {/* Price + date */}
+                    <div style={{textAlign:'right',flexShrink:0}}>
+                      <div style={{fontSize:13,fontWeight:700,color:C.salmon}}>
+                        -{fmtMoney(entry.price)}
+                      </div>
+                      <div style={{fontSize:9,color:C.vdim,marginTop:2}}>
+                        {dateStr} {timeStr}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </>
           )}
         </div>
       )}

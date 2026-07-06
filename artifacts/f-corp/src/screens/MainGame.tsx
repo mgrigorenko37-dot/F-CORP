@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MoreVertical, ChevronDown, Bell } from 'lucide-react';
+import { ChevronDown, Bell, Banknote } from 'lucide-react';
 
 import BottomNav from '../components/BottomNav';
 import InboxTab from '../components/InboxTab';
@@ -13,6 +13,8 @@ import TrainingTab from '../components/TrainingTab';
 import WorldTab from '../components/WorldTab';
 import ClubTab from '../components/ClubTab';
 import { useOfflineProgress } from '../hooks/useOfflineProgress';
+import { getLeagueLevel } from '../lib/storage';
+import { LEVEL_LABEL, LEVEL_COLOR } from '../data/squadData';
 
 export type TabType = 'inbox' | 'squad' | 'personnel' | 'training' | 'market' | 'commerce' | 'tournament' | 'club' | 'world';
 
@@ -25,6 +27,9 @@ export default function MainGame() {
   const [marketInitialTab, setMarketInitialTab] = useState<'players' | 'staff'>('players');
   const [walletBalance, setWalletBalance] = useState(5_000_000);
   const [inboxCount, setInboxCount] = useState(0);
+  const leagueLevel = getLeagueLevel();
+  const leagueLabel = LEVEL_LABEL[leagueLevel] ?? `Лига ${leagueLevel}`;
+  const leagueColor = LEVEL_COLOR[leagueLevel] ?? '#6b7280';
 
   useEffect(() => {
     const club = localStorage.getItem('fcorp_club');
@@ -83,23 +88,26 @@ export default function MainGame() {
       {/* ── Club header strip ── */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '14px 16px 12px',
+        padding: '12px 16px 11px',
         background: '#ffffff',
         boxShadow: '0 1px 0 #f0f0f0',
         flexShrink: 0,
       }}>
-        {/* Left: badge + name */}
+        {/* Left: badge + name + league */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {/* Club badge */}
           <div style={{
-            width: 38, height: 38, borderRadius: 12, flexShrink: 0,
-            background: `${primaryColor}22`,
-            border: `2px solid ${primaryColor}44`,
+            width: 42, height: 42, borderRadius: '12px 12px 16px 16px', flexShrink: 0,
+            background: `linear-gradient(145deg, ${primaryColor}30 0%, ${primaryColor}18 100%)`,
+            border: `2px solid ${primaryColor}55`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 12, fontWeight: 800, color: primaryColor,
+            fontSize: 13, fontWeight: 900, color: primaryColor,
             fontFamily: 'Inter,sans-serif',
+            boxShadow: `0 2px 8px ${primaryColor}22`,
           }}>
             {initials}
           </div>
+
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <span style={{
@@ -110,23 +118,43 @@ export default function MainGame() {
               </span>
               <ChevronDown size={13} color="#9ca3af" />
             </div>
-            <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 500 }}>
-              F-CORP · Football Manager
+            {/* League badge */}
+            <span style={{
+              fontSize: 9, fontWeight: 700,
+              color: leagueColor,
+              background: `${leagueColor}18`,
+              border: `1px solid ${leagueColor}30`,
+              padding: '1px 7px', borderRadius: 8,
+              letterSpacing: '0.3px',
+            }}>
+              {leagueLabel}
             </span>
           </div>
         </div>
 
-        {/* Right: balance + bell */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 16, fontWeight: 900, color: '#111827', fontFamily: 'Inter,sans-serif', letterSpacing: -0.5 }}>
-              {fmtBalance(walletBalance)}
-            </div>
-            <div style={{ fontSize: 9, color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-              Кошелёк
+        {/* Right: balance pill + bell */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Balance pill */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            background: 'linear-gradient(135deg, #f0faf7 0%, #e8f5f0 100%)',
+            border: '1px solid rgba(15,212,168,0.30)',
+            borderRadius: 20, padding: '5px 11px 5px 8px',
+          }}>
+            <Banknote size={13} color="#0fd4a8" />
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 900, color: '#111827', fontFamily: 'Inter,sans-serif', letterSpacing: -0.4, lineHeight: 1 }}>
+                {fmtBalance(walletBalance)}
+              </div>
+              <div style={{ fontSize: 8, color: '#6b7280', fontWeight: 600, letterSpacing: '0.4px', lineHeight: 1, marginTop: 2 }}>
+                КОШЕЛЁК
+              </div>
             </div>
           </div>
+
+          {/* Bell */}
           <button
+            onClick={() => handleTabChange('inbox')}
             style={{
               position: 'relative', width: 36, height: 36, borderRadius: 12,
               background: '#f9fafb', border: '1px solid #f3f4f6',
