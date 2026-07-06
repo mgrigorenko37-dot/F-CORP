@@ -45,12 +45,12 @@ function readStoredClub() {
 const DIRECTIVE_KEY = 'fcorp_president_directive';
 
 const DIRECTIVES: { id: string; icon: string; label: string; sub: string; color: string; formation: string }[] = [
-  { id: 'attacking',  icon: '⚡', label: 'Атака',    sub: 'Схема 4-3-3 · Давление',           color: C.red    },
-  { id: 'defensive',  icon: '🛡️', label: 'Оборона',  sub: 'Схема 5-4-1 · Надёжность',         color: C.teal   },
-  { id: 'balanced',   icon: '⚖️', label: 'Баланс',   sub: 'Схема 4-4-2 · Гибкость',           color: C.yellow },
-  { id: 'possession', icon: '🔄', label: 'Владение', sub: 'Схема 4-2-3-1 · Контроль мяча',    color: C.blue   },
-  { id: 'physical',   icon: '💪', label: 'Физика',   sub: 'Схема 3-5-2 · Прессинг',           color: C.orange },
-  { id: 'technical',  icon: '🎯', label: 'Техника',  sub: 'Схема 4-1-2-1-2 · Дисциплина',    color: C.purple },
+  { id: 'attacking',  icon: '⚡', label: 'Атака',    sub: 'Схема 4-3-3 · Давление',           color: C.red,    formation: '4-3-3'     },
+  { id: 'defensive',  icon: '🛡️', label: 'Оборона',  sub: 'Схема 5-4-1 · Надёжность',         color: C.teal,   formation: '5-4-1'     },
+  { id: 'balanced',   icon: '⚖️', label: 'Баланс',   sub: 'Схема 4-4-2 · Гибкость',           color: C.yellow, formation: '4-4-2'     },
+  { id: 'possession', icon: '🔄', label: 'Владение', sub: 'Схема 4-2-3-1 · Контроль мяча',    color: C.blue,   formation: '4-2-3-1'   },
+  { id: 'physical',   icon: '💪', label: 'Физика',   sub: 'Схема 3-5-2 · Прессинг',           color: C.orange, formation: '3-5-2'     },
+  { id: 'technical',  icon: '🎯', label: 'Техника',  sub: 'Схема 4-1-2-1-2 · Дисциплина',    color: C.purple, formation: '4-1-2-1-2' },
 ];
 
 // ─── Scout recommendations (static seed, decisions in localStorage) ───────────
