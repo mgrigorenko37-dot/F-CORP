@@ -108,9 +108,9 @@ const TYPE_COLOR: Record<Message['type'], string> = {
 };
 
 const C = {
-  teal: '#0fd4a8', tealText: '#065f46',
-  dim: '#6b7280', vdim: '#9ca3af',
-  card: '#ffffff', border: '#f3f4f6',
+  teal: '#0fd4a8', tealText: '#000000',
+  dim: '#999999', vdim: '#777777',
+  card: '#111111', border: '#242424',
 };
 
 const FILTERS: { id: InboxFilter; label: string }[] = [
@@ -269,7 +269,7 @@ export default function InboxTab() {
       {toast && (
         <div style={{
           position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)',
-          background: '#1a1c25', border: '1px solid rgba(15,212,168,0.4)',
+          background: '#111111', border: '1px solid rgba(15,212,168,0.4)',
           borderRadius: 20, padding: '10px 18px', zIndex: 1000,
           fontSize: 13, color: '#ffffff', fontWeight: 600, whiteSpace: 'nowrap',
           boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
@@ -288,7 +288,7 @@ export default function InboxTab() {
             </span>
           </div>
           <span className="font-bold text-[17px] leading-none"
-            style={{ color: '#111827', fontFamily: 'Inter, sans-serif', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            style={{ color: '#ffffff', fontFamily: 'Inter, sans-serif', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             {clubName}
           </span>
         </div>
@@ -458,7 +458,7 @@ export default function InboxTab() {
                     })() : (
                       <button onClick={() => handleAction(msg.id, 'read')}
                         className="flex items-center gap-[6px] px-4 py-[7px] rounded-full text-gray-600 text-[13px] font-semibold active:scale-95 transition-transform"
-                        style={{ background: '#f3f4f6', border: '1px solid #e5e7eb' }}>
+                        style={{ background: '#1e1e1e', border: '1px solid #333333' }}>
                         <Check className="w-[13px] h-[13px]" strokeWidth={2.5} />
                         Прочитано
                       </button>

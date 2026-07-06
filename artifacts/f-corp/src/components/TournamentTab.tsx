@@ -21,9 +21,9 @@ import {
 } from '../lib/autoTick';
 
 const C = {
-  card: '#ffffff', card2: '#f9fafb', border: '#f3f4f6', border2: '#e5e7eb',
-  teal: '#0fd4a8', tealBg: 'rgba(15,212,168,0.09)', tealText: '#065f46',
-  white: '#111827', muted: '#374151', dim: '#6b7280', vdim: '#9ca3af',
+  card: '#111111', card2: '#0d0d0d', border: '#242424', border2: '#2a2a2a',
+  teal: '#0fd4a8', tealBg: 'rgba(15,212,168,0.09)', tealText: '#000000',
+  white: '#ffffff', muted: '#cccccc', dim: '#999999', vdim: '#777777',
   salmon: '#ef4444', yellow: '#f59e0b', purple: '#7c6af7', blue: '#3b82f6',
   orange: '#f97316', green: '#22c55e',
 };

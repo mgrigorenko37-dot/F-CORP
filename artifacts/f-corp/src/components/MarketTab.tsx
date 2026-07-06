@@ -28,9 +28,9 @@ function appendTransferLog(entry: TransferEntry) {
 }
 
 const C = {
-  card:'#ffffff', border:'#f3f4f6', border2:'#e5e7eb',
-  teal:'#0fd4a8', tealText:'#065f46',
-  white:'#111827', muted:'#374151', dim:'#6b7280', vdim:'#9ca3af',
+  card:'#111111', border:'#242424', border2:'#2a2a2a',
+  teal:'#0fd4a8', tealText:'#000000',
+  white:'#ffffff', muted:'#cccccc', dim:'#999999', vdim:'#777777',
   salmon:'#ef4444',
 };
 
