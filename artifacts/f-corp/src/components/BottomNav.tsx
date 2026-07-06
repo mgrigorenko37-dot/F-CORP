@@ -24,7 +24,8 @@ export default function BottomNav({ activeTab, onChange }: Props) {
       position: 'fixed', bottom: 0, left: 0, right: 0,
       display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
       padding: '10px 4px 10px',
-      background: '#111827',
+      background: '#0a0a0a',
+      borderTop: '1px solid #1e1e1e',
       zIndex: 40,
     }}>
       {TABS.map(({ id, label, Icon }) => {
@@ -57,12 +58,12 @@ export default function BottomNav({ activeTab, onChange }: Props) {
                 width: 32,
                 height: 32,
                 borderRadius: 10,
-                background: 'rgba(255,255,255,0.12)',
+                background: 'rgba(255,255,255,0.08)',
               }} />
             )}
             <Icon
               size={18}
-              color={active ? '#0fd4a8' : '#6b7280'}
+              color={active ? '#ffffff' : '#555555'}
               strokeWidth={active ? 2.2 : 1.6}
               style={{ position: 'relative', zIndex: 1 }}
             />
@@ -71,7 +72,7 @@ export default function BottomNav({ activeTab, onChange }: Props) {
               letterSpacing: '0.2px',
               fontFamily: 'Inter,sans-serif',
               fontWeight: active ? 700 : 400,
-              color: active ? '#0fd4a8' : '#6b7280',
+              color: active ? '#ffffff' : '#555555',
               position: 'relative', zIndex: 1,
             }}>
               {label}

@@ -80,7 +80,7 @@ export default function MainGame() {
   return (
     <motion.div
       className="flex flex-col relative overflow-hidden"
-      style={{ background: '#E8EDE8', minHeight: '100dvh' }}
+      style={{ background: '#000000', minHeight: '100dvh' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
@@ -89,8 +89,8 @@ export default function MainGame() {
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '7px 12px 7px',
-        background: '#ffffff',
-        boxShadow: '0 1px 0 #f0f0f0',
+        background: '#111111',
+        boxShadow: '0 1px 0 #242424',
         flexShrink: 0,
       }}>
         {/* Left: badge + name + league */}
@@ -98,12 +98,11 @@ export default function MainGame() {
           {/* Club badge */}
           <div style={{
             width: 34, height: 34, borderRadius: '10px 10px 13px 13px', flexShrink: 0,
-            background: `linear-gradient(145deg, ${primaryColor}30 0%, ${primaryColor}18 100%)`,
-            border: `2px solid ${primaryColor}55`,
+            background: '#1e1e1e',
+            border: '1.5px solid #333333',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 11, fontWeight: 900, color: primaryColor,
+            fontSize: 11, fontWeight: 900, color: '#ffffff',
             fontFamily: 'Inter,sans-serif',
-            boxShadow: `0 2px 6px ${primaryColor}22`,
           }}>
             {initials}
           </div>
@@ -111,19 +110,19 @@ export default function MainGame() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
               <span style={{
-                fontSize: 13, fontWeight: 800, color: '#111827',
+                fontSize: 13, fontWeight: 800, color: '#ffffff',
                 fontFamily: 'Inter,sans-serif', letterSpacing: -0.3,
               }}>
                 {clubName}
               </span>
-              <ChevronDown size={11} color="#9ca3af" />
+              <ChevronDown size={11} color="#555555" />
             </div>
             {/* League badge */}
             <span style={{
               fontSize: 9, fontWeight: 700,
-              color: leagueColor,
-              background: `${leagueColor}18`,
-              border: `1px solid ${leagueColor}30`,
+              color: '#aaaaaa',
+              background: '#1e1e1e',
+              border: '1px solid #333333',
               padding: '1px 6px', borderRadius: 6,
               letterSpacing: '0.3px',
             }}>
@@ -139,14 +138,14 @@ export default function MainGame() {
             onClick={() => handleTabChange('commerce')}
             style={{
               display: 'flex', alignItems: 'center', gap: 4,
-              background: 'linear-gradient(135deg, #f0faf7 0%, #e8f5f0 100%)',
-              border: '1px solid rgba(15,212,168,0.30)',
+              background: '#1e1e1e',
+              border: '1px solid #333333',
               borderRadius: 16, padding: '4px 9px 4px 7px',
               cursor: 'pointer',
             }}
           >
-            <Banknote size={12} color="#0fd4a8" />
-            <span style={{ fontSize: 13, fontWeight: 900, color: '#111827', fontFamily: 'Inter,sans-serif', letterSpacing: -0.4 }}>
+            <Banknote size={12} color="#ffffff" />
+            <span style={{ fontSize: 13, fontWeight: 900, color: '#ffffff', fontFamily: 'Inter,sans-serif', letterSpacing: -0.4 }}>
               {fmtBalance(walletBalance)}
             </span>
           </button>
@@ -156,20 +155,20 @@ export default function MainGame() {
             onClick={() => handleTabChange('inbox')}
             style={{
               position: 'relative', width: 32, height: 32, borderRadius: 10,
-              background: '#f9fafb', border: '1px solid #f3f4f6',
+              background: '#1e1e1e', border: '1px solid #333333',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer',
             }}
           >
-            <Bell size={15} color="#6b7280" />
+            <Bell size={15} color="#aaaaaa" />
             {inboxCount > 0 && (
               <span style={{
                 position: 'absolute', top: -3, right: -3,
                 width: 15, height: 15, borderRadius: '50%',
-                background: '#0fd4a8',
+                background: '#ffffff',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 8, fontWeight: 800, color: '#065f46',
-                border: '2px solid #E8EDE8',
+                fontSize: 8, fontWeight: 800, color: '#000000',
+                border: '2px solid #111111',
               }}>
                 {inboxCount}
               </span>

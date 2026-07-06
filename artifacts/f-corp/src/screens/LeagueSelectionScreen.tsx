@@ -21,13 +21,13 @@ const OTHER_COUNTRIES = [
 const ALL_COUNTRIES = [...PRIORITY_COUNTRIES, ...OTHER_COUNTRIES];
 
 const C = {
-  teal: '#0fd4a8', tealText: '#065f46',
-  card: '#ffffff', border: '#f3f4f6', border2: '#e5e7eb',
-  dim: '#6b7280', vdim: '#9ca3af',
-  white: '#111827',
+  teal: '#ffffff', tealText: '#000000',
+  card: '#111111', border: '#242424', border2: '#2a2a2a',
+  dim: '#888888', vdim: '#555555',
+  white: '#ffffff',
 };
 
-const LEVEL_COLOR = ['', '#f0b429', '#0fd4a8', '#a78bfa', '#6b6f7d'];
+const LEVEL_COLOR = ['', '#ffffff', '#cccccc', '#999999', '#666666'];
 const LEVEL_LABEL = ['', 'Высш. лига', '2-я лига', '3-я лига', '4-я лига'];
 
 interface Props {
@@ -83,11 +83,11 @@ export default function LeagueSelectionScreen({ onNext }: Props) {
 
         {/* Goal banner */}
         <div style={{
-          background: 'rgba(15,212,168,0.08)', border: '0.5px solid rgba(15,212,168,0.3)',
+          background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.15)',
           borderRadius: 10, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12,
         }}>
-          <ArrowUp size={14} color={C.teal} />
-          <span style={{ fontSize: 11, color: C.teal }}>
+          <ArrowUp size={14} color="#aaaaaa" />
+          <span style={{ fontSize: 11, color: '#aaaaaa' }}>
             Цель: пройти 4 лиги и стать чемпионом страны
           </span>
         </div>
@@ -126,8 +126,8 @@ export default function LeagueSelectionScreen({ onNext }: Props) {
               <div
                 onClick={() => handleSelect(country)}
                 style={{
-                  background: isSelected ? 'rgba(15,212,168,0.08)' : C.card,
-                  border: `0.5px solid ${isSelected ? C.teal : C.border}`,
+                  background: isSelected ? 'rgba(255,255,255,0.08)' : C.card,
+                  border: `0.5px solid ${isSelected ? '#ffffff' : C.border}`,
                   borderRadius: isExpanded ? '10px 10px 0 0' : 10,
                   padding: '12px 14px',
                   cursor: 'pointer',
@@ -137,7 +137,7 @@ export default function LeagueSelectionScreen({ onNext }: Props) {
                 <span style={{ fontSize: 20, flexShrink: 0 }}>{flag}</span>
 
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: isSelected ? 700 : 500, color: isSelected ? C.tealText : C.white }}>
+                  <div style={{ fontSize: 13, fontWeight: isSelected ? 700 : 500, color: C.white }}>
                     {country}
                   </div>
                   <div style={{ fontSize: 10, color: C.vdim, marginTop: 2 }}>
@@ -172,7 +172,7 @@ export default function LeagueSelectionScreen({ onNext }: Props) {
                     style={{ overflow: 'hidden' }}
                   >
                     <div style={{
-                      background: '#13141c', border: `0.5px solid ${C.teal}`,
+                      background: '#0a0a0a', border: `0.5px solid #333333`,
                       borderTop: 'none', borderRadius: '0 0 10px 10px',
                       padding: '10px 14px',
                     }}>
