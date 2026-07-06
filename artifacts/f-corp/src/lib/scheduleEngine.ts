@@ -138,9 +138,46 @@ function generateCupWednesdays(
   return result;
 }
 
-// ─── OPPONENT GENERATOR ───────────────────────────────────────────────────────
+// ─── DOUBLE ROUND-ROBIN FIXTURE GENERATOR ────────────────────────────────────
 
-/** Simple seeded opponent picker to avoid "vs undefined" */
+/**
+ * Build a proper double round-robin schedule for MY_CLUB.
+ * - First half  (rounds 0..n-1): each rival exactly once
+ * - Second half (rounds n..2n-1): same rivals, home/away swapped
+ * The rival order is shuffled deterministically from the season start year
+ * so different seasons feel different while staying reproducible.
+ */
+function buildRoundRobinFixtures(
+  rivals: string[],
+  seed = 0,
+): { opponent: string; isHome: boolean }[] {
+  const n = rivals.length;
+
+  // Seeded Fischer-Yates shuffle (LCG-based)
+  const order = [...rivals];
+  let s = (seed ^ 0x9e3779b9) >>> 0;
+  for (let i = order.length - 1; i > 0; i--) {
+    s = Math.imul(s, 1664525) + 1013904223 >>> 0;
+    const j = s % (i + 1);
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+
+  // First leg: alternate home/away so the schedule feels varied
+  const firstLeg = order.map((opponent, i) => ({
+    opponent,
+    isHome: i % 2 === 0,   // even index → home in first half
+  }));
+
+  // Second leg: same rivals, flipped venue
+  const secondLeg = firstLeg.map(f => ({
+    opponent: f.opponent,
+    isHome:   !f.isHome,
+  }));
+
+  return [...firstLeg, ...secondLeg];
+}
+
+// kept for cup fixtures where opponents are "drawn", not round-robin
 function pickOpponent(rivals: string[], round: number, isHome: boolean): string {
   return rivals[(round + (isHome ? 0 : 1)) % rivals.length];
 }
@@ -188,18 +225,22 @@ export function generateSeasonSchedule(input: SeasonScheduleInput): ScheduledMat
     usedDates.add(dateStr);
   }
 
-  // ── 1. LEAGUE — Saturdays (skip international breaks) ──
-  const leagueStart = new Date(seasonStartDate);
+  // ── 1. LEAGUE — Saturdays (double round-robin, skip international breaks) ──
+  const leagueStart   = new Date(seasonStartDate);
+  const rrSeed        = leagueStart.getFullYear() * 100 + leagueLevel; // deterministic per season+level
+  const rrFixtures    = buildRoundRobinFixtures(rivals, rrSeed);       // length = totalRounds
+
   let saturdayPointer = nextWeekday(leagueStart, 6); // first Saturday
-  let leagueRound = 0;
+  let leagueRound     = 0;
 
   while (leagueRound < totalRounds) {
     const dateStr = isoDate(saturdayPointer);
 
     if (!isInternationalBreak(dateStr)) {
+      const fix      = rrFixtures[leagueRound]; // safe: leagueRound < totalRounds = rrFixtures.length
+      const opponent = fix.opponent;
+      const isHome   = fix.isHome;
       leagueRound++;
-      const opponent = pickOpponent(rivals, leagueRound, leagueRound % 2 === 0);
-      const isHome   = leagueRound % 2 === 0;
       addMatch({
         date:            dateStr,
         dayOfWeek:       'sat',
@@ -210,25 +251,6 @@ export function generateSeasonSchedule(input: SeasonScheduleInput): ScheduledMat
         away:            isHome ? opponent  : 'MY_CLUB',
         isHome,
       });
-
-      // Christmas double-header: add extra Wednesday fixture in late December
-      if (leagueRound === 17 || leagueRound === 20) {
-        const wedDate = isoDate(addDays(saturdayPointer, -3)); // Wednesday before
-        if (!usedDates.has(wedDate) && !isInternationalBreak(wedDate)) {
-          const r2 = leagueRound + 0.5;
-          const opp2 = pickOpponent(rivals, leagueRound + 11, true);
-          addMatch({
-            date:            wedDate,
-            dayOfWeek:       'wed',
-            competition:     'league',
-            competitionName: leagueName,
-            round:           Math.floor(r2),
-            home:            'MY_CLUB',
-            away:            opp2,
-            isHome:          true,
-          });
-        }
-      }
     }
 
     saturdayPointer = addDays(saturdayPointer, 7);

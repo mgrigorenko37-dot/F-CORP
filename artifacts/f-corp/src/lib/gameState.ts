@@ -136,6 +136,10 @@ export interface PlayerGameState {
   lastFiveResults:    number[];  // 1=good, 0=avg, -1=bad (last 5 games)
   matchesWithoutPlay: number;    // consecutive matches not played
   burnoutRisk:        number;    // 0–100: weeks of fatigue>70
+
+  // Contract
+  salary:            number;    // weekly wage in F-Coins
+  contractWeeksLeft: number;    // weeks until contract expires (0 = expired)
 }
 
 // ─── COACH ────────────────────────────────────────────────────────────────────
@@ -226,6 +230,56 @@ export interface ScheduledMatch {
   result?:     { homeGoals: number; awayGoals: number; events: MatchEvent[] };
 }
 
+// ─── TRANSFER OFFER ────────────────────────────────────────────────────────────
+
+/** An incoming transfer offer from an AI club, stored until accepted or declined. */
+export interface TransferOffer {
+  id:          string;
+  type:        'buy' | 'loan';
+  playerId:    number;
+  playerName:  string;
+  fromClub:    string;
+  offerAmount: number;  // buy price or loan fee
+  inboxId:     string;  // linked InboxMessage id
+  expiresOn:   string;  // ISO date after which the offer auto-lapses
+}
+
+// ─── SCOUTING ──────────────────────────────────────────────────────────────────
+
+export interface ScoutedPlayer {
+  name:        string;
+  nationality: string;
+  age:         number;
+  position:    string;
+  rating:      number;
+  potential:   number;
+  price:       number;
+}
+
+export interface ScoutingMission {
+  id:            string;
+  region:        string;   // e.g. "Южная Америка"
+  costPaid:      number;
+  startDate:     string;   // ISO date
+  durationWeeks: number;   // countdown to 0
+  status:        'active' | 'completed';
+  report?:       ScoutedPlayer[];
+}
+
+/** Set when a season finishes; consumed by runOneTick to init the next season. */
+export interface SeasonTransition {
+  position:     number;   // MY_CLUB's final league position (1-based)
+  totalTeams:   number;   // total clubs in the league
+  outcome:      'promoted' | 'relegated' | 'stayed';
+  fromLevel:    number;   // league level that just ended
+  toLevel:      number;   // league level for next season
+  seasonNumber: number;   // the season that just ended
+  wins:         number;
+  draws:        number;
+  losses:       number;
+  points:       number;
+}
+
 export interface SeasonState {
   seasonNumber:   number;
   startDate:      string;
@@ -266,12 +320,32 @@ export interface GameState {
    * Prevents double-aging within the same calendar year.
    */
   lastAgeIncrementYear: number;
+  /**
+   * Set by applyWeeklyTick when a season ends.
+   * Consumed and cleared by runOneTick to apply league level change and start next season.
+   */
+  pendingSeasonTransition?: SeasonTransition;
+  /** Active incoming transfer offers from AI clubs. */
+  activeOffers?: TransferOffer[];
 }
 
 // ─── STORAGE HELPERS ──────────────────────────────────────────────────────────
 
 const KEY     = 'fcorp_game_state';
-const VERSION = 7; // v7: age + ratingDelta per player; lastAgeIncrementYear in GameState
+const VERSION = 8; // v8: salary + contractWeeksLeft per player; weekly payroll system
+
+// ─── CONTRACT HELPERS ──────────────────────────────────────────────────────────
+
+/** Weekly wage (F-Coins) based on overall rating. */
+export function playerWeeklySalary(rating: number): number {
+  if (rating >= 90) return 30_000;
+  if (rating >= 80) return 15_000;
+  if (rating >= 70) return  8_000;
+  if (rating >= 60) return  4_000;
+  if (rating >= 50) return  2_000;
+  if (rating >= 40) return  1_000;
+  return 500;
+}
 
 const DEFAULT_MARKET_BUDGET = 2_400_000;
 const DEFAULT_WALLET         = 5_000_000;
@@ -327,14 +401,17 @@ function migratePlayerState(p: PlayerGameState): PlayerGameState {
   const pos    = (p as PlayerGameState & { pos?: string }).pos    ?? 'CM';
   const rating = (p as PlayerGameState & { rating?: number }).rating ?? 60;
   const hasRealAttrs = Object.values(p.attributes ?? {}).some(v => v !== 60);
+  const salary = (p as PlayerGameState).salary ?? playerWeeklySalary(rating);
   return {
     ...p,
     pos,
     rating,
-    suspendedMatches: (p as PlayerGameState).suspendedMatches ?? 0,
-    age:         (p as PlayerGameState).age         ?? guessAge(p.id),
-    ratingDelta: (p as PlayerGameState).ratingDelta ?? 0,
-    attributes:  hasRealAttrs ? p.attributes : generateAttributesForPosition(pos, rating),
+    suspendedMatches:  (p as PlayerGameState).suspendedMatches  ?? 0,
+    age:               (p as PlayerGameState).age               ?? guessAge(p.id),
+    ratingDelta:       (p as PlayerGameState).ratingDelta       ?? 0,
+    attributes:        hasRealAttrs ? p.attributes : generateAttributesForPosition(pos, rating),
+    salary,
+    contractWeeksLeft: (p as PlayerGameState).contractWeeksLeft ?? 104, // 2 years default
   };
 }
 
@@ -372,10 +449,11 @@ export function loadGameState(): GameState {
     const state = parsed as GameState;
     const migrated: GameState = {
       ...state,
-      rivalStrengths:       state.rivalStrengths       ?? {},
-      rivalForms:           state.rivalForms           ?? {},
-      lastAgeIncrementYear: state.lastAgeIncrementYear ?? new Date().getFullYear(),
-      playerStates:         (state.playerStates ?? []).map(migratePlayerState),
+      rivalStrengths:          state.rivalStrengths          ?? {},
+      rivalForms:              state.rivalForms              ?? {},
+      lastAgeIncrementYear:    state.lastAgeIncrementYear    ?? new Date().getFullYear(),
+      pendingSeasonTransition: state.pendingSeasonTransition ?? undefined,
+      playerStates:            (state.playerStates ?? []).map(migratePlayerState),
     };
     if (migrated.season?.schedule?.length) {
       return { ...migrated, season: { ...migrated.season, schedule: normaliseSchedule(migrated.season.schedule) } };
@@ -495,7 +573,46 @@ export function createDefaultPlayerState(
     lastFiveResults:    [0, 0, 0, 0, 0],
     matchesWithoutPlay: 0,
     burnoutRisk:        0,
+    salary:            playerWeeklySalary(rating),
+    contractWeeksLeft: 104, // 2-year starting contract
   };
+}
+
+// ─── TRANSFER WINDOW HELPERS ─────────────────────────────────────────────────
+
+export interface TransferWindowStatus {
+  open:    boolean;
+  name:    'Летнее' | 'Зимнее' | '';
+  closes:  string;   // ISO date when window closes (or '' if closed)
+  opens:   string;   // ISO date when next window opens (or '' if open)
+}
+
+/**
+ * Returns transfer window status for a given in-game date (ISO string).
+ * Summer window: June 1 – September 1.
+ * Winter window: January 1 – February 1.
+ */
+export function getTransferWindowStatus(dateStr: string): TransferWindowStatus {
+  if (!dateStr) return { open: false, name: '', closes: '', opens: '' };
+  const d     = new Date(dateStr);
+  const month = d.getMonth(); // 0-indexed
+  const year  = d.getFullYear();
+
+  // Summer: Jun (5) through Aug (7) → closes Sep 1
+  if (month >= 5 && month <= 7) {
+    return { open: true, name: 'Летнее', closes: `${year}-09-01`, opens: '' };
+  }
+  // Winter: Jan (0) → closes Feb 1
+  if (month === 0) {
+    return { open: true, name: 'Зимнее', closes: `${year}-02-01`, opens: '' };
+  }
+  // Closed — compute next opening
+  if (month === 8 || month >= 9) {
+    // Next opening: Jan 1 of following year
+    return { open: false, name: '', closes: '', opens: `${year + 1}-01-01` };
+  }
+  // Feb–May: next opening is June 1
+  return { open: false, name: '', closes: '', opens: `${year}-06-01` };
 }
 
 // ─── DISPLAY HELPERS ──────────────────────────────────────────────────────────

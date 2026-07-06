@@ -16,12 +16,13 @@
  *   anchors `currentDate` 7 days before the first fixture, and seeds rival data.
  */
 
-import type { GameState, ScheduledMatch, InjuryType, InboxMessage, PlayerGameState } from './gameState';
-import { generateAttributesForPosition } from './gameState';
+import type { GameState, ScheduledMatch, InjuryType, InboxMessage, PlayerGameState, SeasonTransition, TransferOffer } from './gameState';
+import { generateAttributesForPosition, playerWeeklySalary, getTransferWindowStatus } from './gameState';
 import { simulateMatch } from './matchEngine';
 import type { SimulateMatchOutput } from './matchEngine';
 import { generateSeasonSchedule } from './scheduleEngine';
 import type { SeasonScheduleInput } from './scheduleEngine';
+import { getAllStaff } from '../data/personnel';
 
 // ─── INJURY DISPLAY NAMES ────────────────────────────────────────────────────
 
@@ -188,6 +189,7 @@ function recordRivalMatchResult(
 export function initializeSeason(
   gameState: GameState,
   input: SeasonScheduleInput,
+  seasonNumber?: number,
 ): GameState {
   const schedule  = generateSeasonSchedule(input);
   const first     = schedule[0];
@@ -209,12 +211,13 @@ export function initializeSeason(
     ...gameState,
     rivalStrengths,
     rivalForms,
+    pendingSeasonTransition: undefined,
     season: {
       ...gameState.season,
       schedule,
       startDate,
       currentDate:        startDate,
-      seasonNumber:       1,
+      seasonNumber:       seasonNumber ?? gameState.season.seasonNumber,
       leagueRound:        0,
       totalRounds:        input.totalRounds,
       activeCompetitions: input.activeCompetitions,
@@ -253,6 +256,24 @@ export function applyWeeklyTick(
   const preTickInjuredIds = new Set(
     gameState.playerStates.filter(p => !!p.injury).map(p => p.id)
   );
+
+  // ── Medical staff bonus ──────────────────────────────────────────────────────
+  // Hired 'Медицина' staff speed up injury healing and improve fatigue recovery.
+  const allStaffList = getAllStaff();
+  const hiredMedStaff = (gameState.hiredStaffIds ?? [])
+    .map(id => allStaffList.find(s => s.id === id))
+    .filter(s => s?.department === 'Медицина');
+
+  const avgMedEfficiency = hiredMedStaff.length > 0
+    ? hiredMedStaff.reduce((sum, s) => sum + s!.efficiency, 0) / hiredMedStaff.length
+    : 0; // 0..100
+
+  // Weeks healed per tick:  1 (no staff) → 2 (avg eff 40+) → 3 (avg eff 80+)
+  const medHealWeeks  = avgMedEfficiency >= 80 ? 3
+                      : avgMedEfficiency >= 40 ? 2
+                      : 1;
+  // Fatigue recovery bonus: +0..+4 points per rest day
+  const medFatigueBonus = Math.floor(avgMedEfficiency / 25); // 0, 1, 2, 3, or 4
 
   // ── Simulate each match in chronological order ──
   let playerStates = [...gameState.playerStates];
@@ -335,7 +356,7 @@ export function applyWeeklyTick(
     // ── Injury healing: ONLY for injuries that existed before this tick ──
     let newInjury = p.injury;
     if (newInjury && preTickInjuredIds.has(p.id)) {
-      const remaining = Math.max(0, newInjury.weeksLeft - 1);
+      const remaining = Math.max(0, newInjury.weeksLeft - medHealWeeks);
       if (remaining === 0) {
         injuriesHealed.push(p.id);
         newInjury = null;
@@ -344,8 +365,8 @@ export function applyWeeklyTick(
       }
     }
 
-    // ── Fatigue recovery (rest days) ──
-    const recoveryPerDay   = 8 + Math.floor(p.fitness / 15); // 8..14
+    // ── Fatigue recovery (rest days + medical staff bonus) ──
+    const recoveryPerDay   = 8 + Math.floor(p.fitness / 15) + medFatigueBonus; // 8..18
     const fatigueRecovered = restDays * recoveryPerDay;
     const newFatigue       = Math.max(0, Math.round(p.fatigue - fatigueRecovered));
 
@@ -477,6 +498,36 @@ export function applyWeeklyTick(
       }
     }
   }
+
+  // ── Contracts: decrement weeks, detect expiry ─────────────────────────────
+  const contractExpiredIds: number[] = [];
+  progressedStates = progressedStates.map(p => {
+    const weeksLeft = Math.max(0, (p.contractWeeksLeft ?? 104) - 1);
+    if (weeksLeft === 0 && (p.contractWeeksLeft ?? 104) > 0) {
+      contractExpiredIds.push(p.id);
+    }
+    return { ...p, contractWeeksLeft: weeksLeft };
+  });
+
+  // ── Payroll deduction ─────────────────────────────────────────────────────
+  // Weekly wage for each player in squad
+  const playerPayroll = progressedStates.reduce(
+    (sum, p) => sum + (p.salary ?? playerWeeklySalary(p.rating)), 0,
+  );
+
+  // Coach weekly salary
+  const coachWeeklySalary = gameState.coach?.salary ?? 5_000;
+
+  // Staff weekly salaries — estimate from efficiency (0-100 → €500-€25K/week)
+  const staffPayroll = (gameState.hiredStaffIds ?? []).reduce((sum, id) => {
+    const s = allStaffList.find(st => st.id === id);
+    if (!s) return sum;
+    // efficiency 0-100 → €500-€25K/week (approximate from level bands)
+    return sum + Math.round(500 + s.efficiency * 245);
+  }, 0);
+
+  const totalWeeklyWages = playerPayroll + coachWeeklySalary + staffPayroll;
+  let newWalletBalance   = Math.max(0, (gameState.walletBalance ?? 0) - totalWeeklyWages);
 
   // ── Generate inbox messages ──
   const inboxMessages: InboxMessage[] = [];
@@ -615,36 +666,295 @@ export function applyWeeklyTick(
     }
   }
 
-  // ── Season end notification ──
-  const allPlayed = updatedSchedule.every(m => m.played);
-  if (allPlayed && season.schedule.some(m => !m.played)) {
+  // ── AI Transfer Offers ────────────────────────────────────────────────────
+  // Generate buy offers from rival clubs during open transfer windows.
+  const prevActiveOffers = gameState.activeOffers ?? [];
+  let newActiveOffers: TransferOffer[] = prevActiveOffers.filter(o => o.expiresOn >= weekEnd);
+
+  {
+    const currWindow = getTransferWindowStatus(weekEnd);
+    const weekNum = Math.round(
+      (new Date(weekEnd).getTime() - new Date(season.startDate || weekEnd).getTime())
+      / (7 * 24 * 60 * 60 * 1000)
+    );
+
+    if (currWindow.open && weekNum % 6 === 2 && newActiveOffers.length < 3) {
+      const sellable = progressedStates.filter(p => p.rating > 58 && !p.injury);
+      if (sellable.length > 0) {
+        const det = Math.abs(Math.sin(weekNum * 3.7 + 11));
+        const idx = Math.floor(det * sellable.length) % sellable.length;
+        const target = sellable[idx];
+        const tName  = squadNames.get(target.id) ?? `Игрок #${target.id}`;
+
+        // Price ≈ 3 years of salary × random mult (0.7–1.3)
+        const baseValue  = playerWeeklySalary(target.rating) * 52 * 3;
+        const mult       = 0.7 + Math.abs(Math.sin(weekNum * 1.3)) * 0.6;
+        const offerAmount = Math.round(baseValue * mult / 50_000) * 50_000;
+
+        const rivalsArr = Object.keys(gameState.rivalStrengths ?? {});
+        const riIdx     = Math.floor(Math.abs(Math.sin(weekNum * 2.1)) * rivalsArr.length);
+        const fromClub  = rivalsArr.length > 0
+          ? rivalsArr[riIdx % rivalsArr.length]
+          : 'FC Стрэнджер';
+
+        // Only one offer per player at a time
+        if (!newActiveOffers.some(o => o.playerId === target.id)) {
+          const offerId  = `offer_${target.id}_${weekEnd}`;
+          const inboxId  = `transfer_offer_${target.id}_${weekEnd}`;
+          const expiresOn = isoDate(addDays(new Date(weekEnd), 14)); // 2 weeks
+
+          newActiveOffers = [...newActiveOffers, {
+            id: offerId, type: 'buy', playerId: target.id,
+            playerName: tName, fromClub, offerAmount, inboxId, expiresOn,
+          } satisfies TransferOffer];
+
+          const fmtM = (v: number) => v >= 1_000_000
+            ? `€${(v / 1_000_000).toFixed(1)}M`
+            : `€${(v / 1000).toFixed(0)}K`;
+
+          inboxMessages.push({
+            id: inboxId, type: 'OFFER', date: weekEnd, time: '14:00',
+            sender: fromClub,
+            text: [
+              `💼 Предложение о трансфере: ${tName}`,
+              '',
+              `«${fromClub}» готовы заплатить ${fmtM(offerAmount)} за ${tName} (рейтинг ${target.rating}, ${target.age} лет).`,
+              '',
+              `⏳ Предложение действует до ${new Date(expiresOn).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}.`,
+              `Примите или отклоните его в разделе Входящие.`,
+            ].join('\n'),
+            requiresAction: true,
+          });
+        }
+      }
+    }
+  }
+
+  // ── Contract expiry notifications ────────────────────────────────────────
+  for (const playerId of contractExpiredIds) {
+    const name = squadNames.get(playerId) ?? `Игрок #${playerId}`;
+    inboxMessages.push({
+      id:             `contract_expired_${playerId}_${weekEnd}`,
+      type:           'ALERT',
+      date:           weekEnd,
+      time:           '09:30',
+      sender:         'Спортивный директор',
+      text:           `📋 Контракт игрока ${name} истёк. Игрок стал свободным агентом. Продлите контракт или найдите замену.`,
+      requiresAction: true,
+    });
+  }
+
+  // ── Contract expiry warnings (4 weeks remaining) ──────────────────────────
+  for (const p of progressedStates) {
+    if (p.contractWeeksLeft === 4) {
+      const name = squadNames.get(p.id) ?? `Игрок #${p.id}`;
+      inboxMessages.push({
+        id:             `contract_warn_${p.id}_${weekEnd}`,
+        type:           'REPORT',
+        date:           weekEnd,
+        time:           '09:30',
+        sender:         'Спортивный директор',
+        text:           `⚠️ Контракт ${name} истекает через 4 недели. Рекомендуем рассмотреть продление.`,
+        requiresAction: false,
+      });
+    }
+  }
+
+  // ── Weekly payroll summary (send once a month: every 4th week) ───────────
+  {
+    const weekNum = Math.floor(
+      (new Date(weekEnd).getTime() - new Date(season.startDate || weekEnd).getTime())
+      / (7 * 24 * 60 * 60 * 1000)
+    );
+    const fmtW = (v: number) => v >= 1000 ? `€${(v / 1000).toFixed(0)}K` : `€${v}`;
+    if (weekNum % 4 === 0) {
+      inboxMessages.push({
+        id:             `payroll_${weekEnd}`,
+        type:           'REPORT',
+        date:           weekEnd,
+        time:           '08:00',
+        sender:         'Финансовый директор',
+        text: [
+          `💰 Еженедельный фонд оплаты труда:`,
+          `  Игроки: ${fmtW(playerPayroll)}/нед`,
+          `  Тренер: ${fmtW(coachWeeklySalary)}/нед`,
+          `  Персонал: ${fmtW(staffPayroll)}/нед`,
+          `  Итого: ${fmtW(totalWeeklyWages)}/нед`,
+          `  Баланс после выплат: ${fmtW(newWalletBalance)}`,
+        ].join('\n'),
+        requiresAction: false,
+      });
+    }
+  }
+
+  // ── Low balance warning ───────────────────────────────────────────────────
+  const weeksOfRunway = totalWeeklyWages > 0
+    ? Math.floor(newWalletBalance / totalWeeklyWages) : 99;
+  if (weeksOfRunway <= 4 && weeksOfRunway >= 0) {
+    inboxMessages.push({
+      id:             `low_funds_${weekEnd}`,
+      type:           'ALERT',
+      date:           weekEnd,
+      time:           '08:30',
+      sender:         'Финансовый директор',
+      text:           `🚨 Критический уровень средств! Баланс хватит менее чем на ${weeksOfRunway + 1} неделю выплат. Срочно рассмотрите продажу игроков или привлечение спонсоров.`,
+      requiresAction: true,
+    });
+  }
+
+  // ── Transfer window: detect open / close transition ──────────────────────
+  {
+    const prevWindow = getTransferWindowStatus(weekStart);
+    const currWindow = getTransferWindowStatus(weekEnd);
+
+    if (!prevWindow.open && currWindow.open) {
+      // Window just opened
+      const closesDate = new Date(currWindow.closes).toLocaleDateString('ru-RU',
+        { day: 'numeric', month: 'long' });
+      inboxMessages.push({
+        id:             `window_open_${weekEnd}`,
+        type:           'ALERT',
+        date:           weekEnd,
+        time:           '00:01',
+        sender:         'Спортивный директор',
+        text: [
+          `🟢 ${currWindow.name} трансферное окно открыто!`,
+          '',
+          `Теперь вы можете покупать и продавать игроков на рынке.`,
+          `Окно закрывается: ${closesDate}.`,
+          '',
+          `Используйте это время для усиления состава!`,
+        ].join('\n'),
+        requiresAction: false,
+      });
+    } else if (prevWindow.open && !currWindow.open) {
+      // Window just closed
+      const opensDate = new Date(currWindow.opens).toLocaleDateString('ru-RU',
+        { day: 'numeric', month: 'long' });
+      inboxMessages.push({
+        id:             `window_close_${weekEnd}`,
+        type:           'REPORT',
+        date:           weekEnd,
+        time:           '23:59',
+        sender:         'Спортивный директор',
+        text: [
+          `🔴 Трансферное окно закрыто.`,
+          '',
+          `Рынок приостановлен до ${opensDate}.`,
+          `Работайте с текущим составом и готовьтесь к следующему окну.`,
+        ].join('\n'),
+        requiresAction: false,
+      });
+    }
+  }
+
+  // ── Season end: compute final position, promotion/relegation, clear schedule ──
+  let pendingSeasonTransition: SeasonTransition | undefined = undefined;
+  const allPlayed    = updatedSchedule.every(m => m.played);
+  const wasLastMatch = season.schedule.some(m => !m.played); // first time all played
+  if (allPlayed && wasLastMatch) {
+    // --- Compute MY_CLUB's final league stats ---
+    const leaguePlayed = updatedSchedule.filter(
+      m => m.competition === 'league' && m.played && m.result,
+    );
+    const rivals = [...new Set(
+      leaguePlayed.flatMap(m => [m.home, m.away]).filter(n => n !== 'MY_CLUB'),
+    )];
+    const totalTeams = rivals.length + 1;
+
+    let myW = 0, myD = 0, myL = 0, myGF = 0, myGA = 0;
+    for (const m of leaguePlayed) {
+      const mg = m.isHome ? m.result!.homeGoals : m.result!.awayGoals;
+      const og = m.isHome ? m.result!.awayGoals : m.result!.homeGoals;
+      myGF += mg; myGA += og;
+      if (mg > og) myW++; else if (mg === og) myD++; else myL++;
+    }
+    const myPoints = myW * 3 + myD;
+    const myGD     = myGF - myGA;
+
+    // --- Count rivals who finished above MY_CLUB (mock formula, same as table UI) ---
+    let position = 1;
+    for (let i = 0; i < rivals.length; i++) {
+      const rankFactor = 1 - i / rivals.length;
+      const baseMax    = Math.round(season.totalRounds * (0.45 + rankFactor * 0.45));
+      const jitter     = Math.sin(i * 7.31 + 1.1) > 0 ? 1 : -1;
+      const rivalPts   = Math.max(0, baseMax + jitter);   // pctScale = 1 (full season)
+      const rivalGD    = Math.round((1 - i / rivals.length) * 20 - 10); // rough mock
+      if (rivalPts > myPoints || (rivalPts === myPoints && rivalGD > myGD)) {
+        position++;
+      }
+    }
+
+    // --- Promotion / relegation ---
+    const fromLevel = leagueLevel;
+    let outcome: SeasonTransition['outcome'];
+    let toLevel = fromLevel;
+
+    if (position <= 2 && fromLevel > 1) {
+      outcome = 'promoted'; toLevel = fromLevel - 1;
+    } else if (position >= totalTeams - 2 && fromLevel < 4) {
+      outcome = 'relegated'; toLevel = fromLevel + 1;
+    } else {
+      outcome = 'stayed';
+    }
+
+    // --- Rich season-end inbox message ---
+    const outcomeEmoji  = outcome === 'promoted' ? '🏆' : outcome === 'relegated' ? '📉' : '✅';
+    const outcomeText   = outcome === 'promoted'
+      ? `Команда выходит на уровень ${toLevel}! Готовьтесь к более сильным соперникам.`
+      : outcome === 'relegated'
+      ? `Команда вылетает на уровень ${toLevel}. Время перестроиться и вернуться.`
+      : `Команда остаётся в лиге уровня ${fromLevel} на следующий сезон.`;
+
     inboxMessages.push({
       id:             `season_end_${weekEnd}`,
-      type:           'REPORT',
+      type:           outcome === 'stayed' ? 'REPORT' : 'ALERT',
       date:           weekEnd,
       time:           '23:00',
       sender:         'Футбольная лига',
-      text:           `Сезон завершён! Все матчи сыграны. Итоговая таблица сформирована.`,
+      text: [
+        `Сезон ${season.seasonNumber} завершён!`,
+        '',
+        `📊 Итоговая позиция: ${position}-е место из ${totalTeams}`,
+        `Статистика: ${myW}П ${myD}Н ${myL}Р · ${myPoints} очков (${myGF}:${myGA})`,
+        '',
+        `${outcomeEmoji} ${outcomeText}`,
+        '',
+        `Следующий сезон начнётся после летней паузы.`,
+      ].join('\n'),
       requiresAction: false,
     });
+
+    pendingSeasonTransition = {
+      position, totalTeams, outcome, fromLevel, toLevel,
+      seasonNumber: season.seasonNumber,
+      wins: myW, draws: myD, losses: myL, points: myPoints,
+    };
   }
 
   // ── Assemble new state ──
   const prevInbox    = gameState.inbox ?? [];
   const allNewInbox  = [...progressionInbox, ...inboxMessages];
+  // When a season transition is pending, clear the schedule so the next
+  // runOneTick call detects it and initialises a new season.
+  const finalSchedule = pendingSeasonTransition ? [] : updatedSchedule;
+
   const newState: GameState = {
     ...gameState,
-    playerStates:         progressedStates,
-    lastWeekTick:         isoDate(new Date()),
-    inbox:                [...allNewInbox, ...prevInbox].slice(0, 200),
-    rivalStrengths:       finalRivalStrengths,
-    rivalForms:           finalRivalForms,
+    playerStates:            progressedStates,
+    lastWeekTick:            isoDate(new Date()),
+    inbox:                   [...allNewInbox, ...prevInbox].slice(0, 200),
+    rivalStrengths:          finalRivalStrengths,
+    rivalForms:              finalRivalForms,
     lastAgeIncrementYear,
+    pendingSeasonTransition,
+    walletBalance:           newWalletBalance,
+    activeOffers:            newActiveOffers,
     season: {
       ...season,
       currentDate: weekEnd,
       leagueRound,
-      schedule:    updatedSchedule,
+      schedule:    finalSchedule,
     },
   };
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, Check, X } from 'lucide-react';
-import { loadGameState, type InboxMessage } from '../lib/gameState';
+import { loadGameState, type InboxMessage, type TransferOffer } from '../lib/gameState';
 
 type MessageStatus = 'pending' | 'approved' | 'rejected' | 'read';
 type InboxFilter = 'new' | 'action' | 'all';
@@ -153,16 +153,29 @@ export default function InboxTab() {
 
   // Load on every mount so new tick messages appear immediately when the user
   // switches to the inbox tab without having to reload the app.
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [filter, setFilter]     = useState<InboxFilter>('new');
+  const [messages, setMessages]         = useState<Message[]>([]);
+  const [filter, setFilter]             = useState<InboxFilter>('new');
+  const [activeOffers, setActiveOffers] = useState<TransferOffer[]>([]);
+  const [toast, setToast]               = useState<string | null>(null);
 
   useEffect(() => {
     const gs       = loadGameState();
     const base     = buildMessages(stored.name, stored.league);
     const statuses = loadStatuses();
     setMessages(mergeMessages(base, gs.inbox ?? [], statuses));
+    setActiveOffers(gs.activeOffers ?? []);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /** Return the linked TransferOffer for a message (if any). */
+  const getLinkedOffer = (msgId: string): TransferOffer | undefined =>
+    activeOffers.find(o => o.inboxId === msgId);
+
+  /** Show a brief toast for 2.5 s. */
+  const showToast = (text: string) => {
+    setToast(text);
+    setTimeout(() => setToast(null), 2500);
+  };
 
   const handleAction = (id: string, action: 'approved' | 'rejected' | 'read') => {
     setMessages(msgs => {
@@ -170,6 +183,70 @@ export default function InboxTab() {
       saveStatuses(next);
       return next;
     });
+  };
+
+  /** Accept a transfer offer: sell player, credit money, remove offer. */
+  const acceptTransferOffer = (offer: TransferOffer) => {
+    try {
+      const raw = localStorage.getItem('fcorp_game_state');
+      if (!raw) return;
+      const gs = JSON.parse(raw);
+
+      // Remove player from squad
+      const newPlayerStates      = (gs.playerStates      ?? []).filter((p: {id: number}) => p.id !== offer.playerId);
+      const newPurchasedPlayerIds = (gs.purchasedPlayerIds ?? []).filter((pid: number) => pid !== offer.playerId);
+
+      // Credit money to wallet
+      const newWallet = (gs.walletBalance ?? 0) + offer.offerAmount;
+
+      // Remove offer
+      const newOffers = (gs.activeOffers ?? []).filter((o: TransferOffer) => o.id !== offer.id);
+
+      // Add confirmation inbox message
+      const fmtM = (v: number) => v >= 1_000_000
+        ? `€${(v / 1_000_000).toFixed(1)}M`
+        : `€${(v / 1000).toFixed(0)}K`;
+
+      const confirmMsg = {
+        id: `transfer_sold_${offer.playerId}_${Date.now()}`,
+        type: 'REPORT',
+        date: gs.season?.currentDate ?? new Date().toISOString().slice(0, 10),
+        time: '15:00',
+        sender: 'Спортивный директор',
+        text: `✅ Трансфер завершён! ${offer.playerName} продан в «${offer.fromClub}» за ${fmtM(offer.offerAmount)}. Деньги зачислены на счёт клуба.`,
+        requiresAction: false,
+      };
+
+      const updated = {
+        ...gs,
+        playerStates:      newPlayerStates,
+        purchasedPlayerIds: newPurchasedPlayerIds,
+        walletBalance:     newWallet,
+        activeOffers:      newOffers,
+        inbox:             [...(gs.inbox ?? []), confirmMsg],
+      };
+      localStorage.setItem('fcorp_game_state', JSON.stringify(updated));
+      setActiveOffers(newOffers);
+
+      showToast(`${offer.playerName} продан за ${fmtM(offer.offerAmount)}! 💰`);
+    } catch {
+      // silent fail
+    }
+  };
+
+  /** Decline a transfer offer: just remove it from activeOffers. */
+  const declineTransferOffer = (offer: TransferOffer) => {
+    try {
+      const raw = localStorage.getItem('fcorp_game_state');
+      if (!raw) return;
+      const gs  = JSON.parse(raw);
+      const newOffers = (gs.activeOffers ?? []).filter((o: TransferOffer) => o.id !== offer.id);
+      localStorage.setItem('fcorp_game_state', JSON.stringify({ ...gs, activeOffers: newOffers }));
+      setActiveOffers(newOffers);
+      showToast(`Предложение от «${offer.fromClub}» отклонено.`);
+    } catch {
+      // silent fail
+    }
   };
 
   const pending    = messages.filter(m => m.status === 'pending').length;
@@ -188,6 +265,19 @@ export default function InboxTab() {
       exit={{ opacity: 0, y: -10 }}
       className="flex flex-col h-full"
     >
+      {/* ── Toast notification ── */}
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)',
+          background: '#1a1c25', border: '1px solid rgba(15,212,168,0.4)',
+          borderRadius: 20, padding: '10px 18px', zIndex: 1000,
+          fontSize: 13, color: '#fff', fontWeight: 600, whiteSpace: 'nowrap',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+        }}>
+          {toast}
+        </div>
+      )}
+
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-4 pt-5 pb-3">
         <div className="flex items-center gap-3">
@@ -321,22 +411,51 @@ export default function InboxTab() {
                 {/* Actions — pending */}
                 {msg.status === 'pending' && (
                   <div className="flex gap-2 flex-wrap">
-                    {msg.requiresAction ? (
-                      <>
-                        <button onClick={() => handleAction(msg.id, 'approved')}
-                          className="flex items-center gap-[6px] px-4 py-[7px] rounded-full text-white text-[13px] font-semibold active:scale-95 transition-transform"
-                          style={{ background: '#27AE60' }}>
-                          <Check className="w-[13px] h-[13px]" strokeWidth={2.5} />
-                          Одобрить
-                        </button>
-                        <button onClick={() => handleAction(msg.id, 'rejected')}
-                          className="flex items-center gap-[6px] px-4 py-[7px] rounded-full text-white text-[13px] font-semibold active:scale-95 transition-transform"
-                          style={{ background: '#E74C3C' }}>
-                          <X className="w-[13px] h-[13px]" strokeWidth={2.5} />
-                          Отклонить
-                        </button>
-                      </>
-                    ) : (
+                    {msg.requiresAction ? (() => {
+                      const offer = getLinkedOffer(msg.id);
+                      // Real transfer offer — accept sells player + credits money
+                      if (offer) {
+                        return (
+                          <>
+                            <button onClick={() => {
+                              acceptTransferOffer(offer);
+                              handleAction(msg.id, 'approved');
+                            }}
+                              className="flex items-center gap-[6px] px-4 py-[7px] rounded-full text-white text-[13px] font-semibold active:scale-95 transition-transform"
+                              style={{ background: '#27AE60' }}>
+                              <Check className="w-[13px] h-[13px]" strokeWidth={2.5} />
+                              Продать
+                            </button>
+                            <button onClick={() => {
+                              declineTransferOffer(offer);
+                              handleAction(msg.id, 'rejected');
+                            }}
+                              className="flex items-center gap-[6px] px-4 py-[7px] rounded-full text-white text-[13px] font-semibold active:scale-95 transition-transform"
+                              style={{ background: '#E74C3C' }}>
+                              <X className="w-[13px] h-[13px]" strokeWidth={2.5} />
+                              Отказать
+                            </button>
+                          </>
+                        );
+                      }
+                      // Generic action (no game-state change)
+                      return (
+                        <>
+                          <button onClick={() => handleAction(msg.id, 'approved')}
+                            className="flex items-center gap-[6px] px-4 py-[7px] rounded-full text-white text-[13px] font-semibold active:scale-95 transition-transform"
+                            style={{ background: '#27AE60' }}>
+                            <Check className="w-[13px] h-[13px]" strokeWidth={2.5} />
+                            Одобрить
+                          </button>
+                          <button onClick={() => handleAction(msg.id, 'rejected')}
+                            className="flex items-center gap-[6px] px-4 py-[7px] rounded-full text-white text-[13px] font-semibold active:scale-95 transition-transform"
+                            style={{ background: '#E74C3C' }}>
+                            <X className="w-[13px] h-[13px]" strokeWidth={2.5} />
+                            Отклонить
+                          </button>
+                        </>
+                      );
+                    })() : (
                       <button onClick={() => handleAction(msg.id, 'read')}
                         className="flex items-center gap-[6px] px-4 py-[7px] rounded-full text-white/85 text-[13px] font-semibold active:scale-95 transition-transform"
                         style={{ background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.18)' }}>

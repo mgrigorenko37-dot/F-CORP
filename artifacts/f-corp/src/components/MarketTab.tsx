@@ -3,7 +3,8 @@ import { motion } from 'framer-motion';
 import { Search, ChevronDown } from 'lucide-react';
 import { ALL_MARKET_PLAYERS } from '../data/playersMarket';
 import { ALL_MARKET_STAFF } from '../data/staffMarketData';
-import { loadGameState, buyPlayer, hireStaff } from '../lib/gameState';
+import { loadGameState, buyPlayer, hireStaff, getTransferWindowStatus } from '../lib/gameState';
+import type { TransferWindowStatus } from '../lib/gameState';
 
 const C = {
   card:'#1a1c25', border:'#1c1f28', border2:'#2a2d38',
@@ -79,6 +80,9 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
   const [budget, setBudget]         = useState(2_400_000);
   const [playerPage, setPlayerPage] = useState(1);
   const [staffPage, setStaffPage]   = useState(1);
+  const [transferWindow, setTransferWindow] = useState<TransferWindowStatus>(
+    { open: true, name: 'Летнее', closes: '', opens: '' }, // default open so first render looks ok
+  );
 
   // Load persisted market state on mount
   useEffect(() => {
@@ -86,6 +90,7 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
     setBudget(gs.marketBudget);
     setPurchased(new Set(gs.purchasedPlayerIds));
     setHiredStaff(new Set(gs.hiredStaffIds));
+    setTransferWindow(getTransferWindowStatus(gs.season?.currentDate ?? ''));
   }, []);
 
   const allNats = useMemo(() => {
@@ -131,6 +136,7 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
 
   const buy = (id: number, price: number, pos: string, rating: number) => {
     if (price > budget) return;
+    if (!transferWindow.open) return; // blocked outside transfer window
     buyPlayer(id, price, pos, rating);
     setPurchased(s => new Set(s).add(id));
     setBudget(b => b - price);
@@ -191,6 +197,36 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
             );
           })}
         </div>
+
+        {/* ── Transfer window banner (players tab only) ── */}
+        {tab === 'players' && (
+          <div style={{
+            display:'flex', alignItems:'center', justifyContent:'space-between',
+            background: transferWindow.open ? 'rgba(15,212,168,0.10)' : 'rgba(239,68,68,0.08)',
+            border: `0.5px solid ${transferWindow.open ? 'rgba(15,212,168,0.3)' : 'rgba(239,68,68,0.25)'}`,
+            borderRadius: 10, padding: '8px 12px', marginBottom: 12,
+          }}>
+            <div style={{display:'flex', alignItems:'center', gap:7}}>
+              <span style={{fontSize:14}}>{transferWindow.open ? '🟢' : '🔴'}</span>
+              <div>
+                <div style={{fontSize:11, fontWeight:700,
+                  color: transferWindow.open ? C.teal : '#ef4444'}}>
+                  {transferWindow.open
+                    ? `${transferWindow.name} трансферное окно ОТКРЫТО`
+                    : 'Трансферное окно ЗАКРЫТО'}
+                </div>
+                <div style={{fontSize:10, color:C.dim, marginTop:1}}>
+                  {transferWindow.open
+                    ? `Закрывается ${new Date(transferWindow.closes).toLocaleDateString('ru-RU',{day:'numeric',month:'short'})}`
+                    : `Откроется ${new Date(transferWindow.opens).toLocaleDateString('ru-RU',{day:'numeric',month:'short'})}`}
+                </div>
+              </div>
+            </div>
+            {!transferWindow.open && (
+              <span style={{fontSize:10, color:'#ef4444', fontWeight:600}}>РЫНОК ЗАКРЫТ</span>
+            )}
+          </div>
+        )}
 
         {/* ── Search ── */}
         <div style={{display:'flex',alignItems:'center',gap:8,background:C.card,

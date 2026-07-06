@@ -11,7 +11,7 @@ import { Trophy, ArrowUp, ArrowDown, Minus, Calendar, Map as MapIcon } from 'luc
 
 import { getLeagueAtLevel } from '../data/leaguesData';
 import { getDomesticCups, getContinentalComps, getConfederation, getQualificationMap } from '../data/competitions';
-import { getLeagueLevel } from '../lib/storage';
+import { getLeagueLevel, saveLeagueLevel } from '../lib/storage';
 import { loadGameState, updateGameState, createDefaultPlayerState, type GameState, type ScheduledMatch } from '../lib/gameState';
 import { applyWeeklyTick, initializeSeason, getThisWeekMatches } from '../lib/tickEngine';
 import { ALL_MARKET_PLAYERS } from '../data/playersMarket';
@@ -427,18 +427,37 @@ export default function TournamentTab() {
 
   // ── Pure tick helper — takes a state, returns the next state ──
   const runOneTick = useCallback((state: GameState): GameState => {
-    // Init season if not started
+    // Init season if not started (or starting next season after transition)
     let s = state;
     if (!s.season.schedule.length) {
-      const totalRoundsForSeason = (league.totalClubs - 1) * 2;
-      const comps = level === 1
+      // Apply pending season transition (promotion / relegation)
+      const transition = s.pendingSeasonTransition;
+      let effectiveLevel  = level;
+      let effectiveLeague = league;
+
+      if (transition) {
+        effectiveLevel  = transition.toLevel;
+        effectiveLeague = getLeagueAtLevel(country, effectiveLevel);
+        saveLeagueLevel(effectiveLevel);
+        setLevel(effectiveLevel);
+        s = { ...s, pendingSeasonTransition: undefined };
+      }
+
+      const totalRoundsForSeason = (effectiveLeague.totalClubs - 1) * 2;
+      const comps = effectiveLevel === 1
         ? ['league', 'national_cup', 'league_cup', 'uel']
-        : level === 2 ? ['league', 'national_cup', 'league_cup'] : ['league', 'national_cup'];
+        : effectiveLevel === 2 ? ['league', 'national_cup', 'league_cup'] : ['league', 'national_cup'];
+
+      // Season start: August of the current calendar year when schedule is empty
+      const curYear         = new Date(s.season.currentDate || '2025-08-09').getFullYear();
+      const nextSeasonStart = `${curYear}-08-09`;
+      const nextSeasonNum   = transition ? s.season.seasonNumber + 1 : s.season.seasonNumber;
+
       s = initializeSeason(s, {
-        country, leagueLevel: level, rivals: league.rivals,
-        leagueName: league.name, totalRounds: totalRoundsForSeason,
-        activeCompetitions: comps, seasonStartDate: '2025-08-09',
-      });
+        country, leagueLevel: effectiveLevel, rivals: effectiveLeague.rivals,
+        leagueName: effectiveLeague.name, totalRounds: totalRoundsForSeason,
+        activeCompetitions: comps, seasonStartDate: nextSeasonStart,
+      }, nextSeasonNum);
     }
     // Init playerStates from squad templates if empty
     if (s.playerStates.length === 0) {
