@@ -6,11 +6,11 @@ import { getLeagueLevel } from '../lib/storage';
 import { loadGameState, updateGameState } from '../lib/gameState';
 
 const C = {
-  card: '#1a1c25', card2: '#1f222d', border: '#1c1f28', border2: '#2a2d38',
-  teal: '#0fd4a8', tealText: '#04342c', tealBg: 'rgba(15,212,168,0.09)',
-  white: '#e4e5ea', muted: '#c8cad4', dim: '#6b6f7d', vdim: '#5a5d6a',
-  salmon: '#f0997b', yellow: '#f0b429', blue: '#3ba1e0', purple: '#a78bfa',
-  red: '#ef4444', orange: '#f2994a', green: '#22c55e',
+  card: '#ffffff', card2: '#f9fafb', border: '#f3f4f6', border2: '#e5e7eb',
+  teal: '#0fd4a8', tealText: '#065f46', tealBg: 'rgba(15,212,168,0.09)',
+  white: '#111827', muted: '#374151', dim: '#6b7280', vdim: '#9ca3af',
+  salmon: '#ef4444', yellow: '#f59e0b', blue: '#3b82f6', purple: '#7c6af7',
+  red: '#ef4444', orange: '#f97316', green: '#22c55e',
 };
 
 const LEVEL_COLOR: Record<number, string> = { 1: C.yellow, 2: C.teal, 3: C.purple, 4: C.dim };
@@ -205,7 +205,7 @@ export default function ClubTab() {
 
       {/* ── Hero / Badge ── */}
       <div style={{
-        background: `linear-gradient(160deg, ${primary}22 0%, #0f1117 60%)`,
+        background: `linear-gradient(160deg, ${primary}22 0%, ${primary}08 60%)`,
         padding: '20px 18px 0',
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, marginBottom: 16 }}>
@@ -214,12 +214,12 @@ export default function ClubTab() {
             clipPath: 'polygon(50% 0%,100% 15%,100% 62%,50% 100%,0% 62%,0% 15%)',
             background: primary,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 22, fontWeight: 900, color: '#fff', fontFamily: 'Inter,sans-serif',
+            fontSize: 22, fontWeight: 900, color: C.white, fontFamily: 'Inter,sans-serif',
           }}>
             {club.name.slice(0, 2).toUpperCase()}
           </div>
           <div style={{ flex: 1, paddingBottom: 4 }}>
-            <div style={{ fontSize: 24, fontWeight: 800, color: '#fff', fontFamily: 'Inter,sans-serif', lineHeight: 1.1 }}>
+            <div style={{ fontSize: 24, fontWeight: 800, color: C.white, fontFamily: 'Inter,sans-serif', lineHeight: 1.1 }}>
               {club.name}
             </div>
             <div style={{ fontSize: 11, color: C.dim, marginTop: 4, letterSpacing: '0.5px' }}>
@@ -416,7 +416,7 @@ export default function ClubTab() {
                       <button onClick={handleFireCoach} style={{
                         flex: 1, padding: '7px', borderRadius: 7,
                         background: C.salmon, border: 'none',
-                        color: '#fff', fontWeight: 700, fontSize: 11, cursor: 'pointer',
+                        color: '#ffffff', fontWeight: 700, fontSize: 11, cursor: 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
                       }}>
                         <Check size={11} /> Уволить
@@ -646,7 +646,7 @@ export default function ClubTab() {
                   <Icon size={13} />
                 </div>
                 <span style={{ flex: 1, fontSize: 12, color: C.muted }}>{row.label}</span>
-                <span style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>{row.value}</span>
+                <span style={{ fontSize: 16, fontWeight: 700, color: C.white }}>{row.value}</span>
               </div>
             );
           })}
@@ -661,11 +661,11 @@ export default function ClubTab() {
         <div style={{ background: C.card, borderRadius: 12, padding: 14 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
             <span style={{ fontSize: 12, color: C.muted }}>Клубов в лиге</span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{league.totalClubs}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.white }}>{league.totalClubs}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
             <span style={{ fontSize: 12, color: C.muted }}>Туров в сезоне</span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{(league.totalClubs - 1) * 2}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.white }}>{(league.totalClubs - 1) * 2}</span>
           </div>
           {league.promoted > 0 && (
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -700,7 +700,7 @@ export default function ClubTab() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Users size={14} color={primary} />
             <span style={{ fontSize: 12, color: C.muted }}>Игроков в составе</span>
-            <span style={{ marginLeft: 'auto', fontSize: 14, fontWeight: 700, color: '#fff' }}>25</span>
+            <span style={{ marginLeft: 'auto', fontSize: 14, fontWeight: 700, color: C.white }}>25</span>
           </div>
         </div>
       </div>
@@ -719,7 +719,7 @@ export default function ClubTab() {
             }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: C.vdim, flexShrink: 0 }}>{h.season}</span>
               <span style={{ flex: 1, fontSize: 11, color: C.dim }}>{h.note}</span>
-              {h.pos !== '—' && <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{h.pos}-е</span>}
+              {h.pos !== '—' && <span style={{ fontSize: 12, fontWeight: 700, color: C.white }}>{h.pos}-е</span>}
             </div>
           ))}
           <div style={{ padding: '12px 14px', borderTop: `0.5px solid ${C.border}` }}>

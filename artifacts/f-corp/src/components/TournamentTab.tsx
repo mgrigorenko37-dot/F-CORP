@@ -21,11 +21,11 @@ import {
 } from '../lib/autoTick';
 
 const C = {
-  card: '#1a1c25', card2: '#1f222d', border: '#1c1f28', border2: '#2a2d38',
-  teal: '#0fd4a8', tealBg: 'rgba(15,212,168,0.09)', tealText: '#04342c',
-  white: '#e4e5ea', muted: '#c8cad4', dim: '#6b6f7d', vdim: '#5a5d6a',
-  salmon: '#f0997b', yellow: '#f0b429', purple: '#a78bfa', blue: '#3ba1e0',
-  orange: '#f2994a', green: '#22c55e',
+  card: '#ffffff', card2: '#f9fafb', border: '#f3f4f6', border2: '#e5e7eb',
+  teal: '#0fd4a8', tealBg: 'rgba(15,212,168,0.09)', tealText: '#065f46',
+  white: '#111827', muted: '#374151', dim: '#6b7280', vdim: '#9ca3af',
+  salmon: '#ef4444', yellow: '#f59e0b', purple: '#7c6af7', blue: '#3b82f6',
+  orange: '#f97316', green: '#22c55e',
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -547,7 +547,7 @@ export default function TournamentTab() {
       {/* ── Title ── */}
       <div style={{ padding: '16px 18px 0' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 2 }}>
-          <span style={{ fontSize: 22, fontWeight: 700, color: '#fff', fontFamily: 'Inter,sans-serif' }}>Турниры</span>
+          <span style={{ fontSize: 22, fontWeight: 700, color: C.white, fontFamily: 'Inter,sans-serif' }}>Турниры</span>
           <span style={{ fontSize: 22, fontWeight: 700, color: levelColor }}>{myRow?.pos ?? myPos}-е</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -657,7 +657,7 @@ export default function TournamentTab() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
                   <span style={{
                     fontSize: 12, fontWeight: t.isMe ? 700 : 400,
-                    color: t.isMe ? '#fff' : C.muted,
+                    color: C.white,
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   }}>{t.name}</span>
                   {t.trend === 'up' && <ArrowUp size={9} color={C.teal} />}
@@ -666,7 +666,7 @@ export default function TournamentTab() {
                 <span style={{ fontSize: 11, textAlign: 'center', color: t.isMe ? C.muted : C.vdim }}>{t.played}</span>
                 <span style={{ fontSize: 11, textAlign: 'center', color: t.isMe ? C.muted : C.vdim }}>{t.won}</span>
                 <span style={{ fontSize: 11, textAlign: 'center', color: t.isMe ? C.muted : C.vdim }}>{t.lost}</span>
-                <span style={{ fontSize: 13, fontWeight: 700, textAlign: 'right', color: t.isMe ? C.teal : '#fff' }}>
+                <span style={{ fontSize: 13, fontWeight: 700, textAlign: 'right', color: t.isMe ? C.teal : C.white }}>
                   {t.points}
                 </span>
               </div>
@@ -790,13 +790,13 @@ export default function TournamentTab() {
                       <span style={{ fontSize: 10, color: C.vdim }}>{formatDate(m.date)}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ flex: 1, fontSize: 13, fontWeight: m.isHome ? 700 : 400, color: m.isHome ? '#fff' : C.muted, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: m.isHome ? 700 : 400, color: C.white, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {m.isHome ? myClub : opponent}
                       </span>
                       <span style={{ fontSize: 15, fontWeight: 800, flexShrink: 0, color: rc, background: `${rc}18`, padding: '3px 10px', borderRadius: 8, minWidth: 52, textAlign: 'center' }}>
                         {m.isHome ? myGoals : oppGoals} : {m.isHome ? oppGoals : myGoals}
                       </span>
-                      <span style={{ flex: 1, fontSize: 13, fontWeight: !m.isHome ? 700 : 400, color: !m.isHome ? '#fff' : C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: !m.isHome ? 700 : 400, color: C.white, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {m.isHome ? opponent : myClub}
                       </span>
                     </div>
@@ -833,11 +833,11 @@ export default function TournamentTab() {
                   </span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ flex: 1, fontSize: 13, fontWeight: m.isHome ? 700 : 400, color: m.isHome ? '#fff' : C.muted, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ flex: 1, fontSize: 13, fontWeight: m.isHome ? 700 : 400, color: C.white, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {home}
                   </span>
                   <span style={{ fontSize: 10, color: C.vdim, fontWeight: 600, flexShrink: 0, background: C.border2, padding: '3px 8px', borderRadius: 6 }}>vs</span>
-                  <span style={{ flex: 1, fontSize: 13, fontWeight: !m.isHome ? 700 : 400, color: !m.isHome ? '#fff' : C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ flex: 1, fontSize: 13, fontWeight: !m.isHome ? 700 : 400, color: C.white, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {away}
                   </span>
                 </div>
@@ -866,9 +866,9 @@ export default function TournamentTab() {
                 <span style={{ fontSize: 10, color: C.vdim }}>{m.dow.toUpperCase()}, {formatDate(m.date)}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ flex: 1, fontSize: 13, fontWeight: m.isHome ? 700 : 400, color: m.isHome ? '#fff' : C.muted, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.home}</span>
+                <span style={{ flex: 1, fontSize: 13, fontWeight: m.isHome ? 700 : 400, color: C.white, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.home}</span>
                 <span style={{ fontSize: 10, color: C.vdim, fontWeight: 600, flexShrink: 0, background: C.border2, padding: '3px 8px', borderRadius: 6 }}>vs</span>
-                <span style={{ flex: 1, fontSize: 13, fontWeight: !m.isHome ? 700 : 400, color: !m.isHome ? '#fff' : C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.away}</span>
+                <span style={{ flex: 1, fontSize: 13, fontWeight: !m.isHome ? 700 : 400, color: C.white, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.away}</span>
               </div>
               <div style={{ marginTop: 6 }}>
                 <span style={{ fontSize: 9, fontWeight: 700, color: m.isHome ? C.teal : C.vdim, background: m.isHome ? 'rgba(15,212,168,0.12)' : C.border2, padding: '2px 7px', borderRadius: 8 }}>
@@ -1012,7 +1012,7 @@ export default function TournamentTab() {
                         background: myInRange ? comp.color : C.border2,
                       }} />
                       <div>
-                        <div style={{ fontSize: 11, color: myInRange ? '#fff' : C.muted }}>
+                        <div style={{ fontSize: 11, color: C.white }}>
                           {spot.minPos === spot.maxPos ? `${spot.minPos}-е место` : `${spot.minPos}–${spot.maxPos} место`}
                         </div>
                         <div style={{ fontSize: 10, color: comp.color }}>
@@ -1090,7 +1090,7 @@ export default function TournamentTab() {
 
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: isCurrent ? '#fff' : isDone ? C.teal : C.muted }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: isCurrent ? C.tealText : isDone ? C.teal : C.dim }}>
                         {lg.name}
                       </span>
                       {isCurrent && (
@@ -1120,7 +1120,7 @@ export default function TournamentTab() {
             borderRadius: 12, padding: 14, textAlign: 'center',
           }}>
             <div style={{ fontSize: 24, marginBottom: 6 }}>⚽</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 4 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.white, marginBottom: 4 }}>
               {level === 1 ? 'Вы уже в Высшей лиге!' : `До Высшей лиги: ${level - 1} повышения`}
             </div>
             <div style={{ fontSize: 11, color: C.vdim }}>

@@ -5,10 +5,10 @@ import {
 } from 'lucide-react';
 
 const C = {
-  card:'#1a1c25', border:'#1c1f28',
-  teal:'#0fd4a8', tealText:'#04342c',
-  white:'#e4e5ea', muted:'#c8cad4', dim:'#6b6f7d', vdim:'#5a5d6a',
-  salmon:'#f0997b', yellow:'#f0b429', blue:'#3ba1e0', purple:'#a78bfa',
+  card:'#ffffff', border:'#f3f4f6',
+  teal:'#0fd4a8', tealText:'#065f46',
+  white:'#111827', muted:'#374151', dim:'#6b7280', vdim:'#9ca3af',
+  salmon:'#ef4444', yellow:'#f59e0b', blue:'#3b82f6', purple:'#7c6af7',
 };
 
 interface StaffMember {
@@ -135,7 +135,7 @@ export default function PersonnelTab({ onHireStaff }: Props) {
       {/* Title */}
       <div style={{padding:'16px 18px 0'}}>
         <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:4}}>
-          <span style={{fontSize:22,fontWeight:700,color:'#ffffff',fontFamily:'Inter,sans-serif'}}>Персонал</span>
+          <span style={{fontSize:22,fontWeight:700,color:C.white,fontFamily:'Inter,sans-serif'}}>Персонал</span>
           <span style={{fontSize:22,fontWeight:700,color:C.teal,fontFamily:'Inter,sans-serif'}}>
             {fmtSalary(totalSalary)}
           </span>
@@ -148,7 +148,7 @@ export default function PersonnelTab({ onHireStaff }: Props) {
         {/* Metrics */}
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:8,marginBottom:18}}>
           <div style={{background:C.card,borderRadius:12,padding:'12px 8px',textAlign:'center'}}>
-            <div style={{fontSize:20,fontWeight:700,color:'#ffffff'}}>{avgRating}</div>
+            <div style={{fontSize:20,fontWeight:700,color:C.white}}>{avgRating}</div>
             <div style={{fontSize:9,letterSpacing:'0.5px',color:C.dim,marginTop:2}}>СР. УРОВЕНЬ</div>
           </div>
           <div style={{background:C.card,borderRadius:12,padding:'12px 8px',textAlign:'center'}}>
@@ -199,7 +199,7 @@ export default function PersonnelTab({ onHireStaff }: Props) {
                     </div>
 
                     <div style={{textAlign:'right',flexShrink:0}}>
-                      <div style={{fontSize:14,fontWeight:700,color:'#ffffff'}}>{m.rating}</div>
+                      <div style={{fontSize:14,fontWeight:700,color:C.white}}>{m.rating}</div>
                       <div style={{fontSize:9,color:m.morale>=80?C.teal:C.salmon}}>{m.morale}% мораль</div>
                     </div>
                   </div>

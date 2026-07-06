@@ -4,10 +4,10 @@ import { Search, ChevronRight, ChevronLeft, Trophy, ArrowUp, ArrowDown } from 'l
 import { COUNTRY_LEAGUES, getCountryLeagues, getLeagueAtLevel, LeagueInfo } from '../data/leaguesData';
 
 const C = {
-  card: '#1a1c25', border: '#1c1f28', border2: '#2a2d38',
-  teal: '#0fd4a8', tealText: '#04342c',
-  white: '#e4e5ea', muted: '#c8cad4', dim: '#6b6f7d', vdim: '#5a5d6a',
-  salmon: '#f0997b', yellow: '#f0b429', purple: '#a78bfa',
+  card: '#ffffff', border: '#f3f4f6', border2: '#e5e7eb',
+  teal: '#0fd4a8', tealText: '#065f46',
+  white: '#111827', muted: '#374151', dim: '#6b7280', vdim: '#9ca3af',
+  salmon: '#ef4444', yellow: '#f59e0b', purple: '#7c6af7',
 };
 
 const LEVEL_COLOR = ['', C.yellow, C.teal, C.purple, C.dim];
@@ -187,7 +187,7 @@ function CountriesView({ onSelect }: { onSelect: (c: string) => void }) {
       {/* Header */}
       <div style={{ padding: '16px 18px 0' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 4 }}>
-          <span style={{ fontSize: 22, fontWeight: 700, color: '#fff' }}>Мир</span>
+          <span style={{ fontSize: 22, fontWeight: 700, color: C.white }}>Мир</span>
           <span style={{ fontSize: 22, fontWeight: 700, color: C.teal }}>{total}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
@@ -251,7 +251,7 @@ function LeaguesView({ country, onBack, onSelect }: { country: string; onBack: (
         </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
           <span style={{ fontSize: 28 }}>{flag}</span>
-          <span style={{ fontSize: 22, fontWeight: 700, color: '#fff' }}>{country}</span>
+          <span style={{ fontSize: 22, fontWeight: 700, color: C.white }}>{country}</span>
         </div>
         <div style={{ fontSize: 11, letterSpacing: '0.5px', color: C.dim, marginBottom: 18 }}>
           {leagues.length} УРОВНЯ · {leagues.reduce((s, l) => s + l.totalClubs, 0)}+ КЛУБОВ
@@ -272,7 +272,7 @@ function LeaguesView({ country, onBack, onSelect }: { country: string; onBack: (
                 {league.level === 1 ? <Trophy size={18} color={C.yellow} /> : league.level}
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 3 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.white, marginBottom: 3 }}>
                   {league.name}
                 </div>
                 <div style={{ fontSize: 10, color: C.vdim }}>
@@ -321,7 +321,7 @@ function TableView({ country, level, onBack }: { country: string; level: number;
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 4 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 20 }}>{flag}</span>
-            <span style={{ fontSize: 19, fontWeight: 700, color: '#fff' }}>{league.name}</span>
+            <span style={{ fontSize: 19, fontWeight: 700, color: C.white }}>{league.name}</span>
           </div>
           <span style={{ fontSize: 12, fontWeight: 700, color: col, background: `${col}18`, padding: '3px 10px', borderRadius: 10 }}>
             {LEVEL_NAME[level]}
@@ -376,7 +376,7 @@ function TableView({ country, level, onBack }: { country: string; level: number;
               <span style={{ fontSize: 10, textAlign: 'center', color: C.vdim }}>{t.won}</span>
               <span style={{ fontSize: 10, textAlign: 'center', color: C.vdim }}>{t.lost}</span>
               <span style={{ fontSize: 10, textAlign: 'center', color: C.vdim }}>{t.gf - t.ga >= 0 ? '+' : ''}{t.gf - t.ga}</span>
-              <span style={{ fontSize: 13, fontWeight: 700, textAlign: 'right', color: '#fff' }}>{t.points}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, textAlign: 'right', color: C.white }}>{t.points}</span>
             </div>
           );
         })}

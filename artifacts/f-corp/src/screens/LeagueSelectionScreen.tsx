@@ -21,10 +21,10 @@ const OTHER_COUNTRIES = [
 const ALL_COUNTRIES = [...PRIORITY_COUNTRIES, ...OTHER_COUNTRIES];
 
 const C = {
-  teal: '#0fd4a8', tealText: '#04342c',
-  card: '#1a1c25', border: '#1c1f28', border2: '#2a2d38',
-  dim: '#6b6f7d', vdim: '#5a5d6a',
-  white: '#e4e5ea',
+  teal: '#0fd4a8', tealText: '#065f46',
+  card: '#ffffff', border: '#f3f4f6', border2: '#e5e7eb',
+  dim: '#6b7280', vdim: '#9ca3af',
+  white: '#111827',
 };
 
 const LEVEL_COLOR = ['', '#f0b429', '#0fd4a8', '#a78bfa', '#6b6f7d'];
@@ -137,7 +137,7 @@ export default function LeagueSelectionScreen({ onNext }: Props) {
                 <span style={{ fontSize: 20, flexShrink: 0 }}>{flag}</span>
 
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: isSelected ? 700 : 500, color: isSelected ? '#fff' : C.white }}>
+                  <div style={{ fontSize: 13, fontWeight: isSelected ? 700 : 500, color: isSelected ? C.tealText : C.white }}>
                     {country}
                   </div>
                   <div style={{ fontSize: 10, color: C.vdim, marginTop: 2 }}>
@@ -196,7 +196,7 @@ export default function LeagueSelectionScreen({ onNext }: Props) {
                             </div>
 
                             <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: 12, color: '#fff', fontWeight: isBottom ? 700 : 400 }}>
+                              <div style={{ fontSize: 12, color: C.white, fontWeight: isBottom ? 700 : 400 }}>
                                 {league.name}
                                 {isBottom && (
                                   <span style={{

@@ -7,10 +7,10 @@ import { loadGameState, buyPlayer, hireStaff, getTransferWindowStatus } from '..
 import type { TransferWindowStatus } from '../lib/gameState';
 
 const C = {
-  card:'#1a1c25', border:'#1c1f28', border2:'#2a2d38',
-  teal:'#0fd4a8', tealText:'#04342c',
-  white:'#e4e5ea', muted:'#c8cad4', dim:'#6b6f7d', vdim:'#5a5d6a',
-  salmon:'#f0997b',
+  card:'#ffffff', border:'#f3f4f6', border2:'#e5e7eb',
+  teal:'#0fd4a8', tealText:'#065f46',
+  white:'#111827', muted:'#374151', dim:'#6b7280', vdim:'#9ca3af',
+  salmon:'#ef4444',
 };
 
 const POS_COLOR: Record<string,string> = {
@@ -171,7 +171,7 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
       {/* ── Title ── */}
       <div style={{padding:'16px 18px 0',flexShrink:0}}>
         <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:4}}>
-          <span style={{fontSize:22,fontWeight:700,color:'#ffffff',fontFamily:'Inter,sans-serif'}}>Маркет</span>
+          <span style={{fontSize:22,fontWeight:700,color:C.white,fontFamily:'Inter,sans-serif'}}>Маркет</span>
           <span style={{fontSize:22,fontWeight:700,color:C.teal,fontFamily:'Inter,sans-serif'}}>{fmtMoney(budget)}</span>
         </div>
         <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:16}}>

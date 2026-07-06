@@ -4,10 +4,10 @@ import { TrendingUp, TrendingDown, Check, Wallet, Plus, Minus } from 'lucide-rea
 import { loadGameState, topUpWallet, withdrawFromWallet } from '../lib/gameState';
 
 const C = {
-  card:'#1a1c25', border:'#1c1f28', border2:'#2a2d38',
-  teal:'#0fd4a8', tealText:'#04342c',
-  white:'#e4e5ea', muted:'#c8cad4', dim:'#6b6f7d', vdim:'#5a5d6a',
-  salmon:'#f0997b', yellow:'#f0b429',
+  card:'#ffffff', border:'#f3f4f6', border2:'#e5e7eb',
+  teal:'#0fd4a8', tealText:'#065f46',
+  white:'#111827', muted:'#374151', dim:'#6b7280', vdim:'#9ca3af',
+  salmon:'#ef4444', yellow:'#f59e0b',
 };
 
 interface StadiumItem {
@@ -84,7 +84,7 @@ export default function CommerceTab() {
       {/* Title */}
       <div style={{padding:'16px 18px 0'}}>
         <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:4}}>
-          <span style={{fontSize:22,fontWeight:700,color:'#ffffff',fontFamily:'Inter,sans-serif'}}>Финансы</span>
+          <span style={{fontSize:22,fontWeight:700,color:C.white,fontFamily:'Inter,sans-serif'}}>Финансы</span>
           <span style={{fontSize:22,fontWeight:700,color:profit>=0?C.teal:C.salmon,fontFamily:'Inter,sans-serif'}}>
             {profit >= 0 ? '+' : ''}€{Math.round(profit/1000)}K
           </span>
@@ -97,7 +97,7 @@ export default function CommerceTab() {
 
       {/* Wallet card */}
       <div style={{padding:'0 18px 16px'}}>
-        <div style={{background:'linear-gradient(135deg,#1a1c25 0%,#1f222d 100%)',borderRadius:16,padding:16,border:`0.5px solid ${C.border2}`}}>
+        <div style={{background:'linear-gradient(135deg,#f0faf7 0%,#e8f5f0 100%)',borderRadius:16,padding:16,border:`1px solid ${C.teal}30`}}>
           <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
             <Wallet size={16} color={C.yellow} />
             <span style={{fontSize:11,fontWeight:700,letterSpacing:'0.5px',color:C.dim}}>КОШЕЛЁК КЛУБА</span>
@@ -194,7 +194,7 @@ export default function CommerceTab() {
           </div>
 
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',
-            borderTop:`0.5px solid #262a35`,paddingTop:12}}>
+            borderTop:`1px solid ${C.border}`,paddingTop:12}}>
             <span style={{fontSize:12,fontWeight:600,color:C.white}}>Чистая прибыль</span>
             <span style={{fontSize:15,fontWeight:700,color:C.teal}}>
               +€{Math.round(profit/1000).toLocaleString()},000/мес
@@ -209,7 +209,7 @@ export default function CommerceTab() {
         {sponsors.map(sp => (
           <div key={sp.id} style={{background:C.card,borderRadius:12,padding:14,marginBottom:10}}>
             <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
-              <span style={{fontSize:14,fontWeight:700,color:'#ffffff'}}>{sp.name}</span>
+              <span style={{fontSize:14,fontWeight:700,color:C.white}}>{sp.name}</span>
               <span style={{fontSize:9,fontWeight:700,color:sp.badgeColor,
                 background:sp.badgeBg,padding:'2px 8px',borderRadius:10}}>
                 {sp.badge}
@@ -237,7 +237,7 @@ export default function CommerceTab() {
           return (
             <div key={s.id} style={{background:C.card,borderRadius:12,padding:14,marginBottom:10}}>
               <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:8}}>
-                <span style={{fontSize:14,fontWeight:700,color:'#ffffff'}}>{s.name}</span>
+                <span style={{fontSize:14,fontWeight:700,color:C.white}}>{s.name}</span>
                 <div style={{textAlign:'right'}}>
                   {maxed
                     ? <Check size={15} color={C.teal} />
@@ -260,7 +260,7 @@ export default function CommerceTab() {
               {maxed
                 ? <div style={{width:'100%',textAlign:'center',color:'#4a4d5a',
                     fontSize:11,fontWeight:600,padding:'8px',borderRadius:20,
-                    background:'#15161d'}}>
+                    background:'#f3f4f6'}}>
                     Максимальный уровень
                   </div>
                 : <button onClick={() => upgrade(s.id)}

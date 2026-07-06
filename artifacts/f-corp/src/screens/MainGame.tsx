@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MoreVertical, X, ChevronDown } from 'lucide-react';
+import { MoreVertical, ChevronDown, Bell } from 'lucide-react';
 
 import BottomNav from '../components/BottomNav';
 import InboxTab from '../components/InboxTab';
@@ -16,96 +16,139 @@ import { useOfflineProgress } from '../hooks/useOfflineProgress';
 
 export type TabType = 'inbox' | 'squad' | 'personnel' | 'training' | 'market' | 'commerce' | 'tournament' | 'club' | 'world';
 
-const C = {
-  bg: '#0f1117',
-  bar: '#14161f',
-  teal: '#0fd4a8',
-  tealText: '#04342c',
-  white: '#e4e5ea',
-  vdim: '#5a5d6a',
-};
-
 export default function MainGame() {
-  // Silent offline catch-up: apply any ticks missed while the app was closed.
   useOfflineProgress();
 
   const [activeTab, setActiveTab] = useState<TabType>('inbox');
-  const [clubName, setClubName] = useState('ВЫАВЫБА');
-  // Which sub-tab Market should open on
+  const [clubName, setClubName] = useState('F-CORP FC');
+  const [primaryColor, setPrimaryColor] = useState('#7c6af7');
   const [marketInitialTab, setMarketInitialTab] = useState<'players' | 'staff'>('players');
+  const [walletBalance, setWalletBalance] = useState(5_000_000);
+  const [inboxCount, setInboxCount] = useState(0);
 
   useEffect(() => {
     const club = localStorage.getItem('fcorp_club');
     if (club) {
       try {
         const parsed = JSON.parse(club);
-        if (parsed?.name) setClubName(parsed.name.toUpperCase());
+        if (parsed?.name) setClubName(parsed.name);
+        if (parsed?.primaryColor) setPrimaryColor(parsed.primaryColor);
       } catch {}
     }
+    try {
+      const gs = localStorage.getItem('fcorp_game_state');
+      if (gs) {
+        const parsed = JSON.parse(gs);
+        if (typeof parsed?.walletBalance === 'number') setWalletBalance(parsed.walletBalance);
+      }
+      const statuses = localStorage.getItem('fcorp_inbox_statuses');
+      if (statuses) {
+        const map = JSON.parse(statuses);
+        const pending = Object.values(map).filter((v: any) => v === 'pending').length;
+        setInboxCount(pending);
+      } else {
+        setInboxCount(5);
+      }
+    } catch {}
   }, []);
 
-  // Called by PersonnelTab → Hire Staff button
   const goToMarketStaff = () => {
     setMarketInitialTab('staff');
     setActiveTab('market');
   };
 
   const handleTabChange = (tab: TabType) => {
-    // When navigating away from market and back, reset to players
-    if (tab !== 'market') {
-      setMarketInitialTab('players');
-    }
+    if (tab !== 'market') setMarketInitialTab('players');
     setActiveTab(tab);
   };
 
-  const handleClose = () => {
-    const tg = (window as any).Telegram?.WebApp;
-    if (tg?.close) tg.close();
-  };
+  const fmtBalance = (n: number) =>
+    n >= 1_000_000 ? `€${(n / 1_000_000).toFixed(1)}M` : `€${Math.round(n / 1_000)}K`;
+
+  const initials = clubName
+    .split(' ')
+    .map(w => w[0] ?? '')
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <motion.div
       className="flex flex-col relative overflow-hidden"
-      style={{ background: C.bg, minHeight: '100dvh' }}
+      style={{ background: '#E8EDE8', minHeight: '100dvh' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.4 }}
+      transition={{ duration: 0.3 }}
     >
-      {/* ── Top app bar ── */}
+      {/* ── Club header strip ── */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '16px 18px 12px', flexShrink: 0,
+        padding: '14px 16px 12px',
+        background: '#ffffff',
+        boxShadow: '0 1px 0 #f0f0f0',
+        flexShrink: 0,
       }}>
-        <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: 1, color: '#ffffff', fontFamily: 'Inter,sans-serif' }}>
-          F-CORP
-        </span>
-        <div style={{ display: 'flex', gap: 14 }}>
-          <MoreVertical size={17} color={C.vdim} strokeWidth={1.5} />
-          <X size={17} color={C.vdim} strokeWidth={1.5} onClick={handleClose} style={{ cursor: 'pointer' }} />
+        {/* Left: badge + name */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            width: 38, height: 38, borderRadius: 12, flexShrink: 0,
+            background: `${primaryColor}22`,
+            border: `2px solid ${primaryColor}44`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 12, fontWeight: 800, color: primaryColor,
+            fontFamily: 'Inter,sans-serif',
+          }}>
+            {initials}
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{
+                fontSize: 15, fontWeight: 800, color: '#111827',
+                fontFamily: 'Inter,sans-serif', letterSpacing: -0.3,
+              }}>
+                {clubName}
+              </span>
+              <ChevronDown size={13} color="#9ca3af" />
+            </div>
+            <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 500 }}>
+              F-CORP · Football Manager
+            </span>
+          </div>
         </div>
-      </div>
 
-      {/* ── Club strip ── */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 10,
-        padding: '10px 18px', background: C.bar, flexShrink: 0,
-      }}>
-        <div style={{
-          width: 26, height: 30, background: C.teal,
-          clipPath: 'polygon(50% 0%,100% 15%,100% 62%,50% 100%,0% 62%,0% 15%)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 10, fontWeight: 700, color: C.tealText, fontFamily: 'Inter,sans-serif',
-          flexShrink: 0,
-        }}>
-          FC
+        {/* Right: balance + bell */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 16, fontWeight: 900, color: '#111827', fontFamily: 'Inter,sans-serif', letterSpacing: -0.5 }}>
+              {fmtBalance(walletBalance)}
+            </div>
+            <div style={{ fontSize: 9, color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              Кошелёк
+            </div>
+          </div>
+          <button
+            style={{
+              position: 'relative', width: 36, height: 36, borderRadius: 12,
+              background: '#f9fafb', border: '1px solid #f3f4f6',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
+            }}
+          >
+            <Bell size={16} color="#6b7280" />
+            {inboxCount > 0 && (
+              <span style={{
+                position: 'absolute', top: -4, right: -4,
+                width: 16, height: 16, borderRadius: '50%',
+                background: '#0fd4a8',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 9, fontWeight: 800, color: '#065f46',
+                border: '2px solid #E8EDE8',
+              }}>
+                {inboxCount}
+              </span>
+            )}
+          </button>
         </div>
-        <span style={{
-          fontSize: 13, fontWeight: 500, color: C.white,
-          letterSpacing: 1, fontFamily: 'Inter,sans-serif',
-        }}>
-          {clubName}
-        </span>
-        <ChevronDown size={15} color={C.vdim} style={{ marginLeft: 'auto' }} />
       </div>
 
       {/* ── Tab content ── */}

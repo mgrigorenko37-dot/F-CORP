@@ -11,10 +11,10 @@ import {
 import TacticsView from './TacticsView';
 
 const C = {
-  card: '#1a1c25', border: '#1c1f28', border2: '#2a2d38',
-  teal: '#0fd4a8', tealText: '#04342c',
-  white: '#e4e5ea', muted: '#c8cad4', dim: '#6b6f7d', vdim: '#5a5d6a',
-  salmon: '#f0997b', yellow: '#f0b429', blue: '#3ba1e0', purple: '#a78bfa',
+  card: '#ffffff', border: '#f3f4f6', border2: '#e5e7eb',
+  teal: '#0fd4a8', tealText: '#065f46',
+  white: '#111827', muted: '#374151', dim: '#6b7280', vdim: '#9ca3af',
+  salmon: '#ef4444', yellow: '#f59e0b', blue: '#3b82f6', purple: '#7c6af7',
 };
 
 const POS_COLOR: Record<string, string> = {
@@ -103,7 +103,7 @@ export default function SquadTab() {
 
         {/* Title */}
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
-          <span style={{fontSize:22,fontWeight:700,color:'#ffffff',fontFamily:'Inter,sans-serif'}}>Состав</span>
+          <span style={{fontSize:22,fontWeight:700,color:C.white,fontFamily:'Inter,sans-serif'}}>Состав</span>
           <div style={{display:'flex',alignItems:'center',gap:8}}>
             <span style={{
               fontSize:10, fontWeight:700, padding:'3px 10px', borderRadius:12,
@@ -233,7 +233,7 @@ export default function SquadTab() {
                     <div style={{fontSize:13,color:inReserve ? C.vdim : C.white}}>{p.name}</div>
                     <div style={{fontSize:10,color:C.vdim}}>{p.sub} · {playerOverrides.get(p.id)?.age ?? p.age} лет</div>
                   </div>
-                  <span style={{fontSize:14,fontWeight:700,color:inReserve ? C.vdim : '#ffffff',marginRight:4}}>{playerOverrides.get(p.id)?.rating ?? p.rating}</span>
+                  <span style={{fontSize:14,fontWeight:700,color:inReserve ? C.vdim : C.white,marginRight:4}}>{playerOverrides.get(p.id)?.rating ?? p.rating}</span>
                   {view === 'first' && (
                     <button
                       onClick={() => inReserve ? handleMoveFromReserve(p.id) : handleMoveToReserve(p.id)}

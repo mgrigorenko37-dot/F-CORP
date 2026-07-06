@@ -21,10 +21,10 @@ import {
 } from '../lib/gameState';
 
 const C = {
-  bg: '#0f1117', card: '#1a1c25', card2: '#1f222d', border: '#1c1f28', border2: '#2a2d38',
-  teal: '#0fd4a8', tealBg: 'rgba(15,212,168,0.09)', tealText: '#04342c',
-  white: '#e4e5ea', muted: '#c8cad4', dim: '#6b6f7d', vdim: '#5a5d6a',
-  orange: '#f2994a', blue: '#3ba1e0', purple: '#a78bfa', yellow: '#f0b429',
+  bg: '#E8EDE8', card: '#ffffff', card2: '#f9fafb', border: '#f3f4f6', border2: '#e5e7eb',
+  teal: '#0fd4a8', tealBg: 'rgba(15,212,168,0.09)', tealText: '#065f46',
+  white: '#111827', muted: '#374151', dim: '#6b7280', vdim: '#9ca3af',
+  orange: '#f97316', blue: '#3b82f6', purple: '#7c6af7', yellow: '#f59e0b',
   red: '#ef4444',
 };
 
@@ -449,7 +449,7 @@ export default function TrainingTab() {
       {/* ── Header ── */}
       <div style={{ padding: '16px 18px 0' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 2 }}>
-          <span style={{ fontSize: 22, fontWeight: 700, color: '#fff', fontFamily: 'Inter,sans-serif' }}>Тренировки</span>
+          <span style={{ fontSize: 22, fontWeight: 700, color: C.white, fontFamily: 'Inter,sans-serif' }}>Тренировки</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 22, fontWeight: 700, color: C.teal }}>{trainingSessions.length}</span>
             <button onClick={() => setInfoOpen(!infoOpen)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}>

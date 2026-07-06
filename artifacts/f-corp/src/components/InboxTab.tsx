@@ -108,9 +108,9 @@ const TYPE_COLOR: Record<Message['type'], string> = {
 };
 
 const C = {
-  teal: '#0fd4a8', tealText: '#04342c',
-  dim: '#6b6f7d', vdim: '#5a5d6a',
-  card: '#1a1c25', border: '#1c1f28',
+  teal: '#0fd4a8', tealText: '#065f46',
+  dim: '#6b7280', vdim: '#9ca3af',
+  card: '#ffffff', border: '#f3f4f6',
 };
 
 const FILTERS: { id: InboxFilter; label: string }[] = [
@@ -271,7 +271,7 @@ export default function InboxTab() {
           position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)',
           background: '#1a1c25', border: '1px solid rgba(15,212,168,0.4)',
           borderRadius: 20, padding: '10px 18px', zIndex: 1000,
-          fontSize: 13, color: '#fff', fontWeight: 600, whiteSpace: 'nowrap',
+          fontSize: 13, color: '#ffffff', fontWeight: 600, whiteSpace: 'nowrap',
           boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
         }}>
           {toast}
@@ -287,8 +287,8 @@ export default function InboxTab() {
               FC
             </span>
           </div>
-          <span className="text-white font-bold text-[17px] leading-none"
-            style={{ fontFamily: 'Inter, sans-serif', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <span className="font-bold text-[17px] leading-none"
+            style={{ color: '#111827', fontFamily: 'Inter, sans-serif', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             {clubName}
           </span>
         </div>
@@ -302,7 +302,7 @@ export default function InboxTab() {
 
       {/* ── Title + counters ── */}
       <div className="px-4 pb-3">
-        <h2 className="font-bold text-white mb-3"
+        <h2 className="font-bold text-gray-900 mb-3"
           style={{ fontFamily: 'Inter, sans-serif', fontSize: '26px', textTransform: 'none', letterSpacing: 'normal', lineHeight: '1.2' }}>
           Сообщения
         </h2>
@@ -320,7 +320,7 @@ export default function InboxTab() {
             </span>
           )}
           {pending === 0 && (
-            <span className="px-3 py-[5px] rounded-full text-[13px] font-semibold text-white/40 bg-white/8">
+            <span className="px-3 py-[5px] rounded-full text-[13px] font-semibold text-gray-400 bg-gray-100">
               Всё прочитано
             </span>
           )}
@@ -373,12 +373,12 @@ export default function InboxTab() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2 }}
-              className="flex gap-3 py-4 border-b border-white/[0.07] last:border-0"
+              className="flex gap-3 py-4 border-b border-gray-100 last:border-0"
             >
               {/* dot */}
               <div className="shrink-0 pt-[3px]">
                 <div className="w-[7px] h-[7px] rounded-full"
-                  style={{ background: msg.status === 'pending' ? C.teal : 'rgba(255,255,255,0.2)' }} />
+                  style={{ background: msg.status === 'pending' ? C.teal : 'rgba(0,0,0,0.12)' }} />
               </div>
 
               <div className="flex-1 min-w-0">
@@ -404,7 +404,7 @@ export default function InboxTab() {
                 </div>
 
                 {/* Body */}
-                <p className="text-white/90 mb-[14px] leading-[1.55]" style={{ fontSize: '14px' }}>
+                <p className="text-gray-700 mb-[14px] leading-[1.55]" style={{ fontSize: '14px' }}>
                   {msg.text}
                 </p>
 
@@ -457,8 +457,8 @@ export default function InboxTab() {
                       );
                     })() : (
                       <button onClick={() => handleAction(msg.id, 'read')}
-                        className="flex items-center gap-[6px] px-4 py-[7px] rounded-full text-white/85 text-[13px] font-semibold active:scale-95 transition-transform"
-                        style={{ background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.18)' }}>
+                        className="flex items-center gap-[6px] px-4 py-[7px] rounded-full text-gray-600 text-[13px] font-semibold active:scale-95 transition-transform"
+                        style={{ background: '#f3f4f6', border: '1px solid #e5e7eb' }}>
                         <Check className="w-[13px] h-[13px]" strokeWidth={2.5} />
                         Прочитано
                       </button>
@@ -471,7 +471,7 @@ export default function InboxTab() {
                   <span className={`inline-flex items-center gap-[5px] text-[12px] font-semibold ${
                     msg.status === 'approved' ? 'text-primary'
                     : msg.status === 'rejected' ? 'text-red-400'
-                    : 'text-white/40'}`}>
+                    : 'text-gray-400'}`}>
                     <Check className="w-[12px] h-[12px]" strokeWidth={2.5} />
                     {msg.status === 'approved' ? 'Одобрено' : msg.status === 'rejected' ? 'Отклонено' : 'Прочитано'}
                   </span>
@@ -483,7 +483,7 @@ export default function InboxTab() {
       </div>
 
       {/* ── Footer ── */}
-      <div className="text-center py-3 border-t border-white/[0.06] shrink-0">
+      <div className="text-center py-3 border-t border-gray-100 shrink-0">
         <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.25)' }}>
           @fcorp_official_bot
         </span>
