@@ -425,7 +425,7 @@ function buildDefaultGameState(): GameState {
     rivalLeagueStats:       {},
     scoutingMissions:       [],
     scoutedMarketPlayerIds: [],
-    lastAgeIncrementYear: new Date().getFullYear(),
+    lastAgeIncrementYear: new Date().getFullYear() - 1, // season starts ~Aug, aging fires next July
     ticketPrice:        0,
     activeSponsors:     [],
     financeLedger:      [],
@@ -507,6 +507,18 @@ export function loadGameState(): GameState {
     }
 
     const state = parsed as GameState;
+    // Fix: if lastAgeIncrementYear was defaulted to the real current year but the season
+    // started in a prior year, aging would never fire. Clamp back to season start year.
+    const _ssYear = state.season?.startDate
+      ? new Date(state.season.startDate).getFullYear()
+      : undefined;
+    const _savedAgeYear = state.lastAgeIncrementYear;
+    const _correctedAgeYear =
+      _ssYear !== undefined
+      && (_savedAgeYear ?? 9999) >= new Date().getFullYear()
+      && _ssYear < new Date().getFullYear()
+        ? _ssYear   // reset: default was incorrectly set to real year; season is older
+        : (_savedAgeYear ?? (_ssYear ?? new Date().getFullYear() - 1));
     const migrated: GameState = {
       ...state,
       rivalStrengths:          state.rivalStrengths          ?? {},
@@ -514,7 +526,7 @@ export function loadGameState(): GameState {
       rivalLeagueStats:        state.rivalLeagueStats        ?? {},
       scoutingMissions:        state.scoutingMissions        ?? [],
       scoutedMarketPlayerIds:  state.scoutedMarketPlayerIds  ?? [],
-      lastAgeIncrementYear:    state.lastAgeIncrementYear    ?? new Date().getFullYear(),
+      lastAgeIncrementYear:    _correctedAgeYear,
       pendingSeasonTransition: state.pendingSeasonTransition ?? undefined,
       playerStates:            (state.playerStates ?? []).map(migratePlayerState),
       ticketPrice:             state.ticketPrice             ?? 0,

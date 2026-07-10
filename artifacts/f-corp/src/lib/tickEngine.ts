@@ -208,6 +208,10 @@ export function initializeSeason(
     rivalForms[rival] = [0, 0, 0, 0, 0];
   }
 
+  // lastAgeIncrementYear should equal the season's start year so that aging fires
+  // on the first July that follows (startYear + 1 > startYear && month >= 6).
+  const seasonStartYear = new Date(startDate).getFullYear();
+
   return {
     ...gameState,
     rivalStrengths,
@@ -215,6 +219,7 @@ export function initializeSeason(
     rivalLeagueStats:        {},  // reset per-season stats
     scoutingMissions:        gameState.scoutingMissions ?? [],  // carry over missions
     pendingSeasonTransition: undefined,
+    lastAgeIncrementYear:    seasonStartYear,
     season: {
       ...gameState.season,
       schedule,
