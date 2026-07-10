@@ -251,7 +251,9 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
       <div style={{padding:'16px 18px 0',flexShrink:0}}>
         <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:4}}>
           <span style={{fontSize:22,fontWeight:700,color:C.white,fontFamily:'Inter,sans-serif'}}>Маркет</span>
-          <span style={{fontSize:22,fontWeight:700,color:C.teal,fontFamily:'Inter,sans-serif'}}>{fmtMoney(budget)}</span>
+          <span style={{fontSize:22,fontWeight:700,color:C.teal,fontFamily:'Inter,sans-serif'}}>
+            {fmtMoney(tab === 'scouting' ? walletBalance : budget)}
+          </span>
         </div>
         <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:16}}>
           <span style={{fontSize:11,letterSpacing:'0.5px',color:C.dim}}>
@@ -263,7 +265,9 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
               ? `${scoutingMissions.filter(m => m.status === 'active').length} АКТИВНЫХ МИССИЙ`
               : ''}
           </span>
-          <span style={{fontSize:11,letterSpacing:'0.5px',color:C.dim}}>БЮДЖЕТ</span>
+          <span style={{fontSize:11,letterSpacing:'0.5px',color:C.dim}}>
+            {tab === 'scouting' ? 'КОШЕЛЁК' : 'БЮДЖЕТ'}
+          </span>
         </div>
 
         {/* ── PLAYERS / STAFF / SCOUTING / HISTORY toggle ── */}
@@ -445,7 +449,7 @@ export default function MarketTab({ initialTab = 'players' }: Props) {
             const isScouted    = scoutedPlayerIds.has(p.id);
             const dynamicPrice = computePlayerMarketValue(p.rating, p.age);
             const canBuy       = dynamicPrice <= budget;
-            const canScout     = !isScouted && budget >= 50_000;
+            const canScout     = !isScouted && walletBalance >= 50_000;
             return (
               <div key={p.id} style={{background:C.card,borderRadius:12,padding:'12px 14px'}}>
                 <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
